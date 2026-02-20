@@ -10,5 +10,4 @@ Visit our [landing page](https://paperstacks.io/) for more information.
 
 ## License
 
-TBA
-
+This work (source code) is licensed under [MIT](./LICENSE).
