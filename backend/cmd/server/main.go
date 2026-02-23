@@ -1,16 +1,36 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"log/slog"
+	"net"
 	"net/http"
+	"os"
+
+	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "hello\n")
-}
-
 func main() {
-	fmt.Println("Starting server at port 8090")
-	http.HandleFunc("/hello", hello)
-	http.ListenAndServe(":8090", nil)
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+
+	handle := server.AddRoute(http.NewServeMux(), context.Background())
+	httpServer := &http.Server{
+		Addr:    net.JoinHostPort(host, port),
+		Handler: handle,
+	}
+
+	slog.Info("Starting server:", slog.String("host", host), slog.String("port", port))
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		slog.Error(err.Error())
+	}
 }
