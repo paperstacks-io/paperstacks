@@ -8,7 +8,7 @@ import (
 
 // encode writes the response as JSON
 // [Handle decoding/encoding in one place](https://grafana.com/blog/2024/02/09/how-i-write-http-services-in-go-after-13-years/#handle-decodingencoding-in-one-place)
-func encode[T any](w http.ResponseWriter, r *http.Request, status int, v T) error {
+func encode[T any](w http.ResponseWriter, _ *http.Request, status int, v T) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {

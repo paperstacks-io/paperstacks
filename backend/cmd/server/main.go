@@ -20,9 +20,9 @@ func main() {
 		port = "8080"
 	}
 
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-	handle := server.AddRoute(http.NewServeMux(), context.Background())
+	handle := server.AddRoute(http.NewServeMux(), context.Background(), logger)
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(host, port),
 		Handler: handle,
