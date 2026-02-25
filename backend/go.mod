@@ -1,3 +1,3 @@
-module paperstacks.io/paperstacks
+module github.com/paperstacks.io/paperstacks
 
-go 1.26.0
+go 1.26
