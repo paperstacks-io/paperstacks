@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/paperstacks.io/paperstacks/internal/doi"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
@@ -28,8 +29,9 @@ func run(
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	doiService := doi.NewService(nil)
 
-	handle := server.AddRoute(http.NewServeMux(), ctx, logger)
+	handle := server.AddRoute(http.NewServeMux(), ctx, logger, doiService)
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort("localhost", "8080"),
 		Handler:      handle,
