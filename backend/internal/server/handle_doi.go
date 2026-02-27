@@ -15,7 +15,7 @@ func handleDOI(logger *slog.Logger, service *doi.Service) http.Handler {
 			rawDOI := r.PathValue("doi")
 			decodedDOI, err := url.PathUnescape(rawDOI)
 			if err != nil {
-				http.Error(w, "invalid doi path", http.StatusBadRequest)
+				http.Error(w, "invalid DOI", http.StatusBadRequest)
 				return
 			}
 
@@ -27,14 +27,14 @@ func handleDOI(logger *slog.Logger, service *doi.Service) http.Handler {
 				case errors.Is(err, doi.ErrNotFound):
 					http.Error(w, err.Error(), http.StatusNotFound)
 				default:
-					logger.Error("resolve doi metadata", "doi", decodedDOI, "error", err)
+					logger.Error("resolve DOI metadata", "DOI", decodedDOI, "error", err)
 					http.Error(w, "failed to resolve doi metadata", http.StatusBadGateway)
 				}
 				return
 			}
 
 			if err := encode(w, r, http.StatusOK, metadata); err != nil {
-				logger.Error("encode doi response", "error", err)
+				logger.Error("encode DOI response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
