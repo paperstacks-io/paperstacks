@@ -3,6 +3,9 @@ package domain
 // Paper represents a scientific publication with bibliographic metadata,
 // authors, and associated documents such as PDFs.
 type Paper struct {
+	// ID uniquely identifies the paper.
+	ID string `json:"id"`
+
 	// Title is the full title of the publication.
 	Title string `json:"title"`
 
