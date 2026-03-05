@@ -1,3 +1,4 @@
+// Package main runs the paperstacks HTTP server binary.
 package main
 
 import (
