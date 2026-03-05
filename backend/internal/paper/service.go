@@ -23,9 +23,14 @@ func NewService(client *http.Client, repo Repository) *Service {
 	}
 }
 
-func (r *Service) Create(paper domain.Paper) {
-	_, err := r.paperRepo.Create(paper)
-	if err != nil {
-		return
-	}
+func (r *Service) ReadAll() (map[string]domain.Paper, error) {
+	return r.paperRepo.ReadAll()
+}
+
+func (r *Service) Read(id string) (domain.Paper, error) {
+	return r.paperRepo.Read(id)
+}
+
+func (r *Service) Delete(id string) error {
+	return r.paperRepo.Delete(id)
 }

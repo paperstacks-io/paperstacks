@@ -8,15 +8,16 @@ import (
 )
 
 type Repository interface {
-	Create(paper domain.Paper) (domain.Paper, error)
+	Create(paper domain.Paper) error
+	ReadAll() (map[string]domain.Paper, error)
 	Read(id string) (domain.Paper, error)
-	Update(id string, paper domain.Paper) (domain.Paper, error)
+	Update(id string, paper domain.Paper) error
 	Delete(id string) error
 }
 
 var (
-	errPaperExists   = errors.New("paper already exists")
-	errPaperNotFound = errors.New("paper not found")
+	ErrPaperNotFound      = errors.New("not found")
+	ErrPaperAlreadyExists = errors.New("paper already exists")
 )
 
 type MemoryRepo struct {
@@ -26,21 +27,47 @@ type MemoryRepo struct {
 }
 
 func NewMemoryRepo() Repository {
+	data := map[string]domain.Paper{
+		"paper-1": {
+			ID:    "paper-1",
+			Title: "Example Paper One",
+		},
+		"paper-2": {
+			ID:    "paper-2",
+			Title: "Example Paper Two",
+		},
+		"paper-3": {
+			ID:    "paper-3",
+			Title: "Example Paper Three",
+		},
+	}
+
 	return &MemoryRepo{
-		data: make(map[string]domain.Paper),
+		data: data,
 	}
 }
 
-func (r *MemoryRepo) Create(paper domain.Paper) (domain.Paper, error) {
+func (r *MemoryRepo) Create(paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.data[paper.ID]; exists {
-		return domain.Paper{}, errPaperExists
+		return ErrPaperAlreadyExists
 	}
 
 	r.data[paper.ID] = paper
-	return paper, nil
+	return nil
+}
+
+func (r *MemoryRepo) ReadAll() (map[string]domain.Paper, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if len(r.data) == 0 {
+		return nil, ErrPaperNotFound
+	}
+
+	return r.data, nil
 }
 
 func (r *MemoryRepo) Read(id string) (domain.Paper, error) {
@@ -49,24 +76,24 @@ func (r *MemoryRepo) Read(id string) (domain.Paper, error) {
 
 	paper, exists := r.data[id]
 	if !exists {
-		return domain.Paper{}, errPaperNotFound
+		return domain.Paper{}, ErrPaperNotFound
 	}
 
 	return paper, nil
 }
 
-func (r *MemoryRepo) Update(id string, paper domain.Paper) (domain.Paper, error) {
+func (r *MemoryRepo) Update(id string, paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.data[id]; !exists {
-		return domain.Paper{}, errPaperNotFound
+		return ErrPaperNotFound
 	}
 
 	paper.ID = id
 	r.data[id] = paper
 
-	return paper, nil
+	return nil
 }
 
 func (r *MemoryRepo) Delete(id string) error {
@@ -74,7 +101,7 @@ func (r *MemoryRepo) Delete(id string) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.data[id]; !exists {
-		return errPaperNotFound
+		return ErrPaperNotFound
 	}
 
 	delete(r.data, id)
