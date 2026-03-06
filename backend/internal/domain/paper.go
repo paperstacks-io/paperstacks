@@ -4,7 +4,7 @@ package domain
 // authors, and associated documents such as PDFs.
 type Paper struct {
 	// ID uniquely identifies the paper.
-	ID string `json:"id"`
+	DOI string `json:"DOI"`
 
 	// Title is the full title of the publication.
 	Title string `json:"title"`

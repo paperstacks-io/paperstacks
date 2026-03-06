@@ -2,8 +2,8 @@ package server
 
 import "github.com/paperstacks.io/paperstacks/internal/domain"
 
-type createPaperRequest struct {
-	ID                         string          `json:"id"`
+type CreatePaperRequest struct {
+	DOI                        string          `json:"DOI"`
 	Title                      string          `json:"title"`
 	TitleShort                 string          `json:"title-short"`
 	Authors                    []domain.Author `json:"authors"`
@@ -17,7 +17,8 @@ type createPaperRequest struct {
 	Metadata                   domain.Metadata `json:"metadata"`
 }
 
-type updatePaperRequest struct {
+type UpdatePaperRequest struct {
+	DOI                        string          `json:"DOI"`
 	Title                      string          `json:"title"`
 	TitleShort                 string          `json:"title-short"`
 	Authors                    []domain.Author `json:"authors"`
@@ -31,8 +32,8 @@ type updatePaperRequest struct {
 	Metadata                   domain.Metadata `json:"metadata"`
 }
 
-type paperResponse struct {
-	ID                         string          `json:"id"`
+type PaperResponse struct {
+	DOI                        string          `json:"DOI"`
 	Title                      string          `json:"title"`
 	TitleShort                 string          `json:"title-short"`
 	Authors                    []domain.Author `json:"authors"`
@@ -46,9 +47,43 @@ type paperResponse struct {
 	Metadata                   domain.Metadata `json:"metadata"`
 }
 
-func paperToResponse(p domain.Paper) paperResponse {
-	return paperResponse{
-		ID:                         p.ID,
+func (r CreatePaperRequest) ToDomain() domain.Paper {
+	return domain.Paper{
+		DOI:                        r.DOI,
+		Title:                      r.Title,
+		TitleShort:                 r.TitleShort,
+		Authors:                    r.Authors,
+		PublicationYear:            r.PublicationYear,
+		PublicationStatus:          r.PublicationStatus,
+		PublicationStatusTimestamp: r.PublicationStatusTimestamp,
+		Abstract:                   r.Abstract,
+		Keywords:                   r.Keywords,
+		Type:                       r.Type,
+		PDFs:                       r.PDFs,
+		Metadata:                   r.Metadata,
+	}
+}
+
+func (r UpdatePaperRequest) ToDomain() domain.Paper {
+	return domain.Paper{
+		DOI:                        r.DOI,
+		Title:                      r.Title,
+		TitleShort:                 r.TitleShort,
+		Authors:                    r.Authors,
+		PublicationYear:            r.PublicationYear,
+		PublicationStatus:          r.PublicationStatus,
+		PublicationStatusTimestamp: r.PublicationStatusTimestamp,
+		Abstract:                   r.Abstract,
+		Keywords:                   r.Keywords,
+		Type:                       r.Type,
+		PDFs:                       r.PDFs,
+		Metadata:                   r.Metadata,
+	}
+}
+
+func paperToResponse(p domain.Paper) PaperResponse {
+	return PaperResponse{
+		DOI:                        p.DOI,
 		Title:                      p.Title,
 		TitleShort:                 p.TitleShort,
 		Authors:                    p.Authors,
@@ -63,8 +98,8 @@ func paperToResponse(p domain.Paper) paperResponse {
 	}
 }
 
-func papersMapToResponse(m map[string]domain.Paper) map[string]paperResponse {
-	out := make(map[string]paperResponse, len(m))
+func papersMapToResponse(m map[string]domain.Paper) map[string]PaperResponse {
+	out := make(map[string]PaperResponse, len(m))
 	for id, p := range m {
 		out[id] = paperToResponse(p)
 	}

@@ -34,3 +34,11 @@ func (r *Service) Read(id string) (domain.Paper, error) {
 func (r *Service) Delete(id string) error {
 	return r.paperRepo.Delete(id)
 }
+
+func (r *Service) Create(paper domain.Paper) error {
+	return r.paperRepo.Create(paper)
+}
+
+func (r *Service) Update(id string, paper domain.Paper) error {
+	return r.paperRepo.Update(id, paper)
+}

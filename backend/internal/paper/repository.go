@@ -28,16 +28,16 @@ type MemoryRepo struct {
 
 func NewMemoryRepo() Repository {
 	data := map[string]domain.Paper{
-		"paper-1": {
-			ID:    "paper-1",
+		"1": {
+			DOI:   "1",
 			Title: "Example Paper One",
 		},
-		"paper-2": {
-			ID:    "paper-2",
+		"2": {
+			DOI:   "2",
 			Title: "Example Paper Two",
 		},
-		"paper-3": {
-			ID:    "paper-3",
+		"3": {
+			DOI:   "3",
 			Title: "Example Paper Three",
 		},
 	}
@@ -51,11 +51,11 @@ func (r *MemoryRepo) Create(paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.data[paper.ID]; exists {
+	if _, exists := r.data[paper.DOI]; exists {
 		return ErrPaperAlreadyExists
 	}
 
-	r.data[paper.ID] = paper
+	r.data[paper.DOI] = paper
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (r *MemoryRepo) Update(id string, paper domain.Paper) error {
 		return ErrPaperNotFound
 	}
 
-	paper.ID = id
+	paper.DOI = id
 	r.data[id] = paper
 
 	return nil

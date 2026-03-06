@@ -22,10 +22,9 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /example", defaultMiddle(handleExample()))
 	mux.Handle(http.MethodGet+" /doi/{doi...}", defaultMiddle(handleDOI(logger, doiService)))
 	mux.Handle(http.MethodGet+" /papers/", defaultMiddle(handleReadPapers(logger, paperService)))
-	mux.Handle(http.MethodGet+" /papers/{paperId}", defaultMiddle(handleReadPapers(logger, paperService)))
-
-	// e.g curl -X DELETE http://localhost:8080/papers/delete/paper-1
-	mux.Handle(http.MethodDelete+" /papers/delete/{paperId}", defaultMiddle(handleDeletePaper(logger, paperService)))
-
+	mux.Handle(http.MethodGet+" /papers/{paperId}", defaultMiddle(handleReadPaper(logger, paperService)))
+	mux.Handle(http.MethodDelete+" /papers/{paperId}", defaultMiddle(handleDeletePaper(logger, paperService)))
+	mux.Handle(http.MethodPost+" /papers/", defaultMiddle(handleCreatePaper(logger, paperService)))
+	mux.Handle(http.MethodPut+" /papers/{paperId}", defaultMiddle(handleUpdatePaper(logger, paperService)))
 	return mux
 }
