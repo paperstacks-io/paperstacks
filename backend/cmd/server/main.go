@@ -32,7 +32,7 @@ func run(
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	doiService := doi.NewService(nil)
-	paperService := paper.NewService(nil, paper.NewMemoryRepo())
+	paperService := paper.NewService(paper.NewMemoryRepo())
 
 	handle := server.AddRoute(
 		http.NewServeMux(),

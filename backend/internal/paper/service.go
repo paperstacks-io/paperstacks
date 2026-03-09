@@ -2,8 +2,6 @@ package paper
 
 import (
 	"context"
-	"net/http"
-	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/domain"
 )
@@ -12,11 +10,7 @@ type Service struct {
 	paperRepo Repository
 }
 
-func NewService(client *http.Client, repo Repository) *Service {
-	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
-	}
-
+func NewService(repo Repository) *Service {
 	return &Service{
 		paperRepo: repo,
 	}
