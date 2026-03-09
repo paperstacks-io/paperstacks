@@ -3,7 +3,8 @@ package domain
 // Paper represents a scientific publication with bibliographic metadata,
 // authors, and associated documents such as PDFs.
 type Paper struct {
-	// ID uniquely identifies the paper.
+	// DOI is the Digital Object Identifier that uniquely identifies
+	// the publication (e.g. "10.1145/1234567.1234568").
 	DOI string `json:"DOI"`
 
 	// Title is the full title of the publication.
