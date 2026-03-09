@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -31,7 +30,7 @@ func handleReadPapers(logger *slog.Logger, service *paper.Service) http.Handler 
 				return
 			}
 
-			if err := encode(w, r, http.StatusOK, papersMapToResponse(papers)); err != nil {
+			if err := encode(w, r, http.StatusOK, papersToResponse(papers)); err != nil {
 				logger.Error("encode paper response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -118,22 +117,22 @@ func handleCreatePaper(logger *slog.Logger, service *paper.Service) http.Handler
 				return
 			}
 
-			var req CreatePaperRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				logger.Error("decode create paper request", "error", err)
+			req, err := decode[CreatePaperRequest](r)
+			if err != nil {
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
 
-			if err := service.Create(req.ToDomain()); err != nil {
+			p := req.ToDomain()
+			if err := service.Create(p); err != nil {
 				if errors.Is(err, paper.ErrPaperAlreadyExists) {
-					logger.Error("create paper", "doi", req.DOI, "error", err)
+					logger.Error("create paper", "doi", p.DOI, "error", err)
 					http.Error(w, err.Error(), http.StatusConflict)
 					return
 				}
 
-				logger.Error("create paper", "doi", req.DOI, "error", err)
-				http.Error(w, "failed to create paper", http.StatusInternalServerError)
+				logger.Error("create paper", "doi", p.DOI, "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -157,16 +156,16 @@ func handleUpdatePaper(logger *slog.Logger, service *paper.Service) http.Handler
 				return
 			}
 
-			var req UpdatePaperRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				logger.Error("decode update paper request", "error", err)
+			req, err := decode[UpdatePaperRequest](r)
+			if err != nil {
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
 
-			if err := service.Update(id, req.ToDomain()); err != nil {
+			p := req.ToDomain()
+			if err := service.Update(id, p); err != nil {
 				if errors.Is(err, paper.ErrPaperNotFound) {
-					logger.Error("update paper", "id", id, "error", err)
+					logger.Error("update paper", "id", id, "error", "paper "+err.Error())
 					http.Error(w, "paper not found", http.StatusNotFound)
 					return
 				}
@@ -175,8 +174,6 @@ func handleUpdatePaper(logger *slog.Logger, service *paper.Service) http.Handler
 				http.Error(w, "failed to update paper", http.StatusInternalServerError)
 				return
 			}
-
-			w.WriteHeader(http.StatusNoContent)
 		},
 	)
 }

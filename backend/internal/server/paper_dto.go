@@ -98,10 +98,12 @@ func paperToResponse(p domain.Paper) PaperResponse {
 	}
 }
 
-func papersMapToResponse(m map[string]domain.Paper) map[string]PaperResponse {
-	out := make(map[string]PaperResponse, len(m))
-	for id, p := range m {
-		out[id] = paperToResponse(p)
+func papersToResponse(papers []domain.Paper) []PaperResponse {
+	out := make([]PaperResponse, 0, len(papers))
+
+	for _, p := range papers {
+		out = append(out, paperToResponse(p))
 	}
+
 	return out
 }

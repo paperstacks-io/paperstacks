@@ -2,6 +2,7 @@ package paper
 
 import (
 	"errors"
+	"slices"
 	"sync"
 
 	"github.com/paperstacks.io/paperstacks/internal/domain"
@@ -9,7 +10,7 @@ import (
 
 type Repository interface {
 	Create(paper domain.Paper) error
-	ReadAll() (map[string]domain.Paper, error)
+	ReadAll() ([]domain.Paper, error)
 	Read(id string) (domain.Paper, error)
 	Update(id string, paper domain.Paper) error
 	Delete(id string) error
@@ -21,22 +22,22 @@ var (
 )
 
 type MemoryRepo struct {
-	data map[string]domain.Paper
+	data []domain.Paper
 	// mu protects concurrent access to data. RWMutex has a usable zero value.
 	mu sync.RWMutex
 }
 
 func NewMemoryRepo() Repository {
-	data := map[string]domain.Paper{
-		"1": {
+	data := []domain.Paper{
+		{
 			DOI:   "1",
 			Title: "Example Paper One",
 		},
-		"2": {
+		{
 			DOI:   "2",
 			Title: "Example Paper Two",
 		},
-		"3": {
+		{
 			DOI:   "3",
 			Title: "Example Paper Three",
 		},
@@ -51,15 +52,17 @@ func (r *MemoryRepo) Create(paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.data[paper.DOI]; exists {
+	if slices.ContainsFunc(r.data, func(p domain.Paper) bool {
+		return p.DOI == paper.DOI
+	}) {
 		return ErrPaperAlreadyExists
 	}
 
-	r.data[paper.DOI] = paper
+	r.data = append(r.data, paper)
 	return nil
 }
 
-func (r *MemoryRepo) ReadAll() (map[string]domain.Paper, error) {
+func (r *MemoryRepo) ReadAll() ([]domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -74,24 +77,31 @@ func (r *MemoryRepo) Read(id string) (domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	paper, exists := r.data[id]
-	if !exists {
+	idx := slices.IndexFunc(r.data, func(p domain.Paper) bool {
+		return p.DOI == id
+	})
+
+	if idx == -1 {
 		return domain.Paper{}, ErrPaperNotFound
 	}
 
-	return paper, nil
+	return r.data[idx], nil
 }
 
 func (r *MemoryRepo) Update(id string, paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.data[id]; !exists {
+	idx := slices.IndexFunc(r.data, func(p domain.Paper) bool {
+		return p.DOI == id
+	})
+
+	if idx == -1 {
 		return ErrPaperNotFound
 	}
 
 	paper.DOI = id
-	r.data[id] = paper
+	r.data[idx] = paper
 
 	return nil
 }
@@ -100,10 +110,15 @@ func (r *MemoryRepo) Delete(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.data[id]; !exists {
+	idx := slices.IndexFunc(r.data, func(p domain.Paper) bool {
+		return p.DOI == id
+	})
+
+	if idx == -1 {
 		return ErrPaperNotFound
 	}
 
-	delete(r.data, id)
+	r.data = append(r.data[:idx], r.data[idx+1:]...)
+
 	return nil
 }

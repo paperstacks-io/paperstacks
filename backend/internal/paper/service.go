@@ -1,6 +1,7 @@
 package paper
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 
 type Service struct {
 	paperRepo Repository
-	client    *http.Client
 }
 
 func NewService(client *http.Client, repo Repository) *Service {
@@ -19,11 +19,13 @@ func NewService(client *http.Client, repo Repository) *Service {
 
 	return &Service{
 		paperRepo: repo,
-		client:    client,
 	}
 }
 
-func (r *Service) ReadAll() (map[string]domain.Paper, error) {
+func (r *Service) ResolveMetadata(ctx context.Context) {
+}
+
+func (r *Service) ReadAll() ([]domain.Paper, error) {
 	return r.paperRepo.ReadAll()
 }
 
