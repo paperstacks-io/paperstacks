@@ -1,16 +1,10 @@
 package paper
 
 import (
-	"errors"
 	"slices"
 	"sync"
 
 	"github.com/paperstacks.io/paperstacks/internal/domain"
-)
-
-var (
-	ErrPaperNotFound      = errors.New("not found")
-	ErrPaperAlreadyExists = errors.New("paper already exists")
 )
 
 type MemoryRepo struct {
