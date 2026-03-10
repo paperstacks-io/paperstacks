@@ -48,7 +48,7 @@ func handleReadPaper(logger *slog.Logger, service *paper.Service) http.Handler {
 			}
 
 			// No DTO needed for a single ID request
-			id := r.PathValue("paperId")
+			id := r.PathValue("doi")
 			if id == "" {
 				http.Error(w, "missing paper id", http.StatusBadRequest)
 				return
@@ -57,12 +57,12 @@ func handleReadPaper(logger *slog.Logger, service *paper.Service) http.Handler {
 			p, err := service.Read(id)
 			if err != nil {
 				if errors.Is(err, paper.ErrPaperNotFound) {
-					logger.Error("read paper", "paperId", id, "error", "paper "+err.Error())
+					logger.Error("read paper", "doi", id, "error", "paper "+err.Error())
 					http.Error(w, "paper "+err.Error(), http.StatusNotFound)
 					return
 				}
 
-				logger.Error("read paper", "paperId", id, "error", err)
+				logger.Error("read paper", "doi", id, "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -85,7 +85,7 @@ func handleDeletePaper(logger *slog.Logger, service *paper.Service) http.Handler
 				return
 			}
 
-			id := r.PathValue("paperId")
+			id := r.PathValue("doi")
 			if id == "" {
 				http.Error(w, "missing paper id", http.StatusBadRequest)
 				return
@@ -150,9 +150,9 @@ func handleUpdatePaper(logger *slog.Logger, service *paper.Service) http.Handler
 				return
 			}
 
-			id := r.PathValue("paperId")
+			id := r.PathValue("doi")
 			if id == "" {
-				http.Error(w, "missing paper id", http.StatusBadRequest)
+				http.Error(w, "missing paper doi", http.StatusBadRequest)
 				return
 			}
 
