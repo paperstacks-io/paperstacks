@@ -1,3 +1,7 @@
+//go:build integration
+// +build integration
+
+// testintegration contains all integration tests against the http API
 package testintegration
 
 import (

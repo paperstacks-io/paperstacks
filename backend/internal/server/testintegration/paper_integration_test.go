@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package testintegration
 
 import (
@@ -7,7 +10,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
-func TestPapersGetAll(t *testing.T) {
+func TestIntegrationPapersGetAll(t *testing.T) {
 	endpoint := testAPIPath() + "/papers/"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -22,7 +25,7 @@ func TestPapersGetAll(t *testing.T) {
 	}
 }
 
-func TestPapersGetSingle(t *testing.T) {
+func TestIntegrationPapersGetSingle(t *testing.T) {
 	endpoint := testAPIPath() + "/papers/1"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -37,7 +40,7 @@ func TestPapersGetSingle(t *testing.T) {
 	}
 }
 
-func TestPapersGetSingleUnknown(t *testing.T) {
+func TestIntegrationPapersGetSingleUnknown(t *testing.T) {
 	endpoint := testAPIPath() + "/papers/doesntexist"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -46,7 +49,7 @@ func TestPapersGetSingleUnknown(t *testing.T) {
 	assertBody(t, resp, "paper not found\n")
 }
 
-func TestPapersCreate(t *testing.T) {
+func TestIntegrationPapersCreate(t *testing.T) {
 	paperBody := server.CreatePaperRequest{
 		DOI:   "4",
 		Title: "Created Paper",
@@ -66,7 +69,7 @@ func TestPapersCreate(t *testing.T) {
 	assertStatusCode(t, verifyResp, http.StatusOK)
 }
 
-func TestPapersUpdate(t *testing.T) {
+func TestIntegrationPapersUpdate(t *testing.T) {
 	paperBody := server.UpdatePaperRequest{
 		Title: "Updated Paper Two",
 	}
@@ -89,7 +92,7 @@ func TestPapersUpdate(t *testing.T) {
 	}
 }
 
-func TestPapersDelete(t *testing.T) {
+func TestIntegrationPapersDelete(t *testing.T) {
 	doiToDelete := "to-be-deleted"
 	paperBody := server.CreatePaperRequest{
 		DOI:   doiToDelete,

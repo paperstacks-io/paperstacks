@@ -11,8 +11,12 @@ clean: ## Clean up all build artifacts
 	rm -f $(BINARY_DIR)/server $(BINARY_DIR)/server.exe
 
 .PHONY: test
-test: ## Run all tests
+test: ## Run all unit tests
 	$(GOCMD) test ./... -coverprofile=coverage.out
+
+.PHONY: test-integration
+test-integration: ## Run all integration tests
+	$(GOCMD) test -tags=integration -run '^TestIntegration' ./... -coverprofile=coverage.out
 
 .PHONY: build
 build: build-server ## Build all

@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package testintegration
 
 import (
@@ -5,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestHealthz(t *testing.T) {
+func TestIntegrationHealthz(t *testing.T) {
 	endpoint := testAPIPath() + "/healthz"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
