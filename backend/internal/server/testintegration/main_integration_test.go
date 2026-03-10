@@ -32,7 +32,7 @@ func testAPIPath() string {
 }
 
 func startService() bool {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	paperService := paper.NewService(paper.NewMemoryRepo())
 	handle := server.AddRoute(http.NewServeMux(), context.Background(), logger, nil, paperService)
 	httpServer := &http.Server{
