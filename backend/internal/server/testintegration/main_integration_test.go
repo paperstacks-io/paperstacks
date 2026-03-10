@@ -15,10 +15,13 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
-var (
-	testHost = "localhost"
-	testPort = "9999"
+const (
+	testHost      = "localhost"
+	testPort      = "9999"
+	clientTimeout = 10 * time.Second
 )
+
+var client *http.Client
 
 func testAPIPath() string {
 	return "http://" + testHost + ":" + testPort
@@ -49,5 +52,8 @@ func TestMain(m *testing.M) {
 	if !startService() {
 		os.Exit(1)
 	}
+
+	client = &http.Client{Timeout: clientTimeout}
+
 	os.Exit(m.Run())
 }
