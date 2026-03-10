@@ -20,13 +20,14 @@ func TestIntegrationPapersGetAll(t *testing.T) {
 	var papers []server.PaperResponse
 	decodeJSON(t, resp, &papers)
 
-	if len(papers) < 3 {
-		t.Errorf("expected at least %d papers, got %d", 3, len(papers))
+	if len(papers) < 4 {
+		t.Errorf("expected at least %d papers, got %d", 4, len(papers))
 	}
 }
 
 func TestIntegrationPapersGetSingle(t *testing.T) {
-	endpoint := testAPIPath() + "/papers/1"
+	doi := "10.1109/isese.2005.1541817"
+	endpoint := testAPIPath() + "/papers/doi/" + doi
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -35,13 +36,13 @@ func TestIntegrationPapersGetSingle(t *testing.T) {
 	var paper server.PaperResponse
 	decodeJSON(t, resp, &paper)
 
-	if paper.DOI != "1" {
-		t.Fatalf("expected paper to have DOI %s, got %s", "1", paper.DOI)
+	if paper.DOI != doi {
+		t.Fatalf("expected paper to have DOI %s, got %s", doi, paper.DOI)
 	}
 }
 
 func TestIntegrationPapersGetSingleUnknown(t *testing.T) {
-	endpoint := testAPIPath() + "/papers/doesntexist"
+	endpoint := testAPIPath() + "/papers/doi/doesntexist"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -51,7 +52,7 @@ func TestIntegrationPapersGetSingleUnknown(t *testing.T) {
 
 func TestIntegrationPapersCreate(t *testing.T) {
 	paperBody := server.CreatePaperRequest{
-		DOI:   "4",
+		DOI:   "10.1000/new",
 		Title: "Created Paper",
 	}
 
@@ -62,7 +63,7 @@ func TestIntegrationPapersCreate(t *testing.T) {
 	assertStatusCode(t, resp, http.StatusCreated)
 
 	// Verify it was created
-	verifyEndpoint := testAPIPath() + "/papers/4"
+	verifyEndpoint := testAPIPath() + "/papers/doi/" + paperBody.DOI
 	verifyResp := doGetRequest(t, verifyEndpoint)
 	defer verifyResp.Body.Close()
 
@@ -70,11 +71,12 @@ func TestIntegrationPapersCreate(t *testing.T) {
 }
 
 func TestIntegrationPapersUpdate(t *testing.T) {
+	doi := "10.1109/isese.2005.1541817"
 	paperBody := server.UpdatePaperRequest{
-		Title: "Updated Paper Two",
+		Title: "Updated Paper",
 	}
 
-	endpoint := testAPIPath() + "/papers/2"
+	endpoint := testAPIPath() + "/papers/doi/" + doi
 	resp := doPutRequest(t, endpoint, paperBody)
 	defer resp.Body.Close()
 
@@ -87,8 +89,8 @@ func TestIntegrationPapersUpdate(t *testing.T) {
 	var paper server.PaperResponse
 	decodeJSON(t, verifyResp, &paper)
 
-	if paper.Title != "Updated Paper Two" {
-		t.Errorf("expected title %s, got %s", "Updated Paper Two", paper.Title)
+	if paper.Title != "Updated Paper" {
+		t.Errorf("expected title %s, got %s", "Updated Paper", paper.Title)
 	}
 }
 
@@ -100,12 +102,12 @@ func TestIntegrationPapersDelete(t *testing.T) {
 	}
 
 	// Create the paper to delete
-	createEndpoint := testAPIPath() + "/papers/"
+	createEndpoint := testAPIPath() + "/papers/doi/"
 	createResp := doPostRequest(t, createEndpoint, paperBody)
 	createResp.Body.Close()
 
 	// Delete the paper
-	deleteEndpoint := testAPIPath() + "/papers/" + doiToDelete
+	deleteEndpoint := testAPIPath() + "/papers/doi/" + doiToDelete
 	deleteResp := doDeleteRequest(t, deleteEndpoint)
 	defer deleteResp.Body.Close()
 
