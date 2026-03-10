@@ -30,10 +30,6 @@ type Metadata struct {
 	// with the publication, typically used for books or proceedings.
 	ISBN []string `json:"ISBN"`
 
-	// DOI is the Digital Object Identifier that uniquely identifies
-	// the publication (e.g. "10.1145/1234567.1234568").
-	DOI string `json:"DOI"`
-
 	// References contains external references related to the work,
 	// typically URLs or URIs pointing to additional resources.
 	References []string `json:"references"`
