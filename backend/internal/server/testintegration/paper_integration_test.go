@@ -1,3 +1,4 @@
+//nolint:errcheck // to ignore not checking err when defer resp.Body.Close()
 package testintegration
 
 import (
@@ -100,8 +101,7 @@ func TestIntegrationPapersDelete(t *testing.T) {
 
 	// Create the paper to delete
 	createEndpoint := testAPIPath() + "/papers/doi/"
-	createResp := doPostRequest(t, createEndpoint, paperBody)
-	createResp.Body.Close()
+	doPostRequest(t, createEndpoint, paperBody)
 
 	// Delete the paper
 	deleteEndpoint := testAPIPath() + "/papers/doi/" + doiToDelete
