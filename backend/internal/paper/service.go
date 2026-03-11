@@ -6,17 +6,37 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/domain"
 )
 
+type ServiceConfiguration func(service *Service) error
+
 type Service struct {
 	paperRepo Repository
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{
-		paperRepo: repo,
+func NewService(cfgs ...ServiceConfiguration) (*Service, error) {
+	service := &Service{}
+
+	for _, cfg := range cfgs {
+		err := cfg(service)
+
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	return service, nil
 }
 
 func (r *Service) ResolveMetadata(ctx context.Context) {
+}
+
+// This is an in-memory repository implementation.
+// It stores data only in memory and is mainly intended for development or testing.
+// It can easily be replaced with another implementation, such as a database-backed repository.
+func MemoryRepository(memoryRepo Repository) ServiceConfiguration {
+	return func(service *Service) error {
+		service.paperRepo = memoryRepo
+		return nil
+	}
 }
 
 func (r *Service) ReadAll() ([]domain.Paper, error) {
