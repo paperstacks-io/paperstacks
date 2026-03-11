@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/paperstacks.io/paperstacks/internal/doi"
-	"github.com/paperstacks.io/paperstacks/internal/paper"
+	"github.com/paperstacks.io/paperstacks/internal/old/paper"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 )
 

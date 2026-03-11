@@ -1,6 +1,6 @@
 package server
 
-import "github.com/paperstacks.io/paperstacks/internal/domain"
+import "github.com/paperstacks.io/paperstacks/internal/old/domain"
 
 type CreatePaperRequest struct {
 	DOI                        string          `json:"DOI"`

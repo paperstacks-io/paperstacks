@@ -4,7 +4,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/paperstacks.io/paperstacks/internal/domain"
+	"github.com/paperstacks.io/paperstacks/internal/old/domain"
 )
 
 type MemoryRepo struct {

@@ -3,7 +3,7 @@ package paper
 import (
 	"context"
 
-	"github.com/paperstacks.io/paperstacks/internal/domain"
+	"github.com/paperstacks.io/paperstacks/internal/old/domain"
 )
 
 type ServiceConfiguration func(service *Service) error

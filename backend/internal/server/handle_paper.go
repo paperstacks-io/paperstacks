@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/paperstacks.io/paperstacks/internal/paper"
+	"github.com/paperstacks.io/paperstacks/internal/old/paper"
 )
 
 func handleReadPapers(logger *slog.Logger, service *paper.Service) http.Handler {

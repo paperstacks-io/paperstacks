@@ -3,7 +3,7 @@ package paper
 import (
 	"errors"
 
-	"github.com/paperstacks.io/paperstacks/internal/domain"
+	"github.com/paperstacks.io/paperstacks/internal/old/domain"
 )
 
 var (
