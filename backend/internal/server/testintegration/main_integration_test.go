@@ -1,11 +1,9 @@
-//go:build integration
-// +build integration
-
 // testintegration contains all integration tests against the http API
 package testintegration
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"net"
@@ -53,6 +51,11 @@ func startService() bool {
 }
 
 func TestMain(m *testing.M) {
+	if !tests.IsIntegrationTest() {
+		fmt.Println("skipping integration tests: set INTEGRATION environment variable")
+		return
+	}
+
 	if !startService() {
 		os.Exit(1)
 	}
