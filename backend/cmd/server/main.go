@@ -1,4 +1,4 @@
-// Package main runs the paperstacks HTTP server binary.
+// Package main runs the paperstacks HTTP server_ binary.
 package main
 
 import (
@@ -12,9 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/paperstacks.io/paperstacks/internal/doi"
-	"github.com/paperstacks.io/paperstacks/internal/paper"
-	"github.com/paperstacks.io/paperstacks/internal/server"
+	"github.com/paperstacks.io/paperstacks/internal/doi_"
+	paperhttp "github.com/paperstacks.io/paperstacks/internal/paper/infrastructure/http"
+	"github.com/paperstacks.io/paperstacks/internal/paper/infrastructure/persistence/memory"
+	"github.com/paperstacks.io/paperstacks/internal/paper/service"
+	"github.com/paperstacks.io/paperstacks/internal/paper_"
+	"github.com/paperstacks.io/paperstacks/internal/server_"
 )
 
 func run(
@@ -29,18 +32,36 @@ func run(
 	if port == "" {
 		port = "8080"
 	}
+	portTest := getenv("PORT")
+	if portTest == "" {
+		portTest = "8090"
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	doiService := doi.NewService(nil)
+	doiService := doi_.NewService(nil)
 
-	paperService, err := paper.NewService(
-		paper.MemoryRepository(paper.NewMemoryRepo()),
+	paperService, err := paper_.NewService(
+		paper_.MemoryRepository(paper_.NewMemoryRepo()),
 	)
 	if err != nil {
 		return err
 	}
 
-	handle := server.AddRoute(
+	paperApplication := service.NewApplication(memory.NewMemoryPaperRepository())
+	handleTest := paperhttp.AddRouteTest(
+		http.NewServeMux(),
+		ctx,
+		logger,
+		paperApplication,
+	)
+	httpServerTest := &http.Server{
+		Addr:         net.JoinHostPort("localhost", "8090"),
+		Handler:      handleTest,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
+	}
+
+	handle := server_.AddRoute(
 		http.NewServeMux(),
 		ctx,
 		logger,
@@ -67,12 +88,18 @@ func run(
 
 		httpServer.SetKeepAlivesEnabled(false)
 		if err := httpServer.Shutdown(ctx); err != nil {
-			slog.Error("Could not gracefully shutdown the server", slog.String("error", err.Error()))
+			slog.Error("Could not gracefully shutdown the server_", slog.String("error", err.Error()))
 		}
 		close(done)
 	}()
 
-	slog.Info("Starting server:", slog.String("host", host), slog.String("port", port))
+	slog.Info("Starting server_:", slog.String("host", host), slog.String("port", portTest))
+	if err := httpServerTest.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Error("Could not listen", slog.String("port", port), slog.String("error", err.Error()))
+		return err
+	}
+
+	slog.Info("Starting server_:", slog.String("host", host), slog.String("port", port))
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("Could not listen", slog.String("port", port), slog.String("error", err.Error()))
 		return err

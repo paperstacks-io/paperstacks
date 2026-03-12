@@ -33,7 +33,7 @@ make clean
 Start the server with:
 
 ```bash
-./server
+./server_
 ```
 
 The server will start on `localhost:8080` by default.
@@ -48,7 +48,7 @@ You can customize the server behavior with environment variables:
 Example:
 
 ```bash
-HOST=0.0.0.0 PORT=9000 ./server
+HOST=0.0.0.0 PORT=9000 ./server_
 ```
 
 ## Testing
