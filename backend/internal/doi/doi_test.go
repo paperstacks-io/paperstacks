@@ -1,4 +1,4 @@
-package doi_
+package doi
 
 import "testing"
 
@@ -25,7 +25,7 @@ func TestIsValid_invalid(t *testing.T) {
 		"",
 		"10.1000",
 		"10.1000/",
-		"not-a-doi_",
+		"not-a-doi",
 		"/10.1000/182",
 		"10.1000/182 extra",
 		"https://doi.org/10.1007/s10664-024-10522-z", // URL prefix, but the DOI part is valid

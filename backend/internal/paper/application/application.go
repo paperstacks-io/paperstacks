@@ -12,8 +12,11 @@ type Application struct {
 
 type Commands struct {
 	CreatePaper command.CreatePaperHandler
+	DeletePaper command.DeletePaperHandler
+	UpdatePaper command.UpdatePaperHandler
 }
 
 type Queries struct {
 	ReadPapers query.ReadPapersHandler
+	ReadPaper  query.ReadPaperHandler
 }

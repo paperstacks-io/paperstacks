@@ -14,9 +14,12 @@ func NewApplication(ctx context.Context, repository domain.Repository) applicati
 	return application.Application{
 		Commands: application.Commands{
 			CreatePaper: command.NewCreatePaperHandler(repository),
+			DeletePaper: command.NewDeletePaperHandler(repository),
+			UpdatePaper: command.NewUpdatePaperHandler(repository),
 		},
 		Queries: application.Queries{
 			ReadPapers: query.NewReadPapersHandler(repository),
+			ReadPaper:  query.NewReadPaperHandler(repository),
 		},
 	}
 }

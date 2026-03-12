@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -83,7 +83,7 @@ func (r UpdatePaperRequest) ToDomain() domain.Paper {
 	}
 }
 
-func paperToResponse(p domain.Paper) PaperResponse {
+func PaperToResponse(p domain.Paper) PaperResponse {
 	return PaperResponse{
 		DOI:                        p.DOI,
 		Title:                      p.Title,
@@ -104,7 +104,7 @@ func PapersToResponse(papers []domain.Paper) []PaperResponse {
 	out := make([]PaperResponse, 0, len(papers))
 
 	for _, p := range papers {
-		out = append(out, paperToResponse(p))
+		out = append(out, PaperToResponse(p))
 	}
 
 	return out

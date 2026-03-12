@@ -1,4 +1,4 @@
-package server_
+package doi
 
 import (
 	"errors"
@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/paperstacks.io/paperstacks/internal/doi_"
+	"github.com/paperstacks.io/paperstacks/internal/common/server"
 )
 
-func handleDOI(logger *slog.Logger, service *doi_.Service) http.Handler {
+func handleDOI(logger *slog.Logger, service *Service) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			rawDOI := r.PathValue("doi_")
+			rawDOI := r.PathValue("doi")
 			decodedDOI, err := url.PathUnescape(rawDOI)
 			if err != nil {
 				http.Error(w, "invalid DOI", http.StatusBadRequest)
@@ -22,18 +22,18 @@ func handleDOI(logger *slog.Logger, service *doi_.Service) http.Handler {
 			metadata, err := service.ResolveMetadata(r.Context(), decodedDOI)
 			if err != nil {
 				switch {
-				case errors.Is(err, doi_.ErrEmptyDOI):
+				case errors.Is(err, ErrEmptyDOI):
 					http.Error(w, err.Error(), http.StatusBadRequest)
-				case errors.Is(err, doi_.ErrNotFound):
+				case errors.Is(err, ErrNotFound):
 					http.Error(w, err.Error(), http.StatusNotFound)
 				default:
 					logger.Error("resolve DOI metadata", "DOI", decodedDOI, "error", err)
-					http.Error(w, "failed to resolve doi_ metadata", http.StatusBadGateway)
+					http.Error(w, "failed to resolve doi metadata", http.StatusBadGateway)
 				}
 				return
 			}
 
-			if err := encode(w, r, http.StatusOK, metadata); err != nil {
+			if err := server.Encode(w, r, http.StatusOK, metadata); err != nil {
 				logger.Error("encode DOI response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}

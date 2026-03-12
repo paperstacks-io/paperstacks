@@ -1,4 +1,4 @@
-package doi_
+package doi
 
 import "regexp"
 
@@ -8,7 +8,7 @@ import "regexp"
 // Fields are intentionally exported since the data is usually marshaled
 // directly into JSON for HTTP responses.
 type Metadata struct {
-	DOI       string   `json:"doi_"`
+	DOI       string   `json:"doi"`
 	Title     string   `json:"title"`
 	Publisher string   `json:"publisher"`
 	Type      string   `json:"type"`

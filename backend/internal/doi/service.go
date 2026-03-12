@@ -1,4 +1,4 @@
-package doi_
+package doi
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 const crossrefWorksURL = "https://api.crossref.org/works/"
 
 var (
-	ErrEmptyDOI = errors.New("doi_ is empty")
-	ErrNotFound = errors.New("doi_ not found")
+	ErrEmptyDOI = errors.New("doi is empty")
+	ErrNotFound = errors.New("doi not found")
 )
 
 type Service struct {

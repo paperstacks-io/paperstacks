@@ -1,6 +1,8 @@
 package command
 
 import (
+	"context"
+
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -14,6 +16,6 @@ func NewCreatePaperHandler(repository domain.Repository) CreatePaperHandler {
 	}
 }
 
-func (p *CreatePaperHandler) Handle(paper domain.Paper) error {
-	return nil
+func (p *CreatePaperHandler) Handle(ctx context.Context, paper domain.Paper) error {
+	return p.repository.Create(ctx, paper)
 }
