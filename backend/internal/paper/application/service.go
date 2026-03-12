@@ -7,23 +7,23 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-type Service struct {
+type PaperService struct {
 	repo domain.Repository
 }
 
-func NewService(repo domain.Repository) Service {
-	return Service{repo: repo}
+func NewPaperService(repo domain.Repository) *PaperService {
+	return &PaperService{repo: repo}
 }
 
-func (s Service) List(ctx context.Context) ([]domain.Paper, error) {
+func (s *PaperService) List(ctx context.Context) ([]domain.Paper, error) {
 	return s.repo.List(ctx)
 }
 
-func (s Service) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
+func (s *PaperService) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
 	return s.repo.GetByDOI(ctx, strings.TrimSpace(doi))
 }
 
-func (s Service) Create(ctx context.Context, paper domain.Paper) error {
+func (s *PaperService) Create(ctx context.Context, paper domain.Paper) error {
 	paper = paper.Normalize()
 	if err := paper.Validate(); err != nil {
 		return err
@@ -32,7 +32,7 @@ func (s Service) Create(ctx context.Context, paper domain.Paper) error {
 	return s.repo.Save(ctx, paper)
 }
 
-func (s Service) Update(ctx context.Context, doi string, paper domain.Paper) error {
+func (s *PaperService) Update(ctx context.Context, doi string, paper domain.Paper) error {
 	doi = strings.TrimSpace(doi)
 	paper = paper.Normalize()
 
@@ -53,6 +53,6 @@ func (s Service) Update(ctx context.Context, doi string, paper domain.Paper) err
 	return s.repo.Update(ctx, doi, paper)
 }
 
-func (s Service) Delete(ctx context.Context, doi string) error {
+func (s *PaperService) Delete(ctx context.Context, doi string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(doi))
 }

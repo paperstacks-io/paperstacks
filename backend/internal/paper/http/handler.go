@@ -10,7 +10,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-func handleListPapers(logger *slog.Logger, service application.Service) http.Handler {
+func handleListPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
@@ -41,7 +41,7 @@ func handleListPapers(logger *slog.Logger, service application.Service) http.Han
 	)
 }
 
-func handleGetPaperByDOI(logger *slog.Logger, service application.Service) http.Handler {
+func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
@@ -80,7 +80,7 @@ func handleGetPaperByDOI(logger *slog.Logger, service application.Service) http.
 	)
 }
 
-func handleDeletePaper(logger *slog.Logger, service application.Service) http.Handler {
+func handleDeletePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodDelete {
@@ -112,7 +112,7 @@ func handleDeletePaper(logger *slog.Logger, service application.Service) http.Ha
 	)
 }
 
-func handleSavePaper(logger *slog.Logger, service application.Service) http.Handler {
+func handleSavePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
@@ -150,7 +150,7 @@ func handleSavePaper(logger *slog.Logger, service application.Service) http.Hand
 	)
 }
 
-func HandleUpdatePaper(logger *slog.Logger, service application.Service) http.Handler {
+func HandleUpdatePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPut {

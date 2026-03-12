@@ -11,7 +11,7 @@ import (
 func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 	t.Parallel()
 
-	service := NewService(memory.NewRepository())
+	service := NewPaperService(memory.NewRepository())
 
 	err := service.Create(context.Background(), domain.Paper{
 		DOI:   " 10.1000/example ",
@@ -38,7 +38,7 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 func TestServiceUpdateRejectsMismatchedDOI(t *testing.T) {
 	t.Parallel()
 
-	service := NewService(memory.NewRepository())
+	service := NewPaperService(memory.NewRepository())
 
 	err := service.Update(context.Background(), "10.1109/isese.2005.1541817", domain.Paper{
 		DOI:   "10.9999/other",

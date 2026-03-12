@@ -5,17 +5,15 @@ import (
 	"net/http"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 )
 
 func AddPaperRoute(
 	mux *http.ServeMux,
 	logger *slog.Logger,
-	paperRepo domain.Repository,
+	paperService *application.PaperService,
 ) {
 	defaultMiddle := middleware.NewDefault(logger)
-	paperService := application.NewService(paperRepo)
 
 	mux.Handle(http.MethodGet+" /papers/", defaultMiddle(handleListPapers(logger, paperService)))
 	mux.Handle(http.MethodGet+" /papers/doi/{doi...}", defaultMiddle(handleGetPaperByDOI(logger, paperService)))

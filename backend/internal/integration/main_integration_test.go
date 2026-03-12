@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/tests"
+	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
@@ -32,8 +33,8 @@ func startApplication() bool {
 	handle := http.NewServeMux()
 	server.AddRoute(handle, context.Background(), logger, nil)
 
-	paperRepo := memory.NewRepository()
-	paperHttp.AddPaperRoute(handle, logger, paperRepo)
+	paperService := application.NewPaperService(memory.NewRepository())
+	paperHttp.AddPaperRoute(handle, logger, paperService)
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(testHost, testPort),
