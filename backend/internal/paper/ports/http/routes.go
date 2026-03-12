@@ -18,7 +18,7 @@ func AddRouteTest(
 	mux.Handle(http.MethodGet+" /papers/", defaultMiddle(paperHttpServer.HandleReadPapers(ctx, logger)))
 	mux.Handle(http.MethodGet+" /papers/doi/{doi...}", defaultMiddle(paperHttpServer.HandleReadPaper(ctx, logger)))
 	mux.Handle(http.MethodPost+" /papers/", defaultMiddle(paperHttpServer.HandleCreatePaper(ctx, logger)))
-	mux.Handle(http.MethodPut+" /papers/doi/{doi...}", defaultMiddle(paperHttpServer.HandleDeletePaper(ctx, logger)))
+	mux.Handle(http.MethodDelete+" /papers/doi/{doi...}", defaultMiddle(paperHttpServer.HandleDeletePaper(ctx, logger)))
 	mux.Handle(http.MethodPut+" /papers/doi/{doi...}", defaultMiddle(paperHttpServer.HandleUpdatePaper(ctx, logger)))
 	return mux
 }
