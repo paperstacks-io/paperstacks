@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
-	"github.com/paperstacks.io/paperstacks/internal/paper"
+	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-func HandleReadPapers(logger *slog.Logger, paperRepo paper.Repository) http.Handler {
+func HandleReadPapers(logger *slog.Logger, paperRepo domain.Repository) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
@@ -18,9 +18,9 @@ func HandleReadPapers(logger *slog.Logger, paperRepo paper.Repository) http.Hand
 				return
 			}
 
-			papers, err := paperRepo.ReadAll(r.Context())
+			papers, err := paperRepo.List(r.Context())
 			if err != nil {
-				if errors.Is(err, paper.ErrPaperNotFound) {
+				if errors.Is(err, domain.ErrPaperNotFound) {
 					logger.Error("read papers", "error", "papers "+err.Error())
 					http.Error(w, "papers "+err.Error(), http.StatusNotFound)
 					return
@@ -40,7 +40,7 @@ func HandleReadPapers(logger *slog.Logger, paperRepo paper.Repository) http.Hand
 	)
 }
 
-func HandleReadPaper(logger *slog.Logger, paperRepo paper.Repository) http.Handler {
+func HandleReadPaper(logger *slog.Logger, paperRepo domain.Repository) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
@@ -56,9 +56,10 @@ func HandleReadPaper(logger *slog.Logger, paperRepo paper.Repository) http.Handl
 				return
 			}
 
-			p, err := paperRepo.Read(r.Context(), id)
+			p, err := paperRepo.GetByDOI(r.Context(), id)
 			if err != nil {
-				if errors.Is(err, paper.ErrPaperNotFound) {
+
+				if errors.Is(err, domain.ErrPaperNotFound) {
 					logger.Error("read paper", "doi", id, "error", "paper "+err.Error())
 					http.Error(w, "paper "+err.Error(), http.StatusNotFound)
 					return
@@ -78,7 +79,7 @@ func HandleReadPaper(logger *slog.Logger, paperRepo paper.Repository) http.Handl
 	)
 }
 
-func HandleDeletePaper(logger *slog.Logger, paperRepo paper.Repository) http.Handler {
+func HandleDeletePaper(logger *slog.Logger, paperRepo domain.Repository) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodDelete {
@@ -94,7 +95,7 @@ func HandleDeletePaper(logger *slog.Logger, paperRepo paper.Repository) http.Han
 			}
 
 			if err := paperRepo.Delete(r.Context(), id); err != nil {
-				if errors.Is(err, paper.ErrPaperNotFound) {
+				if errors.Is(err, domain.ErrPaperNotFound) {
 					logger.Error("delete paper", "id", id, "error", err)
 					http.Error(w, "paper not found", http.StatusNotFound)
 					return
@@ -110,7 +111,7 @@ func HandleDeletePaper(logger *slog.Logger, paperRepo paper.Repository) http.Han
 	)
 }
 
-func HandleCreatePaper(logger *slog.Logger, paperRepo paper.Repository) http.Handler {
+func HandleCreatePaper(logger *slog.Logger, paperRepo domain.Repository) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
@@ -126,8 +127,8 @@ func HandleCreatePaper(logger *slog.Logger, paperRepo paper.Repository) http.Han
 			}
 
 			p := req.ToDomain()
-			if err := paperRepo.Create(r.Context(), p); err != nil {
-				if errors.Is(err, paper.ErrPaperAlreadyExists) {
+			if err := paperRepo.Save(r.Context(), p); err != nil {
+				if errors.Is(err, domain.ErrPaperAlreadyExists) {
 					logger.Error("create paper", "doi", p.DOI, "error", err)
 					http.Error(w, err.Error(), http.StatusConflict)
 					return
@@ -143,7 +144,7 @@ func HandleCreatePaper(logger *slog.Logger, paperRepo paper.Repository) http.Han
 	)
 }
 
-func HandleUpdatePaper(logger *slog.Logger, paperRepo paper.Repository) http.Handler {
+func HandleUpdatePaper(logger *slog.Logger, paperRepo domain.Repository) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPut {
@@ -166,7 +167,7 @@ func HandleUpdatePaper(logger *slog.Logger, paperRepo paper.Repository) http.Han
 
 			p := req.ToDomain()
 			if err := paperRepo.Update(r.Context(), id, p); err != nil {
-				if errors.Is(err, paper.ErrPaperNotFound) {
+				if errors.Is(err, domain.ErrPaperNotFound) {
 					logger.Error("update paper", "id", id, "error", "paper "+err.Error())
 					http.Error(w, "paper not found", http.StatusNotFound)
 					return
