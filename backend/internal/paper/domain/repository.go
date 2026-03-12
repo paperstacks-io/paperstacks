@@ -8,6 +8,8 @@ import (
 var (
 	ErrPaperNotFound      = errors.New("paper not found")
 	ErrPaperAlreadyExists = errors.New("paper already exists")
+	ErrInvalidPaper       = errors.New("invalid paper")
+	ErrDOIMismatch        = errors.New("paper DOI does not match resource DOI")
 )
 
 type Repository interface {

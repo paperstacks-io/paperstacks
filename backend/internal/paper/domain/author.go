@@ -1,5 +1,7 @@
 package domain
 
+import "strings"
+
 // Author represents a person who contributed to a publication.
 //
 // It contains the author's personal name components, institutional
@@ -7,23 +9,23 @@ package domain
 // identify researchers.
 type Author struct {
 	// NameFirst is the author's given (first) name.
-	NameFirst string `json:"name-first"`
+	NameFirst string
 
 	// NameMiddle is the author's middle name or middle initials.
 	// It may be empty if the author does not use a middle name.
-	NameMiddle string `json:"name-middle"`
+	NameMiddle string
 
 	// NameLast is the author's family or last name.
-	NameLast string `json:"name-last"`
+	NameLast string
 
 	// Affiliation specifies the institution or organization
 	// the author was associated with at the time of publication.
-	Affiliation string `json:"affiliation"`
+	Affiliation string
 
 	// ORCID is the author's ORCID identifier, a persistent
 	// digital identifier for researchers (e.g. "0000-0002-1825-0097").
 	// It may be empty if the author has no ORCID.
-	ORCID string `json:"orcid"`
+	ORCID string
 }
 
 // FullName returns the author's full name assembled from
@@ -33,4 +35,14 @@ func (a Author) FullName() string {
 		return a.NameFirst + " " + a.NameMiddle + " " + a.NameLast
 	}
 	return a.NameFirst + " " + a.NameLast
+}
+
+func (a Author) Normalize() Author {
+	a.NameFirst = strings.TrimSpace(a.NameFirst)
+	a.NameMiddle = strings.TrimSpace(a.NameMiddle)
+	a.NameLast = strings.TrimSpace(a.NameLast)
+	a.Affiliation = strings.TrimSpace(a.Affiliation)
+	a.ORCID = strings.TrimSpace(a.ORCID)
+
+	return a
 }

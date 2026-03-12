@@ -1,44 +1,81 @@
 package domain
 
+import "strings"
+
 // Paper represents a scientific publication with bibliographic metadata,
 // authors, and associated documents such as PDFs.
 type Paper struct {
 	// DOI is the Digital Object Identifier that uniquely identifies
 	// the publication (e.g. "10.1145/1234567.1234568").
-	DOI string `json:"DOI"`
+	DOI string
 
 	// Title is the full title of the publication.
-	Title string `json:"title"`
+	Title string
 
 	// TitleShort is an abbreviated version of the title used for citations.
-	TitleShort string `json:"title-short"`
+	TitleShort string
 
 	// Authors lists all authors who contributed to the publication.
-	Authors []Author `json:"authors"`
+	Authors []Author
 
 	// PublicationYear is the year the work was published or made public.
-	PublicationYear string `json:"publication-year"`
+	PublicationYear string
 
 	// PublicationStatus describes the publication state
 	// (e.g., "published", "preprint", or "retracted").
-	PublicationStatus string `json:"publication-status"`
+	PublicationStatus string
 
 	// PublicationStatusTimestamp records when the publication status was changed
 	// or generated, expressed as an ISO 8601 timestamp.
-	PublicationStatusTimestamp string `json:"publication-status-timestamp"`
+	PublicationStatusTimestamp string
 
 	// Abstract contains the summary of the publication.
-	Abstract string `json:"abstract"`
+	Abstract string
 
 	// Keywords contains search keywords associated with the paper.
-	Keywords string `json:"keywords"`
+	Keywords string
 
 	// Type specifies the publication type (e.g. "journal" or "conference").
-	Type string `json:"type"`
+	Type string
 
 	// PDFs contains URIs pointing to PDF versions of the paper.
-	PDFs []string `json:"pdfs"`
+	PDFs []string
 
 	// Metadata contains detailed bibliographic metadata for the publication.
-	Metadata Metadata `json:"metadata"`
+	Metadata Metadata
+}
+
+func (p Paper) Normalize() Paper {
+	p.DOI = strings.TrimSpace(p.DOI)
+	p.Title = strings.TrimSpace(p.Title)
+	p.TitleShort = strings.TrimSpace(p.TitleShort)
+	p.PublicationYear = strings.TrimSpace(p.PublicationYear)
+	p.PublicationStatus = strings.TrimSpace(p.PublicationStatus)
+	p.PublicationStatusTimestamp = strings.TrimSpace(p.PublicationStatusTimestamp)
+	p.Abstract = strings.TrimSpace(p.Abstract)
+	p.Keywords = strings.TrimSpace(p.Keywords)
+	p.Type = strings.TrimSpace(p.Type)
+	p.Metadata = p.Metadata.Normalize()
+
+	for i := range p.Authors {
+		p.Authors[i] = p.Authors[i].Normalize()
+	}
+
+	for i := range p.PDFs {
+		p.PDFs[i] = strings.TrimSpace(p.PDFs[i])
+	}
+
+	return p
+}
+
+func (p Paper) Validate() error {
+	if strings.TrimSpace(p.DOI) == "" {
+		return ErrInvalidPaper
+	}
+
+	if strings.TrimSpace(p.Title) == "" {
+		return ErrInvalidPaper
+	}
+
+	return nil
 }

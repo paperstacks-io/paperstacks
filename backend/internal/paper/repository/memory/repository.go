@@ -16,7 +16,10 @@ func NewRepository() *Repository {
 	return &Repository{data: seedData()}
 }
 
-func (r *Repository) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
+func (r *Repository) GetByDOI(_ context.Context, doi string) (domain.Paper, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	for _, item := range r.data {
 		if item.DOI == doi {
 			return item, nil
@@ -42,10 +45,9 @@ func (r *Repository) Save(_ context.Context, paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for i, item := range r.data {
+	for _, item := range r.data {
 		if item.DOI == paper.DOI {
-			r.data[i] = paper
-			return nil
+			return domain.ErrPaperAlreadyExists
 		}
 	}
 

@@ -14,7 +14,7 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/doi"
 	phttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
-	"github.com/paperstacks.io/paperstacks/internal/paper/infrastructure/persistence/memory"
+	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
@@ -44,7 +44,6 @@ func run(
 	)
 	phttp.AddPaperRoute(
 		handle,
-		ctx,
 		logger,
 		paperRepo,
 	)
