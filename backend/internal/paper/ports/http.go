@@ -1,4 +1,4 @@
-package handlers
+package ports
 
 import (
 	"context"
@@ -7,11 +7,21 @@ import (
 	"net/http"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
+	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/infrastructure/persistence/memory"
-	"github.com/paperstacks.io/paperstacks/internal/paper/service"
 )
 
-func HandleReadPapers(ctx context.Context, logger *slog.Logger, service *service.Application) http.Handler {
+type HttpServer struct {
+	application application.Application
+}
+
+func NewHttpServer(app application.Application) *HttpServer {
+	return &HttpServer{
+		application: app,
+	}
+}
+
+func (h *HttpServer) HandleReadPapers(ctx context.Context, logger *slog.Logger) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
@@ -20,7 +30,7 @@ func HandleReadPapers(ctx context.Context, logger *slog.Logger, service *service
 				return
 			}
 
-			papers, err := service.ReadAll(ctx)
+			papers, err := h.application.Queries.ReadPapers.Handle(ctx)
 			if err != nil {
 				if errors.Is(err, memory.ErrPaperAlreadyExists) {
 					logger.Error("read papers", "error", "papers "+err.Error())

@@ -3,19 +3,20 @@ package service
 import (
 	"context"
 
+	"github.com/paperstacks.io/paperstacks/internal/paper/application"
+	"github.com/paperstacks.io/paperstacks/internal/paper/application/command"
+	"github.com/paperstacks.io/paperstacks/internal/paper/application/query"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-type Application struct {
-	repository domain.Repository
-}
-
-func NewApplication(repository domain.Repository) *Application {
-	return &Application{
-		repository: repository,
+func NewApplication(ctx context.Context, repository domain.Repository) application.Application {
+	_ = ctx
+	return application.Application{
+		Commands: application.Commands{
+			CreatePaper: command.NewCreatePaperHandler(repository),
+		},
+		Queries: application.Queries{
+			ReadPapers: query.NewReadPapersHandler(repository),
+		},
 	}
-}
-
-func (r *Application) ReadAll(ctx context.Context) ([]domain.Paper, error) {
-	return r.repository.ReadAll(ctx)
 }

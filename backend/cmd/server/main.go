@@ -15,6 +15,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/doi_"
 	paperhttp "github.com/paperstacks.io/paperstacks/internal/paper/infrastructure/http"
 	"github.com/paperstacks.io/paperstacks/internal/paper/infrastructure/persistence/memory"
+	"github.com/paperstacks.io/paperstacks/internal/paper/ports"
 	"github.com/paperstacks.io/paperstacks/internal/paper/service"
 	"github.com/paperstacks.io/paperstacks/internal/paper_"
 	"github.com/paperstacks.io/paperstacks/internal/server_"
@@ -47,12 +48,16 @@ func run(
 		return err
 	}
 
-	paperApplication := service.NewApplication(memory.NewMemoryPaperRepository())
+	paperApplication := service.NewApplication(
+		ctx,
+		memory.NewMemoryPaperRepository(),
+	)
+	paperHttpServer := ports.NewHttpServer(paperApplication)
 	handleTest := paperhttp.AddRouteTest(
 		http.NewServeMux(),
 		ctx,
 		logger,
-		paperApplication,
+		paperHttpServer,
 	)
 	httpServerTest := &http.Server{
 		Addr:         net.JoinHostPort("localhost", "8090"),
