@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	"github.com/paperstacks.io/paperstacks/internal/doi"
 )
 
@@ -33,7 +34,7 @@ func handleDOI(logger *slog.Logger, service *doi.Service) http.Handler {
 				return
 			}
 
-			if err := encode(w, r, http.StatusOK, metadata); err != nil {
+			if err := server.Encode(w, r, http.StatusOK, metadata); err != nil {
 				logger.Error("encode DOI response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
