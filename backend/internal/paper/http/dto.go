@@ -2,37 +2,37 @@ package http
 
 import "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 
-type paperRequest struct {
-	DOI                        string            `json:"DOI"`
-	Title                      string            `json:"title"`
-	TitleShort                 string            `json:"title-short"`
-	Authors                    []authorRequest   `json:"authors"`
-	PublicationYear            string            `json:"publication-year"`
-	PublicationStatus          string            `json:"publication-status"`
-	PublicationStatusTimestamp string            `json:"publication-status-timestamp"`
-	Abstract                   string            `json:"abstract"`
-	Keywords                   string            `json:"keywords"`
-	Type                       string            `json:"type"`
-	PDFs                       []string          `json:"pdfs"`
-	Metadata                   metadataRequest   `json:"metadata"`
+type PaperRequest struct {
+	DOI                        string          `json:"DOI"`
+	Title                      string          `json:"title"`
+	TitleShort                 string          `json:"title-short"`
+	Authors                    []AuthorRequest `json:"authors"`
+	PublicationYear            string          `json:"publication-year"`
+	PublicationStatus          string          `json:"publication-status"`
+	PublicationStatusTimestamp string          `json:"publication-status-timestamp"`
+	Abstract                   string          `json:"abstract"`
+	Keywords                   string          `json:"keywords"`
+	Type                       string          `json:"type"`
+	PDFs                       []string        `json:"pdfs"`
+	Metadata                   MetadataRequest `json:"metadata"`
 }
 
-type paperResponse struct {
-	DOI                        string             `json:"DOI"`
-	Title                      string             `json:"title"`
-	TitleShort                 string             `json:"title-short"`
-	Authors                    []authorResponse `json:"authors"`
-	PublicationYear            string             `json:"publication-year"`
-	PublicationStatus          string             `json:"publication-status"`
-	PublicationStatusTimestamp string             `json:"publication-status-timestamp"`
-	Abstract                   string             `json:"abstract"`
-	Keywords                   string             `json:"keywords"`
-	Type                       string             `json:"type"`
-	PDFs                       []string           `json:"pdfs"`
-	Metadata                   metadataResponse `json:"metadata"`
+type PaperResponse struct {
+	DOI                        string           `json:"DOI"`
+	Title                      string           `json:"title"`
+	TitleShort                 string           `json:"title-short"`
+	Authors                    []AuthorResponse `json:"authors"`
+	PublicationYear            string           `json:"publication-year"`
+	PublicationStatus          string           `json:"publication-status"`
+	PublicationStatusTimestamp string           `json:"publication-status-timestamp"`
+	Abstract                   string           `json:"abstract"`
+	Keywords                   string           `json:"keywords"`
+	Type                       string           `json:"type"`
+	PDFs                       []string         `json:"pdfs"`
+	Metadata                   MetadataResponse `json:"metadata"`
 }
 
-type authorRequest struct {
+type AuthorRequest struct {
 	NameFirst   string `json:"name-first"`
 	NameMiddle  string `json:"name-middle"`
 	NameLast    string `json:"name-last"`
@@ -40,7 +40,7 @@ type authorRequest struct {
 	ORCID       string `json:"orcid"`
 }
 
-type authorResponse struct {
+type AuthorResponse struct {
 	NameFirst   string `json:"name-first"`
 	NameMiddle  string `json:"name-middle"`
 	NameLast    string `json:"name-last"`
@@ -48,7 +48,7 @@ type authorResponse struct {
 	ORCID       string `json:"orcid"`
 }
 
-type metadataRequest struct {
+type MetadataRequest struct {
 	Publisher           string   `json:"publisher"`
 	PublishedIn         string   `json:"published-in"`
 	Pages               string   `json:"pages"`
@@ -63,7 +63,7 @@ type metadataRequest struct {
 	DataSourceTimestamp string   `json:"data-source-timestamp"`
 }
 
-type metadataResponse struct {
+type MetadataResponse struct {
 	Publisher           string   `json:"publisher"`
 	PublishedIn         string   `json:"published-in"`
 	Pages               string   `json:"pages"`
@@ -78,7 +78,7 @@ type metadataResponse struct {
 	DataSourceTimestamp string   `json:"data-source-timestamp"`
 }
 
-func (r paperRequest) toDomain() domain.Paper {
+func (r PaperRequest) toDomain() domain.Paper {
 	authors := make([]domain.Author, 0, len(r.Authors))
 	for _, author := range r.Authors {
 		authors = append(authors, author.toDomain())
@@ -100,13 +100,13 @@ func (r paperRequest) toDomain() domain.Paper {
 	}
 }
 
-func newPaperResponse(p domain.Paper) paperResponse {
-	authors := make([]authorResponse, 0, len(p.Authors))
+func NewPaperResponse(p domain.Paper) PaperResponse {
+	authors := make([]AuthorResponse, 0, len(p.Authors))
 	for _, author := range p.Authors {
-		authors = append(authors, newAuthorResponse(author))
+		authors = append(authors, NewAuthorResponse(author))
 	}
 
-	return paperResponse{
+	return PaperResponse{
 		DOI:                        p.DOI,
 		Title:                      p.Title,
 		TitleShort:                 p.TitleShort,
@@ -118,20 +118,20 @@ func newPaperResponse(p domain.Paper) paperResponse {
 		Keywords:                   p.Keywords,
 		Type:                       p.Type,
 		PDFs:                       p.PDFs,
-		Metadata:                   newMetadataResponse(p.Metadata),
+		Metadata:                   NewMetadataResponse(p.Metadata),
 	}
 }
 
-func newPaperResponses(papers []domain.Paper) []paperResponse {
-	out := make([]paperResponse, 0, len(papers))
+func NewPaperResponses(papers []domain.Paper) []PaperResponse {
+	out := make([]PaperResponse, 0, len(papers))
 	for _, paper := range papers {
-		out = append(out, newPaperResponse(paper))
+		out = append(out, NewPaperResponse(paper))
 	}
 
 	return out
 }
 
-func (r authorRequest) toDomain() domain.Author {
+func (r AuthorRequest) toDomain() domain.Author {
 	return domain.Author{
 		NameFirst:   r.NameFirst,
 		NameMiddle:  r.NameMiddle,
@@ -141,8 +141,8 @@ func (r authorRequest) toDomain() domain.Author {
 	}
 }
 
-func newAuthorResponse(a domain.Author) authorResponse {
-	return authorResponse{
+func NewAuthorResponse(a domain.Author) AuthorResponse {
+	return AuthorResponse{
 		NameFirst:   a.NameFirst,
 		NameMiddle:  a.NameMiddle,
 		NameLast:    a.NameLast,
@@ -151,7 +151,7 @@ func newAuthorResponse(a domain.Author) authorResponse {
 	}
 }
 
-func (r metadataRequest) toDomain() domain.Metadata {
+func (r MetadataRequest) toDomain() domain.Metadata {
 	return domain.Metadata{
 		Publisher:           r.Publisher,
 		PublishedIn:         r.PublishedIn,
@@ -168,8 +168,8 @@ func (r metadataRequest) toDomain() domain.Metadata {
 	}
 }
 
-func newMetadataResponse(m domain.Metadata) metadataResponse {
-	return metadataResponse{
+func NewMetadataResponse(m domain.Metadata) MetadataResponse {
+	return MetadataResponse{
 		Publisher:           m.Publisher,
 		PublishedIn:         m.PublishedIn,
 		Pages:               m.Pages,

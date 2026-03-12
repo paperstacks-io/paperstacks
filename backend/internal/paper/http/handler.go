@@ -22,17 +22,17 @@ func handleListPapers(logger *slog.Logger, service application.Service) http.Han
 			papers, err := service.List(r.Context())
 			if err != nil {
 				if errors.Is(err, domain.ErrPaperNotFound) {
-					logger.Error("read papers", "error", "papers "+err.Error())
-					http.Error(w, "papers "+err.Error(), http.StatusNotFound)
+					logger.Error("read papers", "error", err.Error())
+					http.Error(w, err.Error(), http.StatusNotFound)
 					return
 				}
 
-				logger.Error("read papers", "error", "papers "+err.Error())
+				logger.Error("read papers", "error", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			resp := newPaperResponses(papers)
+			resp := NewPaperResponses(papers)
 			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 				logger.Error("encode paper response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -61,8 +61,8 @@ func handleGetPaperByDOI(logger *slog.Logger, service application.Service) http.
 			if err != nil {
 
 				if errors.Is(err, domain.ErrPaperNotFound) {
-					logger.Error("read paper", "doi", id, "error", "paper "+err.Error())
-					http.Error(w, "paper "+err.Error(), http.StatusNotFound)
+					logger.Error("read paper", "doi", id, "error", err.Error())
+					http.Error(w, err.Error(), http.StatusNotFound)
 					return
 				}
 
@@ -71,7 +71,7 @@ func handleGetPaperByDOI(logger *slog.Logger, service application.Service) http.
 				return
 			}
 
-			response := newPaperResponse(p)
+			response := NewPaperResponse(p)
 			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
 				logger.Error("encode paper response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -112,7 +112,7 @@ func handleDeletePaper(logger *slog.Logger, service application.Service) http.Ha
 	)
 }
 
-func handleCreatePaper(logger *slog.Logger, service application.Service) http.Handler {
+func handleSavePaper(logger *slog.Logger, service application.Service) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
@@ -121,7 +121,7 @@ func handleCreatePaper(logger *slog.Logger, service application.Service) http.Ha
 				return
 			}
 
-			req, err := server.Decode[paperRequest](r)
+			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
@@ -165,7 +165,7 @@ func HandleUpdatePaper(logger *slog.Logger, service application.Service) http.Ha
 				return
 			}
 
-			req, err := server.Decode[paperRequest](r)
+			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return

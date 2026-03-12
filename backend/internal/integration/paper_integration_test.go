@@ -1,21 +1,21 @@
 //nolint:errcheck // to ignore not checking err when defer resp.Body.Close()
-package testintegration
+package integration
 
 import (
 	"net/http"
 	"testing"
 
-	"github.com/paperstacks.io/paperstacks/internal/server"
+	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 )
 
-func TestIntegrationPapersGetAll(t *testing.T) {
-	endpoint := testAPIPath() + "/papers/"
+func TestIntegrationListPapers(t *testing.T) {
+	endpoint := testAPIPath + "/papers/"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusOK)
 
-	var papers []server.PaperResponse
+	var papers []paperHttp.PaperResponse
 	decodeJSON(t, resp, &papers)
 
 	if len(papers) < 4 {
@@ -23,15 +23,15 @@ func TestIntegrationPapersGetAll(t *testing.T) {
 	}
 }
 
-func TestIntegrationPapersGetSingle(t *testing.T) {
+func TestIntegrationGetPaperByDOI(t *testing.T) {
 	doi := "10.1109/isese.2005.1541817"
-	endpoint := testAPIPath() + "/papers/doi/" + doi
+	endpoint := testAPIPath + "/papers/doi/" + doi
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusOK)
 
-	var paper server.PaperResponse
+	var paper paperHttp.PaperResponse
 	decodeJSON(t, resp, &paper)
 
 	if paper.DOI != doi {
@@ -39,8 +39,8 @@ func TestIntegrationPapersGetSingle(t *testing.T) {
 	}
 }
 
-func TestIntegrationPapersGetSingleUnknown(t *testing.T) {
-	endpoint := testAPIPath() + "/papers/doi/doesntexist"
+func TestIntegrationPapersGetPaperByDOIUnknown(t *testing.T) {
+	endpoint := testAPIPath + "/papers/doi/doesntexist"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -48,43 +48,43 @@ func TestIntegrationPapersGetSingleUnknown(t *testing.T) {
 	assertBody(t, resp, "paper not found\n")
 }
 
-func TestIntegrationPapersCreate(t *testing.T) {
-	paperBody := server.CreatePaperRequest{
+func TestIntegrationSavePaper(t *testing.T) {
+	paperReq := paperHttp.PaperRequest{
 		DOI:   "10.1000/new",
 		Title: "Created Paper",
 	}
 
-	endpoint := testAPIPath() + "/papers/"
-	resp := doPostRequest(t, endpoint, paperBody)
+	endpoint := testAPIPath + "/papers/"
+	resp := doPostRequest(t, endpoint, paperReq)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusCreated)
 
 	// Verify it was created
-	verifyEndpoint := testAPIPath() + "/papers/doi/" + paperBody.DOI
+	verifyEndpoint := testAPIPath + "/papers/doi/" + paperReq.DOI
 	verifyResp := doGetRequest(t, verifyEndpoint)
 	defer verifyResp.Body.Close()
 
 	assertStatusCode(t, verifyResp, http.StatusOK)
 }
 
-func TestIntegrationPapersUpdate(t *testing.T) {
+func TestIntegrationUpdatePaper(t *testing.T) {
 	doi := "10.1109/isese.2005.1541817"
-	paperBody := server.UpdatePaperRequest{
+	paperBody := paperHttp.PaperRequest{
 		Title: "Updated Paper",
 	}
 
-	endpoint := testAPIPath() + "/papers/doi/" + doi
+	endpoint := testAPIPath + "/papers/doi/" + doi
 	resp := doPutRequest(t, endpoint, paperBody)
 	defer resp.Body.Close()
 
-	assertStatusCode(t, resp, http.StatusOK)
+	assertStatusCode(t, resp, http.StatusNoContent)
 
 	// Verify it was updated
 	verifyResp := doGetRequest(t, endpoint)
 	defer verifyResp.Body.Close()
 
-	var paper server.PaperResponse
+	var paper paperHttp.PaperResponse
 	decodeJSON(t, verifyResp, &paper)
 
 	if paper.Title != "Updated Paper" {
@@ -92,19 +92,19 @@ func TestIntegrationPapersUpdate(t *testing.T) {
 	}
 }
 
-func TestIntegrationPapersDelete(t *testing.T) {
+func TestIntegrationDeletePaper(t *testing.T) {
 	doiToDelete := "to-be-deleted"
-	paperBody := server.CreatePaperRequest{
+	paperBody := paperHttp.PaperRequest{
 		DOI:   doiToDelete,
 		Title: "To Be Deleted",
 	}
 
 	// Create the paper to delete
-	createEndpoint := testAPIPath() + "/papers/doi/"
+	createEndpoint := testAPIPath + "/papers/doi/"
 	doPostRequest(t, createEndpoint, paperBody)
 
 	// Delete the paper
-	deleteEndpoint := testAPIPath() + "/papers/doi/" + doiToDelete
+	deleteEndpoint := testAPIPath + "/papers/doi/" + doiToDelete
 	deleteResp := doDeleteRequest(t, deleteEndpoint)
 	defer deleteResp.Body.Close()
 

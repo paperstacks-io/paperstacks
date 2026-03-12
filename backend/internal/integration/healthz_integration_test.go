@@ -1,4 +1,4 @@
-package testintegration
+package integration
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestIntegrationHealthz(t *testing.T) {
-	endpoint := testAPIPath() + "/healthz"
+	endpoint := testAPIPath + "/healthz"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
