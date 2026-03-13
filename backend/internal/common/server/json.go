@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// encode writes the response as JSON
+// Encode writes the response as JSON
 // [Handle decoding/encoding in one place](https://grafana.com/blog/2024/02/09/how-i-write-http-services-in-go-after-13-years/#handle-decodingencoding-in-one-place)
 func Encode[T any](w http.ResponseWriter, _ *http.Request, status int, v T) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -17,7 +17,7 @@ func Encode[T any](w http.ResponseWriter, _ *http.Request, status int, v T) erro
 	return nil
 }
 
-// decode request from JSON
+// Decode request from JSON
 // [Handle decoding/encoding in one place](https://grafana.com/blog/2024/02/09/how-i-write-http-services-in-go-after-13-years/#handle-decodingencoding-in-one-place)
 func Decode[T any](r *http.Request) (T, error) {
 	var v T

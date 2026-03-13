@@ -56,3 +56,7 @@ func (s *PaperService) Update(ctx context.Context, doi string, paper domain.Pape
 func (s *PaperService) Delete(ctx context.Context, doi string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(doi))
 }
+
+func (s *PaperService) GetByTitle(ctx context.Context, title string) ([]domain.Paper, error) {
+	return s.repo.GetByTitle(ctx, title)
+}

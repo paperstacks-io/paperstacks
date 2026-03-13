@@ -15,7 +15,9 @@ var (
 type Repository interface {
 	// queries
 	GetByDOI(ctx context.Context, doi string) (Paper, error)
+	GetByTitle(ctx context.Context, title string) ([]Paper, error)
 	List(ctx context.Context) ([]Paper, error)
+
 	// commands
 	Save(ctx context.Context, paper Paper) error
 	Update(ctx context.Context, doi string, paper Paper) error

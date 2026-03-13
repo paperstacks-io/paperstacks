@@ -82,3 +82,21 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 
 	return domain.ErrPaperNotFound
 }
+
+func (r *Repository) GetByTitle(_ context.Context, title string) ([]domain.Paper, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var result []domain.Paper
+	for _, item := range r.data {
+		if item.Title == title {
+			result = append(result, item)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, domain.ErrPaperNotFound
+	}
+
+	return result, nil
+}
