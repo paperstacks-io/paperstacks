@@ -31,7 +31,7 @@ var client *http.Client
 func startApplication() bool {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	handle := http.NewServeMux()
-	server.AddRoute(handle, context.Background(), logger, nil)
+	server.AddRoute(handle, context.Background(), logger)
 
 	paperService := application.NewPaperService(memory.NewRepository())
 	paperHttp.AddPaperRoute(handle, logger, paperService)
