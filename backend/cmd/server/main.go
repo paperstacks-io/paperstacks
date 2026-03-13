@@ -51,7 +51,7 @@ func run(
 	doiHttp.AddDOIRoute(handle, logger, doiService)
 
 	httpServer := &http.Server{
-		Addr:         net.JoinHostPort("localhost", "8080"),
+		Addr:         net.JoinHostPort(host, port),
 		Handler:      handle,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
