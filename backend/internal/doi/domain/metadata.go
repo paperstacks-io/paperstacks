@@ -1,4 +1,4 @@
-package doi
+package domain
 
 import "regexp"
 

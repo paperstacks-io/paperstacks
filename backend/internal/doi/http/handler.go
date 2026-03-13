@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"errors"
@@ -7,10 +7,10 @@ import (
 	"net/url"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
-	"github.com/paperstacks.io/paperstacks/internal/doi"
+	"github.com/paperstacks.io/paperstacks/internal/doi/application"
 )
 
-func handleDOI(logger *slog.Logger, service *doi.Service) http.Handler {
+func handleDOI(logger *slog.Logger, service *application.DOIService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			rawDOI := r.PathValue("doi")
@@ -23,9 +23,9 @@ func handleDOI(logger *slog.Logger, service *doi.Service) http.Handler {
 			metadata, err := service.ResolveMetadata(r.Context(), decodedDOI)
 			if err != nil {
 				switch {
-				case errors.Is(err, doi.ErrEmptyDOI):
+				case errors.Is(err, application.ErrEmptyDOI):
 					http.Error(w, err.Error(), http.StatusBadRequest)
-				case errors.Is(err, doi.ErrNotFound):
+				case errors.Is(err, application.ErrNotFound):
 					http.Error(w, err.Error(), http.StatusNotFound)
 				default:
 					logger.Error("resolve DOI metadata", "DOI", decodedDOI, "error", err)
@@ -34,7 +34,8 @@ func handleDOI(logger *slog.Logger, service *doi.Service) http.Handler {
 				return
 			}
 
-			if err := server.Encode(w, r, http.StatusOK, metadata); err != nil {
+			response := NewMetadataResponse(metadata)
+			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
 				logger.Error("encode DOI response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
