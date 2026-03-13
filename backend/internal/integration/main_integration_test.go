@@ -1,5 +1,5 @@
 // testintegration contains all integration tests against the http API
-package testintegration
+package integration
 
 import (
 	"context"
@@ -13,31 +13,29 @@ import (
 	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/tests"
-	"github.com/paperstacks.io/paperstacks/internal/paper"
+	"github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
+	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
 const (
 	testHost      = "localhost"
 	testPort      = "9999"
+	testAPIPath   = "http://" + testHost + ":" + testPort
 	clientTimeout = 10 * time.Second
 )
 
 var client *http.Client
 
-func testAPIPath() string {
-	return "http://" + testHost + ":" + testPort
-}
+func startApplication() bool {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	handle := http.NewServeMux()
+	server.AddRoute(handle, context.Background(), logger, nil)
 
-func startService() bool {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	paperService, err := paper.NewService(
-		paper.MemoryRepository(paper.NewMemoryRepo()),
-	)
-	if err != nil {
-		return false
-	}
-	handle := server.AddRoute(http.NewServeMux(), context.Background(), logger, nil, paperService)
+	paperService := application.NewPaperService(memory.NewRepository())
+	paperHttp.AddPaperRoute(handle, logger, paperService)
+
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(testHost, testPort),
 		Handler:      handle,
@@ -61,7 +59,7 @@ func TestMain(m *testing.M) {
 		return
 	}
 
-	if !startService() {
+	if !startApplication() {
 		os.Exit(1)
 	}
 

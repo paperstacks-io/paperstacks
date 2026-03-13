@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/doi"
-	"github.com/paperstacks.io/paperstacks/internal/paper"
+	"github.com/paperstacks.io/paperstacks/internal/paper/application"
+	phttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
+	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 )
 
@@ -32,21 +34,21 @@ func run(
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	doiService := doi.NewService(nil)
+	paperService := application.NewPaperService(memory.NewRepository())
 
-	paperService, err := paper.NewService(
-		paper.MemoryRepository(paper.NewMemoryRepo()),
-	)
-	if err != nil {
-		return err
-	}
-
-	handle := server.AddRoute(
-		http.NewServeMux(),
+	handle := http.NewServeMux()
+	server.AddRoute(
+		handle,
 		ctx,
 		logger,
 		doiService,
+	)
+	phttp.AddPaperRoute(
+		handle,
+		logger,
 		paperService,
 	)
+
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort("localhost", "8080"),
 		Handler:      handle,
