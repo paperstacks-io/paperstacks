@@ -13,12 +13,6 @@ import (
 func handleListPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet {
-				w.Header().Set("Allow", http.MethodGet)
-				http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-				return
-			}
-
 			papers, err := service.List(r.Context())
 			if err != nil {
 				if errors.Is(err, domain.ErrPaperNotFound) {
@@ -44,13 +38,6 @@ func handleListPapers(logger *slog.Logger, service *application.PaperService) ht
 func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet {
-				w.Header().Set("Allow", http.MethodGet)
-				http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-				return
-			}
-
-			// No DTO needed for a single ID request
 			id := r.PathValue("doi")
 			if id == "" {
 				http.Error(w, "missing paper id", http.StatusBadRequest)
@@ -83,12 +70,6 @@ func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService)
 func handleDeletePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodDelete {
-				w.Header().Set("Allow", http.MethodDelete)
-				http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-				return
-			}
-
 			id := r.PathValue("doi")
 			if id == "" {
 				http.Error(w, "missing paper id", http.StatusBadRequest)
@@ -115,12 +96,6 @@ func handleDeletePaper(logger *slog.Logger, service *application.PaperService) h
 func handleSavePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost {
-				w.Header().Set("Allow", http.MethodPost)
-				http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-				return
-			}
-
 			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
 				http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -153,12 +128,6 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 func HandleUpdatePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPut {
-				w.Header().Set("Allow", http.MethodPut)
-				http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-				return
-			}
-
 			id := r.PathValue("doi")
 			if id == "" {
 				http.Error(w, "missing paper doi", http.StatusBadRequest)
