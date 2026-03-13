@@ -1,4 +1,4 @@
-package doi
+package application
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/paperstacks.io/paperstacks/internal/doi/domain"
 )
 
 const crossrefWorksURL = "https://api.crossref.org/works/"
@@ -18,18 +20,18 @@ var (
 	ErrNotFound = errors.New("doi not found")
 )
 
-type Service struct {
+type DOIService struct {
 	client *http.Client
 }
 
-func NewService(client *http.Client) *Service {
+func NewDOIService(client *http.Client) *DOIService {
 	if client == nil {
 		client = &http.Client{Timeout: 10 * time.Second}
 	}
-	return &Service{client: client}
+	return &DOIService{client: client}
 }
 
-func (s *Service) ResolveMetadata(ctx context.Context, rawDOI string) (*Metadata, error) {
+func (s *DOIService) ResolveMetadata(ctx context.Context, rawDOI string) (*domain.Metadata, error) {
 	doi := strings.TrimSpace(rawDOI)
 	if doi == "" {
 		return nil, ErrEmptyDOI
@@ -84,7 +86,7 @@ func (s *Service) ResolveMetadata(ctx context.Context, rawDOI string) (*Metadata
 		return nil, fmt.Errorf("decode crossref response: %w", err)
 	}
 
-	return &Metadata{
+	return &domain.Metadata{
 		DOI:       body.Message.DOI,
 		Title:     firstOrEmpty(body.Message.Title),
 		Publisher: body.Message.Publisher,
