@@ -16,6 +16,7 @@ type Repository interface {
 	// queries
 	GetByDOI(ctx context.Context, doi string) (Paper, error)
 	GetByTitle(ctx context.Context, title string) ([]Paper, error)
+	GetByKeyword(ctx context.Context, keyword string) ([]Paper, error)
 	List(ctx context.Context) ([]Paper, error)
 
 	// commands

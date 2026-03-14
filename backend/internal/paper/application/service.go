@@ -60,3 +60,7 @@ func (s *PaperService) Delete(ctx context.Context, doi string) error {
 func (s *PaperService) GetByTitle(ctx context.Context, title string) ([]domain.Paper, error) {
 	return s.repo.GetByTitle(ctx, title)
 }
+
+func (s *PaperService) GetByKeyword(ctx context.Context, keyword string) ([]domain.Paper, error) {
+	return s.repo.GetByKeyword(ctx, keyword)
+}

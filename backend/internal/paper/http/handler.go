@@ -30,7 +30,7 @@ func handleListPapers(logger *slog.Logger, service *application.PaperService) ht
 
 			response := NewPaperResponses(papers)
 			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
-				logger.Error("encode paper responseonse", "error", err)
+				logger.Error("encode paper response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
@@ -60,9 +60,9 @@ func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService)
 				return
 			}
 
-			responseonse := NewPaperResponse(p)
-			if err := server.Encode(w, r, http.StatusOK, responseonse); err != nil {
-				logger.Error("encode paper responseonse", "error", err)
+			response := NewPaperResponse(p)
+			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
+				logger.Error("encode paper response", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
@@ -100,7 +100,7 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 		func(w http.ResponseWriter, r *http.Request) {
 			request, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid requestuest body", http.StatusBadRequest)
+				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
 
@@ -138,7 +138,7 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 
 			request, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid requestuest body", http.StatusBadRequest)
+				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
 
@@ -190,6 +190,7 @@ func handleGetPapersByTitle(logger *slog.Logger, service *application.PaperServi
 
 			logger.Error("read paper", "title", title, "error", err)
 			http.Error(w, "failed to read paper", http.StatusInternalServerError)
+			return
 		}
 
 		response := make([]PaperResponse, 0, len(papers))
@@ -199,6 +200,46 @@ func handleGetPapersByTitle(logger *slog.Logger, service *application.PaperServi
 
 		if err := server.Encode(w, r, http.StatusOK, response); err != nil {
 			logger.Error("encode papers", "title", title, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+}
+
+func handleGetPapersByKeyword(logger *slog.Logger, service *application.PaperService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		keyword := r.PathValue("keyword")
+		if keyword == "" {
+			http.Error(w, "missing keyword", http.StatusBadRequest)
+			return
+		}
+
+		decodedKeyword := strings.TrimSpace(keyword)
+		if decodedKeyword != keyword {
+			target := "/papers/keywords/" + url.PathEscape(keyword)
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			return
+		}
+
+		papers, err := service.GetByKeyword(r.Context(), decodedKeyword)
+		if err != nil {
+			if errors.Is(err, domain.ErrPaperNotFound) {
+				logger.Error("read paper", "title", keyword, "error", err.Error())
+				http.Error(w, "paper not found", http.StatusNotFound)
+				return
+			}
+
+			logger.Error("read paper", "title", keyword, "error", err)
+			http.Error(w, "failed to read paper", http.StatusInternalServerError)
+			return
+		}
+
+		response := make([]PaperResponse, 0, len(papers))
+		for _, p := range papers {
+			response = append(response, NewPaperResponse(p))
+		}
+
+		if err := server.Encode(w, r, http.StatusOK, response); err != nil {
+			logger.Error("encode papers", "title", keyword, "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})

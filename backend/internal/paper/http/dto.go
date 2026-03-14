@@ -11,7 +11,7 @@ type PaperRequest struct {
 	PublicationStatus          string          `json:"publication-status"`
 	PublicationStatusTimestamp string          `json:"publication-status-timestamp"`
 	Abstract                   string          `json:"abstract"`
-	Keywords                   string          `json:"keywords"`
+	Keywords                   []string        `json:"keywords"`
 	Type                       string          `json:"type"`
 	PDFs                       []string        `json:"pdfs"`
 	Metadata                   MetadataRequest `json:"metadata"`
@@ -26,7 +26,7 @@ type PaperResponse struct {
 	PublicationStatus          string           `json:"publication-status"`
 	PublicationStatusTimestamp string           `json:"publication-status-timestamp"`
 	Abstract                   string           `json:"abstract"`
-	Keywords                   string           `json:"keywords"`
+	Keywords                   []string         `json:"keywords"`
 	Type                       string           `json:"type"`
 	PDFs                       []string         `json:"pdfs"`
 	Metadata                   MetadataResponse `json:"metadata"`

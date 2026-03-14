@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -91,6 +92,29 @@ func (r *Repository) GetByTitle(_ context.Context, title string) ([]domain.Paper
 	for _, item := range r.data {
 		if item.Title == title {
 			result = append(result, item)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, domain.ErrPaperNotFound
+	}
+
+	return result, nil
+}
+
+func (r *Repository) GetByKeyword(_ context.Context, keyword string) ([]domain.Paper, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	keyword = strings.ToLower(keyword)
+
+	var result []domain.Paper
+	for _, item := range r.data {
+		for _, k := range item.Keywords {
+			if strings.Contains(strings.ToLower(strings.TrimSpace(k)), keyword) {
+				result = append(result, item)
+				break
+			}
 		}
 	}
 
