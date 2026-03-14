@@ -184,7 +184,7 @@ func handleGetPapersByTitle(logger *slog.Logger, service *application.PaperServi
 		if err != nil {
 			if errors.Is(err, domain.ErrPaperNotFound) {
 				logger.Error("read paper", "title", title, "error", err.Error())
-				http.Error(w, "no paper found", http.StatusNotFound)
+				http.Error(w, "paper not found", http.StatusNotFound)
 				return
 			}
 

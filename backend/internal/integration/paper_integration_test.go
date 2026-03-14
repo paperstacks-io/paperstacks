@@ -116,3 +116,44 @@ func TestIntegrationDeletePaper(t *testing.T) {
 
 	assertStatusCode(t, verifyResp, http.StatusNotFound)
 }
+
+func TestIntegrationGetPaperByTitle(t *testing.T) {
+	titles := []string{
+		"Updated Paper",
+		"Code review guidelines for GUI-based testing artifacts",
+		"We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
+		"Augmented testing to support manual GUI-based regression testing: An empirical study",
+	}
+
+	for _, title := range titles {
+		t.Run(title, func(t *testing.T) {
+			endpoint := testAPIPath + "/papers/title/" + title
+			resp := doGetRequest(t, endpoint)
+			defer resp.Body.Close()
+
+			assertStatusCode(t, resp, http.StatusOK)
+
+			var papers []paperHttp.PaperResponse
+			decodeJSON(t, resp, &papers)
+
+			if len(papers) == 0 {
+				t.Fatal("expected at least one paper, got none")
+			}
+
+			for i, paper := range papers {
+				if paper.Title != title {
+					t.Fatalf("expected paper at index %d to have title %q, got %q", i, title, paper.Title)
+				}
+			}
+		})
+	}
+}
+
+func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
+	endpoint := testAPIPath + "/papers/title/doesntexist"
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusNotFound)
+	assertBody(t, resp, "paper not found\n")
+}
