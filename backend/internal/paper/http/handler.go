@@ -4,8 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -166,81 +164,19 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 }
 
 func handleGetPapersByTitle(logger *slog.Logger, service *application.PaperService) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		title := r.PathValue("title")
-		if title == "" {
-			http.Error(w, "missing title", http.StatusBadRequest)
-			return
-		}
-
-		decodedTitle := strings.TrimSpace(title)
-		if decodedTitle != title {
-			target := "/papers/title/" + url.PathEscape(decodedTitle)
-			http.Redirect(w, r, target, http.StatusMovedPermanently)
-			return
-		}
-
-		papers, err := service.GetByTitle(r.Context(), decodedTitle)
-		if err != nil {
-			if errors.Is(err, domain.ErrPaperNotFound) {
-				logger.Error("read paper", "title", title, "error", err.Error())
-				http.Error(w, "paper not found", http.StatusNotFound)
-				return
-			}
-
-			logger.Error("read paper", "title", title, "error", err)
-			http.Error(w, "failed to read paper", http.StatusInternalServerError)
-			return
-		}
-
-		response := make([]PaperResponse, 0, len(papers))
-		for _, p := range papers {
-			response = append(response, NewPaperResponse(p))
-		}
-
-		if err := server.Encode(w, r, http.StatusOK, response); err != nil {
-			logger.Error("encode papers", "title", title, "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
+	return handleGetPapersByField(
+		logger,
+		"title",
+		"/papers/title",
+		service.GetByTitle,
+	)
 }
 
 func handleGetPapersByKeyword(logger *slog.Logger, service *application.PaperService) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		keyword := r.PathValue("keyword")
-		if keyword == "" {
-			http.Error(w, "missing keyword", http.StatusBadRequest)
-			return
-		}
-
-		decodedKeyword := strings.TrimSpace(keyword)
-		if decodedKeyword != keyword {
-			target := "/papers/keyword/" + url.PathEscape(decodedKeyword)
-			http.Redirect(w, r, target, http.StatusMovedPermanently)
-			return
-		}
-
-		papers, err := service.GetByKeyword(r.Context(), decodedKeyword)
-		if err != nil {
-			if errors.Is(err, domain.ErrPaperNotFound) {
-				logger.Error("read paper", "title", keyword, "error", err.Error())
-				http.Error(w, "paper not found", http.StatusNotFound)
-				return
-			}
-
-			logger.Error("read paper", "title", keyword, "error", err)
-			http.Error(w, "failed to read paper", http.StatusInternalServerError)
-			return
-		}
-
-		response := make([]PaperResponse, 0, len(papers))
-		for _, p := range papers {
-			response = append(response, NewPaperResponse(p))
-		}
-
-		if err := server.Encode(w, r, http.StatusOK, response); err != nil {
-			logger.Error("encode papers", "title", keyword, "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
+	return handleGetPapersByField(
+		logger,
+		"keyword",
+		"/papers/keyword",
+		service.GetByKeyword,
+	)
 }
