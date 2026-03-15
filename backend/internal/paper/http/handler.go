@@ -215,7 +215,7 @@ func handleGetPapersByKeyword(logger *slog.Logger, service *application.PaperSer
 
 		decodedKeyword := strings.TrimSpace(keyword)
 		if decodedKeyword != keyword {
-			target := "/papers/keywords/" + url.PathEscape(keyword)
+			target := "/papers/keyword/" + url.PathEscape(decodedKeyword)
 			http.Redirect(w, r, target, http.StatusMovedPermanently)
 			return
 		}

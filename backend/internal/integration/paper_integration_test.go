@@ -157,3 +157,37 @@ func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
 	assertStatusCode(t, resp, http.StatusNotFound)
 	assertBody(t, resp, "paper not found\n")
 }
+
+func TestIntegrationPapersGetByKeyword(t *testing.T) {
+	keyword := "Code review"
+	endpoint := testAPIPath + "/papers/keyword/" + keyword
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 2 {
+		t.Fatalf("expected 2 papers, got %d", len(papers))
+	}
+}
+
+func TestIntegrationPapersGetByKeywordWithSpaces(t *testing.T) {
+	keyword := "   Code review   "
+	endpoint := testAPIPath + "/papers/keyword/" + keyword
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 2 {
+		t.Fatalf("expected 2 papers, got %d", len(papers))
+	}
+}
