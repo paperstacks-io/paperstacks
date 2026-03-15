@@ -4,6 +4,8 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -26,9 +28,9 @@ func handleListPapers(logger *slog.Logger, service *application.PaperService) ht
 				return
 			}
 
-			response := NewPaperResponses(papers)
-			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
-				logger.Error("encode paper response", "error", err)
+			resp := NewPaperResponses(papers)
+			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+				logger.Error("encode paper resp", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
@@ -58,9 +60,9 @@ func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService)
 				return
 			}
 
-			response := NewPaperResponse(p)
-			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
-				logger.Error("encode paper response", "error", err)
+			resp := NewPaperResponse(p)
+			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+				logger.Error("encode paper resp", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
@@ -96,13 +98,13 @@ func handleDeletePaper(logger *slog.Logger, service *application.PaperService) h
 func handleSavePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			request, err := server.Decode[PaperRequest](r)
+			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
+				http.Error(w, "invalid req body", http.StatusBadRequest)
 				return
 			}
 
-			p := request.toDomain()
+			p := req.toDomain()
 			if err := service.Create(r.Context(), p); err != nil {
 				if errors.Is(err, domain.ErrPaperAlreadyExists) {
 					logger.Error("create paper", "doi", p.DOI, "error", err)
@@ -134,13 +136,13 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 				return
 			}
 
-			request, err := server.Decode[PaperRequest](r)
+			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
+				http.Error(w, "invalid req body", http.StatusBadRequest)
 				return
 			}
 
-			p := request.toDomain()
+			p := req.toDomain()
 			if err := service.Update(r.Context(), id, p); err != nil {
 				if errors.Is(err, domain.ErrPaperNotFound) {
 					logger.Error("update paper", "id", id, "error", "paper "+err.Error())
@@ -163,20 +165,55 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 	)
 }
 
-func handleGetPapersByTitle(logger *slog.Logger, service *application.PaperService) http.Handler {
-	return handleGetPapersByField(
-		logger,
-		"title",
-		"/papers/title",
-		service.GetByTitle,
-	)
-}
+func handleGetPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		title := strings.TrimSpace(r.URL.Query().Get("title"))
+		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
 
-func handleGetPapersByKeyword(logger *slog.Logger, service *application.PaperService) http.Handler {
-	return handleGetPapersByField(
-		logger,
-		"keyword",
-		"/papers/keyword",
-		service.GetByKeyword,
-	)
+		params := []struct {
+			key   string
+			value string
+		}{
+			{"title", title},
+			{"keyword", keyword},
+		}
+
+		var parts []string
+		for _, p := range params {
+			if p.value != "" {
+				encoded := url.QueryEscape(p.value)
+				encoded = strings.ReplaceAll(encoded, "+", "%20")
+				parts = append(parts, p.key+"="+encoded)
+			}
+		}
+
+		canonicalURL := *r.URL
+		canonicalURL.RawQuery = strings.Join(parts, "&")
+
+		if r.URL.RawQuery != canonicalURL.RawQuery {
+			http.Redirect(w, r, canonicalURL.String(), http.StatusMovedPermanently)
+			return
+		}
+
+		papers, err := service.Search(r.Context(), title, keyword)
+		if err != nil {
+			if errors.Is(err, domain.ErrPaperNotFound) {
+				logger.Error("read papers", "error", err.Error())
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("read papers", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := NewPaperResponses(papers)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode paper response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
 }

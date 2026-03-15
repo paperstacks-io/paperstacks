@@ -2,7 +2,9 @@
 package integration
 
 import (
+	"log"
 	"net/http"
+	"net/url"
 	"testing"
 
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
@@ -119,7 +121,6 @@ func TestIntegrationDeletePaper(t *testing.T) {
 
 func TestIntegrationGetPaperByTitle(t *testing.T) {
 	titles := []string{
-		"Updated Paper",
 		"Code review guidelines for GUI-based testing artifacts",
 		"We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
 		"Augmented testing to support manual GUI-based regression testing: An empirical study",
@@ -127,8 +128,19 @@ func TestIntegrationGetPaperByTitle(t *testing.T) {
 
 	for _, title := range titles {
 		t.Run(title, func(t *testing.T) {
-			endpoint := testAPIPath + "/papers/title/" + title
-			resp := doGetRequest(t, endpoint)
+			u, err := url.Parse(testAPIPath + "/papers")
+			if err != nil {
+				t.Fatalf("failed to parse url: %v", err)
+			}
+
+			q := u.Query()
+			q.Set("title", title)
+			u.RawQuery = q.Encode()
+
+			log.Print(u.String())
+
+			resp := doGetRequest(t, u.String())
+
 			defer resp.Body.Close()
 
 			assertStatusCode(t, resp, http.StatusOK)
@@ -150,7 +162,7 @@ func TestIntegrationGetPaperByTitle(t *testing.T) {
 }
 
 func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
-	endpoint := testAPIPath + "/papers/title/doesntexist"
+	endpoint := testAPIPath + "/papers?title=" + url.QueryEscape("doesntexist")
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -160,7 +172,7 @@ func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
 
 func TestIntegrationPapersGetByKeyword(t *testing.T) {
 	keyword := "Code review"
-	endpoint := testAPIPath + "/papers/keyword/" + keyword
+	endpoint := testAPIPath + "/papers?keyword=" + url.QueryEscape(keyword)
 
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -177,7 +189,7 @@ func TestIntegrationPapersGetByKeyword(t *testing.T) {
 
 func TestIntegrationPapersGetByKeywordWithSpaces(t *testing.T) {
 	keyword := "   Code review   "
-	endpoint := testAPIPath + "/papers/keyword/" + keyword
+	endpoint := testAPIPath + "/papers?keyword=" + url.QueryEscape(keyword)
 
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -189,5 +201,29 @@ func TestIntegrationPapersGetByKeywordWithSpaces(t *testing.T) {
 
 	if len(papers) != 2 {
 		t.Fatalf("expected 2 papers, got %d", len(papers))
+	}
+}
+
+func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
+	title := "Code review guidelines for GUI-based testing artifacts"
+	keyword := "Code review"
+
+	endpoint := testAPIPath + "/papers?title=" + url.QueryEscape(title) +
+		"&keyword=" + url.QueryEscape(keyword)
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 1 {
+		t.Fatalf("expected 1 paper, got %d", len(papers))
+	}
+
+	if papers[0].Title != title {
+		t.Fatalf("expected title %q, got %q", title, papers[0].Title)
 	}
 }
