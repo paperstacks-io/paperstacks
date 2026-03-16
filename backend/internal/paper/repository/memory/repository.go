@@ -89,31 +89,35 @@ func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.
 	defer r.mu.RUnlock()
 
 	var result []domain.Paper
+	set := make(map[string]struct{})
 
 	for _, item := range r.data {
+		titleMatch := false
+		keywordMatch := false
 
-		if title != "" && !strings.Contains(strings.ToLower(item.Title), title) {
-			continue
+		if title != "" && strings.Contains(strings.ToLower(item.Title), title) {
+			titleMatch = true
 		}
 
 		if keyword != "" {
-			found := false
 			for _, k := range item.Keywords {
-				if strings.Contains(strings.ToLower(strings.TrimSpace(k)), keyword) {
-					found = true
+				if strings.Contains(strings.ToLower(k), keyword) {
+					keywordMatch = true
 					break
 				}
 			}
-			if !found {
-				continue
-			}
 		}
 
-		result = append(result, item)
+		if titleMatch || keywordMatch {
+			if _, exist := set[item.Title]; !exist {
+				set[item.Title] = struct{}{}
+				result = append(result, item)
+			}
+		}
 	}
 
 	if len(result) == 0 {
-		return nil, domain.ErrPaperNotFound
+		return []domain.Paper{}, nil
 	}
 
 	return result, nil

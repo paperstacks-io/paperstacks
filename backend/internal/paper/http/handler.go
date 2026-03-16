@@ -171,12 +171,6 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 
 		papers, err := service.Search(r.Context(), title, keyword)
 		if err != nil {
-			if errors.Is(err, domain.ErrPaperNotFound) {
-				logger.Error("read papers", "error", err.Error())
-				http.Error(w, err.Error(), http.StatusNotFound)
-				return
-			}
-
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

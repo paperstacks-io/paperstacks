@@ -216,8 +216,8 @@ func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
 	var papers []paperHttp.PaperResponse
 	decodeJSON(t, resp, &papers)
 
-	if len(papers) != 1 {
-		t.Fatalf("expected 1 paper, got %d", len(papers))
+	if len(papers) != 2 {
+		t.Fatalf("expected 2 paper, got %d", len(papers))
 	}
 
 	if papers[0].Title != title {
