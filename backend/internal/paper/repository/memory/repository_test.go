@@ -90,7 +90,7 @@ func TestRepositorySearchNoResultReturnsNotFound(t *testing.T) {
 
 	result, err := repo.Search(context.Background(), "nonexistent title", "")
 	if len(result) != 0 {
-		t.Fatalf("Search() result = %v, want empty slice", result)
+		t.Fatalf("Search() result = %v, want empty slice", len(result))
 	}
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
