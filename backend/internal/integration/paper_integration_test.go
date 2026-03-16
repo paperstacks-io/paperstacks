@@ -3,6 +3,7 @@ package integration
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
@@ -115,4 +116,111 @@ func TestIntegrationDeletePaper(t *testing.T) {
 	defer verifyResp.Body.Close()
 
 	assertStatusCode(t, verifyResp, http.StatusNotFound)
+}
+
+func TestIntegrationGetPaperByTitle(t *testing.T) {
+	titles := []string{
+		"Code review guidelines for GUI-based testing artifacts",
+		"We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
+		"Augmented testing to support manual GUI-based regression testing: An empirical study",
+	}
+
+	for _, title := range titles {
+		t.Run(title, func(t *testing.T) {
+			u, err := url.Parse(testAPIPath + "/papers")
+			if err != nil {
+				t.Fatalf("failed to parse url: %v", err)
+			}
+
+			q := u.Query()
+			q.Set("title", title)
+			u.RawQuery = q.Encode()
+
+			resp := doGetRequest(t, u.String())
+
+			defer resp.Body.Close()
+
+			assertStatusCode(t, resp, http.StatusOK)
+
+			var papers []paperHttp.PaperResponse
+			decodeJSON(t, resp, &papers)
+
+			if len(papers) == 0 {
+				t.Fatal("expected at least one paper, got none")
+			}
+
+			for i, paper := range papers {
+				if paper.Title != title {
+					t.Fatalf("expected paper at index %d to have title %q, got %q", i, title, paper.Title)
+				}
+			}
+		})
+	}
+}
+
+func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
+	endpoint := testAPIPath + "/papers?title=" + url.QueryEscape("doesntexist")
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+	assertBody(t, resp, "[]\n")
+}
+
+func TestIntegrationPapersGetByKeyword(t *testing.T) {
+	keyword := "Code review"
+	endpoint := testAPIPath + "/papers?keyword=" + url.QueryEscape(keyword)
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 2 {
+		t.Fatalf("expected 2 papers, got %d", len(papers))
+	}
+}
+
+func TestIntegrationPapersGetByKeywordWithSpaces(t *testing.T) {
+	keyword := "   Code review   "
+	endpoint := testAPIPath + "/papers?keyword=" + url.QueryEscape(keyword)
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 2 {
+		t.Fatalf("expected 2 papers, got %d", len(papers))
+	}
+}
+
+func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
+	title := "Code review guidelines for GUI-based testing artifacts"
+	keyword := "Code review"
+
+	endpoint := testAPIPath + "/papers?title=" + url.QueryEscape(title) +
+		"&keyword=" + url.QueryEscape(keyword)
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 2 {
+		t.Fatalf("expected 2 paper, got %d", len(papers))
+	}
+
+	if papers[0].Title != title {
+		t.Fatalf("expected title %q, got %q", title, papers[0].Title)
+	}
 }

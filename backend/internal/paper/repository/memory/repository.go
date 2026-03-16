@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -81,4 +82,36 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 	}
 
 	return domain.ErrPaperNotFound
+}
+
+func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.Paper, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var result []domain.Paper
+
+	if title == "" && keyword == "" {
+		return []domain.Paper{}, nil
+	}
+
+	for _, paper := range r.data {
+
+		matchesTitle := title != "" && strings.Contains(strings.ToLower(paper.Title), title)
+		matchesKeyword := keyword != "" && containsText(paper.Keywords, keyword)
+
+		if matchesTitle || matchesKeyword {
+			result = append(result, paper)
+		}
+	}
+
+	return result, nil
+}
+
+func containsText(slice []string, text string) bool {
+	for _, v := range slice {
+		if strings.Contains(strings.ToLower(v), text) {
+			return true
+		}
+	}
+	return false
 }

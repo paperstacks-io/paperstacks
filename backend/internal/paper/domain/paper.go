@@ -33,7 +33,7 @@ type Paper struct {
 	Abstract string
 
 	// Keywords contains search keywords associated with the paper.
-	Keywords string
+	Keywords []string
 
 	// Type specifies the publication type (e.g. "journal" or "conference").
 	Type string
@@ -53,7 +53,6 @@ func (p Paper) Normalize() Paper {
 	p.PublicationStatus = strings.TrimSpace(p.PublicationStatus)
 	p.PublicationStatusTimestamp = strings.TrimSpace(p.PublicationStatusTimestamp)
 	p.Abstract = strings.TrimSpace(p.Abstract)
-	p.Keywords = strings.TrimSpace(p.Keywords)
 	p.Type = strings.TrimSpace(p.Type)
 	p.Metadata = p.Metadata.Normalize()
 
@@ -63,6 +62,10 @@ func (p Paper) Normalize() Paper {
 
 	for i := range p.PDFs {
 		p.PDFs[i] = strings.TrimSpace(p.PDFs[i])
+	}
+
+	for i := range p.Keywords {
+		p.Keywords[i] = strings.TrimSpace(p.Keywords[i])
 	}
 
 	return p

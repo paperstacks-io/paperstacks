@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -28,7 +29,7 @@ func handleListPapers(logger *slog.Logger, service *application.PaperService) ht
 
 			resp := NewPaperResponses(papers)
 			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-				logger.Error("encode paper response", "error", err)
+				logger.Error("encode paper resp", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
@@ -58,9 +59,9 @@ func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService)
 				return
 			}
 
-			response := NewPaperResponse(p)
-			if err := server.Encode(w, r, http.StatusOK, response); err != nil {
-				logger.Error("encode paper response", "error", err)
+			resp := NewPaperResponse(p)
+			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+				logger.Error("encode paper resp", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		},
@@ -98,7 +99,7 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 		func(w http.ResponseWriter, r *http.Request) {
 			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
+				http.Error(w, "invalid req body", http.StatusBadRequest)
 				return
 			}
 
@@ -125,7 +126,7 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 	)
 }
 
-func HandleUpdatePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
+func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("doi")
@@ -136,7 +137,7 @@ func HandleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 
 			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
+				http.Error(w, "invalid req body", http.StatusBadRequest)
 				return
 			}
 
@@ -161,4 +162,26 @@ func HandleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 			w.WriteHeader(http.StatusNoContent)
 		},
 	)
+}
+
+func handleSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		title := strings.TrimSpace(r.URL.Query().Get("title"))
+		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
+
+		papers, err := service.Search(r.Context(), title, keyword)
+		if err != nil {
+			logger.Error("read papers", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := NewPaperResponses(papers)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode paper response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
 }
