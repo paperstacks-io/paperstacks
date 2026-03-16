@@ -109,8 +109,10 @@ func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.
 		}
 
 		if titleMatch || keywordMatch {
-			if _, exist := set[item.Title]; !exist {
-				set[item.Title] = struct{}{}
+			key := item.DOI
+
+			if _, exist := set[key]; !exist {
+				set[key] = struct{}{}
 				result = append(result, item)
 			}
 		}
