@@ -165,7 +165,7 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 	)
 }
 
-func handleGetPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
+func handleSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		title := strings.TrimSpace(r.URL.Query().Get("title"))
 		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
