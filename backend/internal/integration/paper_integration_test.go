@@ -2,7 +2,6 @@
 package integration
 
 import (
-	"log"
 	"net/http"
 	"net/url"
 	"testing"
@@ -137,8 +136,6 @@ func TestIntegrationGetPaperByTitle(t *testing.T) {
 			q.Set("title", title)
 			u.RawQuery = q.Encode()
 
-			log.Print(u.String())
-
 			resp := doGetRequest(t, u.String())
 
 			defer resp.Body.Close()
@@ -166,8 +163,8 @@ func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
-	assertStatusCode(t, resp, http.StatusNotFound)
-	assertBody(t, resp, "paper not found\n")
+	assertStatusCode(t, resp, http.StatusOK)
+	assertBody(t, resp, "[]\n")
 }
 
 func TestIntegrationPapersGetByKeyword(t *testing.T) {
