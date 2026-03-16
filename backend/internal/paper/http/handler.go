@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
@@ -169,31 +168,6 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		title := strings.TrimSpace(r.URL.Query().Get("title"))
 		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
-
-		params := []struct {
-			key   string
-			value string
-		}{
-			{"title", title},
-			{"keyword", keyword},
-		}
-
-		var parts []string
-		for _, p := range params {
-			if p.value != "" {
-				encoded := url.QueryEscape(p.value)
-				encoded = strings.ReplaceAll(encoded, "+", "%20")
-				parts = append(parts, p.key+"="+encoded)
-			}
-		}
-
-		canonicalURL := *r.URL
-		canonicalURL.RawQuery = strings.Join(parts, "&")
-
-		if r.URL.RawQuery != canonicalURL.RawQuery {
-			http.Redirect(w, r, canonicalURL.String(), http.StatusMovedPermanently)
-			return
-		}
 
 		papers, err := service.Search(r.Context(), title, keyword)
 		if err != nil {
