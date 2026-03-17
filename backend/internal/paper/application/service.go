@@ -57,8 +57,8 @@ func (s *PaperService) Delete(ctx context.Context, doi string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(doi))
 }
 
-func (s *PaperService) Search(ctx context.Context, title, keyword string) ([]domain.Paper, error) {
+func (s *PaperService) Search(ctx context.Context, title, keyword string, field string, desc bool) ([]domain.Paper, error) {
 	keyword = strings.ToLower(keyword)
 	title = strings.ToLower(title)
-	return s.repo.Search(ctx, title, keyword)
+	return s.repo.Search(ctx, title, keyword, field, desc)
 }

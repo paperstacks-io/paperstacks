@@ -168,8 +168,31 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		title := strings.TrimSpace(r.URL.Query().Get("title"))
 		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
+		sortBy := r.URL.Query().Get("sortBy")
 
-		papers, err := service.Search(r.Context(), title, keyword)
+		var field string
+		var desc bool // desc indicates descending sort order (default: false)
+		if sortBy != "" {
+			if string(sortBy[0]) != " " && string(sortBy[0]) != "-" {
+				http.Error(w, "invalid sortBy format", http.StatusBadRequest)
+				return
+			}
+			desc = string(sortBy[0]) == "-"
+
+			field = strings.ToLower(sortBy[1:])
+			if field != "title" && field != "keyword" {
+				http.Error(w, "invalid sort field", http.StatusBadRequest)
+				return
+			}
+		}
+
+		papers, err := service.Search(
+			r.Context(),
+			title,
+			keyword,
+			field,
+			desc,
+		)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
