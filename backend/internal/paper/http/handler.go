@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
@@ -170,33 +171,38 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
 		sortBy := r.URL.Query().Get("sortBy")
 
-		var field string
 		var desc bool // desc indicates descending sort order (default: false)
 		if sortBy != "" {
-			if string(sortBy[0]) != " " && string(sortBy[0]) != "-" {
-				http.Error(w, "invalid sortBy format", http.StatusBadRequest)
-				return
-			}
-			desc = string(sortBy[0]) == "-"
+			sortBy, _ = strings.CutPrefix(sortBy, " ")
+			sortBy, desc = strings.CutPrefix(sortBy, "-")
 
-			field = strings.ToLower(sortBy[1:])
-			if field != "title" && field != "keyword" {
+			sortBy = strings.ToLower(sortBy)
+			if sortBy != "title" && sortBy != "keyword" {
 				http.Error(w, "invalid sort field", http.StatusBadRequest)
 				return
 			}
 		}
 
-		papers, err := service.Search(
-			r.Context(),
-			title,
-			keyword,
-			field,
-			desc,
-		)
+		papers, err := service.Search(r.Context(), title, keyword)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if sortBy != "" && len(papers) > 1 {
+			sort.Slice(papers, func(i, j int) bool {
+				switch sortBy {
+				case "title":
+					if desc {
+						return papers[i].Title > papers[j].Title
+					}
+					return papers[i].Title < papers[j].Title
+
+				default:
+					return false
+				}
+			})
 		}
 
 		resp := NewPaperResponses(papers)

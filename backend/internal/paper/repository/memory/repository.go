@@ -2,7 +2,6 @@ package memory
 
 import (
 	"context"
-	"sort"
 	"strings"
 	"sync"
 
@@ -85,7 +84,7 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) Search(_ context.Context, title, keyword string, field string, desc bool) ([]domain.Paper, error) {
+func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -103,21 +102,6 @@ func (r *Repository) Search(_ context.Context, title, keyword string, field stri
 		if matchesTitle || matchesKeyword {
 			result = append(result, paper)
 		}
-	}
-
-	if field != "" {
-		sort.Slice(result, func(i, j int) bool {
-			switch field {
-			case "title":
-				if desc {
-					return result[i].Title > result[j].Title
-				}
-				return result[i].Title < result[j].Title
-
-			default:
-				return false
-			}
-		})
 	}
 
 	return result, nil
