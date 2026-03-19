@@ -173,16 +173,15 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 		sortBy := r.URL.Query().Get("sortBy")
 
 		var desc bool // desc indicates descending sort order (default: false)
-		if sortBy != "" {
-			sortBy, _ = strings.CutPrefix(sortBy, " ")
-			sortBy, desc = strings.CutPrefix(sortBy, "-")
+		sortBy, _ = strings.CutPrefix(sortBy, " ")
+		sortBy, desc = strings.CutPrefix(sortBy, "-")
+		sortBy = strings.ToLower(sortBy)
 
-			sortBy = strings.ToLower(sortBy)
-			if sortBy != "title" && sortBy != "year" {
-				http.Error(w, "invalid sort field", http.StatusBadRequest)
-				return
-			}
+		if sortBy != "" && sortBy != "title" && sortBy != "year" {
+			http.Error(w, "invalid sort field", http.StatusBadRequest)
+			return
 		}
+
 
 		papers, err := service.Search(r.Context(), title, keyword)
 		if err != nil {
