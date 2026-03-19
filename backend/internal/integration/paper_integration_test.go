@@ -2,8 +2,10 @@
 package integration
 
 import (
+	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
@@ -278,3 +280,80 @@ func TestIntegrationPapersSortByTitleAsc(t *testing.T) {
 		}
 	}
 }
+
+func TestIntegrationPapersSortByYearDesc(t *testing.T) {
+	endpoint := testAPIPath + "/papers?title=gui&sortBy=-year"
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 3 {
+		t.Fatalf("expected 3 papers, got %d", len(papers))
+	}
+	
+	year := math.MaxInt
+	for i, paper := range papers {
+		paperYear, err := strconv.Atoi(paper.PublicationYear)
+		if err != nil {
+			t.Fatalf("expected paper at index %d to have a valid publication year, got %s", i, paper.PublicationYear)
+		}
+
+		if paperYear <= year {
+			year = paperYear
+		}else {
+			t.Fatalf("exptected paper at index %d to have publication year less than or equal to %d, got %d", i, year, paperYear)
+		}
+	}
+}
+
+func TestIntegrationPapersSortByYearAsc(t *testing.T) {
+	endpoint := testAPIPath + "/papers?title=gui&sortBy=+year"
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 3 {
+		t.Fatalf("expected 3 papers, got %d", len(papers))
+	}
+	
+	year :=  math.MinInt
+	for i, paper := range papers {
+
+		paperYear, err := strconv.Atoi(paper.PublicationYear)
+		if err != nil {
+			t.Fatalf("expected paper at index %d to have a valid publication year, got %s", i, paper.PublicationYear)
+		}
+
+		if paperYear >= year {
+			year = paperYear
+		} else {
+			t.Fatalf("expected paper at index %d to have publication year greater then or equal to %d, got %d", i, year, paperYear)
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -83,7 +83,7 @@ func seedData() []domain.Paper {
 				"Common tool",
 				"Visual model",
 				"Time zones",
-				"Incremental chan, year stringge",
+				"Incremental changes",
 				"Changes in integrity",
 				"Global organization",
 				"Unified modeling language",
