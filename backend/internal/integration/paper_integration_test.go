@@ -224,3 +224,57 @@ func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
 		t.Fatalf("expected title %q, got %q", title, papers[0].Title)
 	}
 }
+
+func TestIntegrationPapersSortByTitleDesc(t *testing.T) {
+	endpoint :=  testAPIPath + "/papers?title=gui&sortBy=-title"
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 3 {
+		t.Fatalf("expected 3 papers, got %d", len(papers))
+	}
+
+	titles := []string{
+		"We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
+		"Code review guidelines for GUI-based testing artifacts",
+		"Augmented testing to support manual GUI-based regression testing: An empirical study",
+	}
+
+	for i, paper := range papers {
+		if paper.Title != titles[i] {
+			t.Fatalf("expected paper at index %d to have title %q, got %q", i, titles[i], paper.Title)
+		}
+	}
+}
+
+func TestIntegrationPapersSortByTitleAsc(t *testing.T) {
+	endpoint :=  testAPIPath + "/papers?title=gui&sortBy=+title"
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var papers []paperHttp.PaperResponse
+	decodeJSON(t, resp, &papers)
+
+	if len(papers) != 3 {
+		t.Fatalf("expected 3 papers, got %d", len(papers))
+	}
+
+	titles := []string{
+		"Augmented testing to support manual GUI-based regression testing: An empirical study",
+		"Code review guidelines for GUI-based testing artifacts",
+		"We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
+	}
+
+	for i, paper := range papers {
+		if paper.Title != titles[i] {
+			t.Fatalf("expected paper at index %d to have title %q, got %q", i, titles[i], paper.Title)
+		}
+	}
+}
