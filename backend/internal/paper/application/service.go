@@ -60,5 +60,6 @@ func (s *PaperService) Delete(ctx context.Context, doi string) error {
 func (s *PaperService) Search(ctx context.Context, title, keyword string) ([]domain.Paper, error) {
 	keyword = strings.ToLower(keyword)
 	title = strings.ToLower(title)
+
 	return s.repo.Search(ctx, title, keyword)
 }

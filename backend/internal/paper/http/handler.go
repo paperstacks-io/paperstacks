@@ -1,6 +1,7 @@
 package http
 
 import (
+	"cmp"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -177,7 +178,7 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			sortBy, desc = strings.CutPrefix(sortBy, "-")
 
 			sortBy = strings.ToLower(sortBy)
-			if sortBy != "title" && sortBy != "keyword" {
+			if sortBy != "title" && sortBy != "year" {
 				http.Error(w, "invalid sort field", http.StatusBadRequest)
 				return
 			}
@@ -195,10 +196,16 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 				switch sortBy {
 				case "title":
 					if desc {
-						return papers[i].Title > papers[j].Title
+						return compare(papers[i].Title, papers[j].Title, true)
 					}
-					return papers[i].Title < papers[j].Title
+					return compare(papers[i].Title, papers[j].Title, false)
 
+				case "year":
+					if desc {
+						return compare(papers[i].PublicationYear, papers[j].PublicationYear, true)
+					}
+					return compare(papers[i].PublicationYear, papers[j].PublicationYear, false)
+					
 				default:
 					return false
 				}
@@ -213,4 +220,12 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			return
 		}
 	})
+}
+
+func compare[T cmp.Ordered](a, b T, desc bool) bool {
+	if desc {
+		return a > b
+	}
+
+	return a < b
 }
