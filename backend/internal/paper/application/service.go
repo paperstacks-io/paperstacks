@@ -1,9 +1,7 @@
 package application
 
 import (
-	"cmp"
 	"context"
-	"sort"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -59,49 +57,10 @@ func (s *PaperService) Delete(ctx context.Context, doi string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(doi))
 }
 
-func (s *PaperService) Search(ctx context.Context, title, keyword string, sortBy *string, desc bool) ([]domain.Paper, error) {
+func (s *PaperService) Search(ctx context.Context, title, keyword string, sortBy *string, order *string) ([]domain.Paper, error) {
 	keyword = strings.ToLower(keyword)
 	title = strings.ToLower(title)
 	
-	papers, err := s.repo.Search(ctx, title, keyword)
-	if err != nil { return nil, err }
-
-	if sortBy != nil { return sortPapersByOrder(papers, *sortBy, desc) }
-
-	return papers, nil
+	return s.repo.Search(ctx, title, keyword, sortBy, order)
 }
 
-func sortPapersByOrder(papers []domain.Paper, sortBy string, desc bool) ([]domain.Paper, error) {
-	if len(papers) == 1 {
-		return papers, nil
-	}
-
-	sort.Slice(papers, func(i, j int) bool {
-		switch sortBy {
-		case "title":
-			if desc {
-				return compare(papers[i].Title, papers[j].Title, true)
-			}
-			return compare(papers[i].Title, papers[j].Title, false)
-
-		case "year":
-			if desc {
-				return compare(papers[i].PublicationYear, papers[j].PublicationYear, true)
-			}
-			return compare(papers[i].PublicationYear, papers[j].PublicationYear, false)
-
-		default:
-			return false
-		}
-	})
-
-	return papers, nil
-}
-
-func compare[T cmp.Ordered](a, b T, desc bool) bool {
-	if desc {
-		return a > b
-	}
-
-	return a < b
-}

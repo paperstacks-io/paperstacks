@@ -1,7 +1,9 @@
 package memory
 
 import (
+	"cmp"
 	"context"
+	"sort"
 	"strings"
 	"sync"
 
@@ -84,7 +86,7 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.Paper, error) {
+func (r *Repository) Search(_ context.Context, title, keyword string, sortBy *string, order *string) ([]domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -104,7 +106,46 @@ func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.
 		}
 	}
 
+	if order != nil {
+		sortPapersByOrder(result, *sortBy, *order)
+	}
+
 	return result, nil
+}
+
+func sortPapersByOrder(papers []domain.Paper, sortBy string,  order string) ([]domain.Paper, error) {
+	if len(papers) == 1 {
+		return papers, nil
+	}
+
+	sort.Slice(papers, func(i, j int) bool {
+		switch sortBy {
+		case "title":
+			if order == "desc" {
+				return compare(papers[i].Title, papers[j].Title, true)
+			}
+			return compare(papers[i].Title, papers[j].Title, false)
+
+		case "year":
+			if order == "desc" {
+				return compare(papers[i].PublicationYear, papers[j].PublicationYear, true)
+			}
+			return compare(papers[i].PublicationYear, papers[j].PublicationYear, false)
+
+		default:
+			return false
+		}
+	})
+
+	return papers, nil
+}
+
+func compare[T cmp.Ordered](a, b T, desc bool) bool {
+	if desc {
+		return a > b
+	}
+
+	return a < b
 }
 
 func containsText(slice []string, text string) bool {
