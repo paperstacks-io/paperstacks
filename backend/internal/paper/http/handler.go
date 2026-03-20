@@ -1,11 +1,9 @@
 package http
 
 import (
-	"cmp"
 	"errors"
 	"log/slog"
 	"net/http"
-	"sort"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
@@ -180,32 +178,11 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			return
 		}
 
-		papers, err := service.Search(r.Context(), title, keyword)
+		papers, err := service.Search(r.Context(), title, keyword, &sortBy, desc)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		}
-
-		if sortBy != "" && len(papers) > 1 {
-			sort.Slice(papers, func(i, j int) bool {
-				switch sortBy {
-				case "title":
-					if desc {
-						return compare(papers[i].Title, papers[j].Title, true)
-					}
-					return compare(papers[i].Title, papers[j].Title, false)
-
-				case "year":
-					if desc {
-						return compare(papers[i].PublicationYear, papers[j].PublicationYear, true)
-					}
-					return compare(papers[i].PublicationYear, papers[j].PublicationYear, false)
-
-				default:
-					return false
-				}
-			})
 		}
 
 		resp := NewPaperResponses(papers)
@@ -216,14 +193,6 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			return
 		}
 	})
-}
-
-func compare[T cmp.Ordered](a, b T, desc bool) bool {
-	if desc {
-		return a > b
-	}
-
-	return a < b
 }
 
 func normalizeQueryParam(s string) string {
