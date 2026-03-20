@@ -168,20 +168,17 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 
 func handleSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		title := strings.TrimSpace(r.URL.Query().Get("title"))
-		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
-		sortBy := r.URL.Query().Get("sortBy")
+		title := normalizeQueryParam(r.URL.Query().Get("title"))
+		keyword := normalizeQueryParam(r.URL.Query().Get("keyword"))
+		sortBy := normalizeQueryParam(r.URL.Query().Get("sortBy"))
 
-		var desc bool // desc indicates descending sort order (default: false)
-		sortBy, _ = strings.CutPrefix(sortBy, " ")
-		sortBy, desc = strings.CutPrefix(sortBy, "-")
-		sortBy = strings.ToLower(sortBy)
+		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
-		if sortBy != "" && sortBy != "title" && sortBy != "year" {
-			http.Error(w, "invalid sort field", http.StatusBadRequest)
+		isAllowedSortKey := sortBy == "title" || sortBy == "year"
+		if sortBy != "" && !isAllowedSortKey {
+			http.Error(w, "invalid 'sortBy': allowed values are 'title', 'year'", http.StatusBadRequest)
 			return
 		}
-
 
 		papers, err := service.Search(r.Context(), title, keyword)
 		if err != nil {
@@ -204,7 +201,7 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 						return compare(papers[i].PublicationYear, papers[j].PublicationYear, true)
 					}
 					return compare(papers[i].PublicationYear, papers[j].PublicationYear, false)
-					
+
 				default:
 					return false
 				}
@@ -227,4 +224,8 @@ func compare[T cmp.Ordered](a, b T, desc bool) bool {
 	}
 
 	return a < b
+}
+
+func normalizeQueryParam(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }
