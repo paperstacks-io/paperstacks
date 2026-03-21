@@ -1,7 +1,9 @@
 package memory
 
 import (
+	"cmp"
 	"context"
+	"sort"
 	"strings"
 	"sync"
 
@@ -84,7 +86,7 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.Paper, error) {
+func (r *Repository) Search(_ context.Context, title, keyword string, sortBy string, orderDesc bool) ([]domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -104,7 +106,39 @@ func (r *Repository) Search(_ context.Context, title, keyword string) ([]domain.
 		}
 	}
 
+	if sortBy != "" {
+		sortPapersByOrder(result, sortBy, orderDesc)
+	}
+
 	return result, nil
+}
+
+func sortPapersByOrder(papers []domain.Paper, sortBy string, desc bool) ([]domain.Paper, error) {
+	if len(papers) == 1 {
+		return papers, nil
+	}
+
+	sort.Slice(papers, func(i, j int) bool {
+		switch sortBy {
+		case "title":
+			return compare(papers[i].Title, papers[j].Title, desc)
+		case "year":
+			return compare(papers[i].PublicationYear, papers[j].PublicationYear, desc)
+
+		default:
+			return false
+		}
+	})
+
+	return papers, nil
+}
+
+func compare[T cmp.Ordered](a, b T, desc bool) bool {
+	if desc {
+		return a > b
+	}
+
+	return a < b
 }
 
 func containsText(slice []string, text string) bool {
