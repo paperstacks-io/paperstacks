@@ -178,9 +178,7 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			return
 		}
 
-		order := sortByOrder(sortBy, desc)
-
-		papers, err := service.Search(r.Context(), title, keyword, &sortBy, order)
+		papers, err := service.Search(r.Context(), title, keyword, sortBy, desc)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -199,17 +197,4 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 
 func normalizeQueryParam(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
-}
-
-func sortByOrder(sortBy string, desc bool) *string {
-	if sortBy == "" {
-		return nil
-	}
-
-	o := "asc"
-	if desc {
-		o = "desc"
-	}
-	
-	return &o
 }

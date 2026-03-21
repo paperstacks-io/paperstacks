@@ -86,7 +86,7 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) Search(_ context.Context, title, keyword string, sortBy *string, order *string) ([]domain.Paper, error) {
+func (r *Repository) Search(_ context.Context, title, keyword string, sortBy string, orderDesc bool) ([]domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -106,14 +106,14 @@ func (r *Repository) Search(_ context.Context, title, keyword string, sortBy *st
 		}
 	}
 
-	if order != nil {
-		sortPapersByOrder(result, *sortBy, *order)
+	if sortBy != "" {
+		sortPapersByOrder(result, sortBy, orderDesc)
 	}
 
 	return result, nil
 }
 
-func sortPapersByOrder(papers []domain.Paper, sortBy string,  order string) ([]domain.Paper, error) {
+func sortPapersByOrder(papers []domain.Paper, sortBy string, desc bool) ([]domain.Paper, error) {
 	if len(papers) == 1 {
 		return papers, nil
 	}
@@ -121,16 +121,9 @@ func sortPapersByOrder(papers []domain.Paper, sortBy string,  order string) ([]d
 	sort.Slice(papers, func(i, j int) bool {
 		switch sortBy {
 		case "title":
-			if order == "desc" {
-				return compare(papers[i].Title, papers[j].Title, true)
-			}
-			return compare(papers[i].Title, papers[j].Title, false)
-
+			return compare(papers[i].Title, papers[j].Title, desc)
 		case "year":
-			if order == "desc" {
-				return compare(papers[i].PublicationYear, papers[j].PublicationYear, true)
-			}
-			return compare(papers[i].PublicationYear, papers[j].PublicationYear, false)
+			return compare(papers[i].PublicationYear, papers[j].PublicationYear, desc)
 
 		default:
 			return false
