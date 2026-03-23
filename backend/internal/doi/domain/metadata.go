@@ -10,6 +10,7 @@ import "regexp"
 type Metadata struct {
 	DOI       string   `json:"doi"`
 	Title     string   `json:"title"`
+	Keywords  []string `json:"keywords"`
 	Publisher string   `json:"publisher"`
 	Type      string   `json:"type"`
 	Authors   []string `json:"authors"`

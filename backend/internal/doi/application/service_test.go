@@ -27,6 +27,7 @@ func TestDOIServiceResolveMetadata(t *testing.T) {
 				"message": {
 					"DOI": "10.1000/182",
 					"title": ["Example title"],
+					"subject": ["quality assurance", "gui testing"],
 					"publisher": "Example publisher",
 					"type": "journal-article",
 					"URL": "https://doi.org/10.1000/182",
@@ -59,6 +60,10 @@ func TestDOIServiceResolveMetadata(t *testing.T) {
 
 	if got.Title != "Example title" {
 		t.Fatalf("Title = %q, want %q", got.Title, "Example title")
+	}
+
+	if len(got.Keywords) != 2 || got.Keywords[0] != "quality assurance" || got.Keywords[1] != "gui testing" {
+		t.Fatalf("Keywords = %#v", got.Keywords)
 	}
 
 	if got.Published != "2024-05-01" {
