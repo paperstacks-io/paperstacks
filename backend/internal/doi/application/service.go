@@ -62,9 +62,10 @@ func (s *DOIService) ResolveMetadata(ctx context.Context, rawDOI string) (*domai
 		Message struct {
 			DOI       string `json:"DOI"`
 			Title     []string
-			Publisher string `json:"publisher"`
-			Type      string `json:"type"`
-			URL       string `json:"URL"`
+			Subject   []string `json:"subject"`
+			Publisher string   `json:"publisher"`
+			Type      string   `json:"type"`
+			URL       string   `json:"URL"`
 			Author    []struct {
 				Given  string `json:"given"`
 				Family string `json:"family"`
@@ -89,6 +90,7 @@ func (s *DOIService) ResolveMetadata(ctx context.Context, rawDOI string) (*domai
 	return &domain.Metadata{
 		DOI:       body.Message.DOI,
 		Title:     firstOrEmpty(body.Message.Title),
+		Keywords:  body.Message.Subject,
 		Publisher: body.Message.Publisher,
 		Type:      body.Message.Type,
 		Authors:   authorsFromMessage(body.Message.Author),
