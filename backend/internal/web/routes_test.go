@@ -46,13 +46,14 @@ func TestAddRouteRendersResponsiveLandingShell(t *testing.T) {
 			}
 
 			body := rec.Body.String()
-			if !strings.Contains(body, page.active) || !strings.Contains(body, `bg-sidebar-accent font-medium text-sidebar-accent-foreground`) {
+			if !strings.Contains(body, page.active) || strings.Count(body, `bg-sidebar-accent font-medium text-sidebar-accent-foreground`) != 1 {
 				t.Errorf("response body missing active navigation styling for %q", page.path)
 			}
 
 			for _, want := range []string{
 				`href="/app/assets/styles.css"`,
 				`src="/app/assets/htmx.min.js"`,
+				`id="app-shell"`,
 				`id="page-content"`,
 				`id="sidebar-backdrop"`,
 				`class="fixed inset-0 z-40 hidden bg-foreground/40 lg:hidden"`,
@@ -63,8 +64,8 @@ func TestAddRouteRendersResponsiveLandingShell(t *testing.T) {
 				`class="flex items-center gap-3 border-b border-border bg-background px-4 py-4 sm:px-6 lg:hidden"`,
 				`href="/app/"`,
 				`hx-get="/app/"`,
-				`hx-target="#page-content"`,
-				`hx-select="#page-content"`,
+				`hx-target="#app-shell"`,
+				`hx-select="#app-shell"`,
 				`hx-swap="outerHTML"`,
 				`hx-push-url="true"`,
 				`href="/app/papers"`,
@@ -118,16 +119,26 @@ func TestAddRouteRendersPageContentFragmentForHTMXRequests(t *testing.T) {
 			}
 
 			body := rec.Body.String()
+			if !strings.Contains(body, `id="app-shell"`) {
+				t.Fatalf("HTMX response missing app shell wrapper")
+			}
+			if !strings.Contains(body, `id="mobile-sidebar"`) {
+				t.Fatalf("HTMX response missing sidebar")
+			}
 			if !strings.Contains(body, `id="page-content"`) {
 				t.Fatalf("HTMX response missing page content wrapper")
 			}
 			if !strings.Contains(body, test.want) {
 				t.Fatalf("HTMX response missing page body %q", test.want)
 			}
-			for _, unwanted := range []string{"<!doctype html>", `id="mobile-sidebar"`, `href="/app/assets/styles.css"`} {
+			for _, unwanted := range []string{"<!doctype html>", `href="/app/assets/styles.css"`} {
 				if strings.Contains(body, unwanted) {
 					t.Fatalf("HTMX response unexpectedly included %q", unwanted)
 				}
+			}
+
+			if !strings.Contains(body, `href="`+test.path+`"`) || strings.Count(body, `bg-sidebar-accent font-medium text-sidebar-accent-foreground`) != 1 {
+				t.Fatalf("HTMX response missing active navigation styling for %q", test.path)
 			}
 		})
 	}

@@ -5,20 +5,19 @@ import (
 	"net/http"
 )
 
-func handleIndex(tmpl *template.Template, title string, pageName string, navItems []navItem) http.Handler {
+func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		data := pageData{
-			Title:           title,
-			PageName:        pageName,
-			NavItems:        navItems,
-			ContentTargetID: "page-content",
+			NavItems:      navItems,
+			AppTargetID:   "app-shell",
+			PageContentID: "page-content",
 		}
 
 		templateName := "layout"
 		if r.Header.Get("HX-Request") == "true" {
-			templateName = "page-content"
+			templateName = "app"
 		}
 
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {

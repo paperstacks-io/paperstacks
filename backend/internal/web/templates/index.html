@@ -13,7 +13,7 @@
   </body>
 </html>
 {{end}} {{define "app"}}
-<div class="flex min-h-screen bg-background">
+<div id="{{.AppTargetID}}" class="flex min-h-screen bg-background">
   <div
     id="sidebar-backdrop"
     class="fixed inset-0 z-40 hidden bg-foreground/40 lg:hidden"
@@ -60,8 +60,8 @@
       <a
         href="{{.Path}}"
         hx-get="{{.Path}}"
-        hx-target="#{{$.ContentTargetID}}"
-        hx-select="#{{$.ContentTargetID}}"
+        hx-target="#{{$.AppTargetID}}"
+        hx-select="#{{$.AppTargetID}}"
         hx-swap="outerHTML"
         hx-push-url="true"
         class="flex items-center rounded-md px-3 py-2 text-sm transition-colors {{if .Active}}bg-sidebar-accent font-medium text-sidebar-accent-foreground{{else}}text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground{{end}}"
@@ -108,7 +108,7 @@
   </main>
 </div>
 {{end}} {{define "page-content"}}
-<div id="{{.ContentTargetID}}" class="flex min-h-0 min-w-0 flex-1 flex-col">
+<div id="{{.PageContentID}}" class="flex min-h-0 min-w-0 flex-1 flex-col">
   {{template "page-body" .}}
 </div>
 {{end}}

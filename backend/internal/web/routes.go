@@ -17,10 +17,11 @@ import (
 var content embed.FS
 
 type pageData struct {
-	Title           string
-	PageName        string
-	NavItems        []navItem
-	ContentTargetID string
+	Title         string
+	PageName      string
+	NavItems      []navItem
+	AppTargetID   string
+	PageContentID string
 }
 
 type navItem struct {
@@ -67,23 +68,22 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /app/{$}", defaultMiddle(handleIndex(homeTemplate, "Paperstacks", "Home", navItems("/app/"))))
+	mux.Handle(http.MethodGet+" /app/{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/app/"))))
+
 	for _, page := range []struct {
 		path     string
-		pageName string
-		title    string
 		template string
 	}{
-		{path: "/app/papers", pageName: "Papers", title: "Papers", template: "paper"},
-		{path: "/app/search", pageName: "Search", title: "Search", template: "search"},
-		{path: "/app/settings", pageName: "Settings", title: "Settings", template: "settings"},
+		{path: "/app/papers", template: "paper"},
+		{path: "/app/search", template: "search"},
+		{path: "/app/settings", template: "settings"},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
 		if err != nil {
 			return err
 		}
 
-		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, page.title, page.pageName, navItems(page.path))))
+		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
 	}
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
 
