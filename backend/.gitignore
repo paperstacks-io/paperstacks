@@ -1,6 +1,7 @@
 # Build artifacts
 tmp/
 coverage.out
+node_modules/
 
 /server
 /server.exe
