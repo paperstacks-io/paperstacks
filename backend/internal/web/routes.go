@@ -17,7 +17,16 @@ import (
 var content embed.FS
 
 type pageData struct {
-	Title string
+	Title           string
+	PageName        string
+	NavItems        []navItem
+	ContentTargetID string
+}
+
+type navItem struct {
+	Label  string
+	Path   string
+	Active bool
 }
 
 func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
@@ -31,6 +40,11 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 		return fmt.Errorf("parse web templates: %w", err)
 	}
 
+	homeTemplate, err := pageTemplateSet(tmpl, "home")
+	if err != nil {
+		return err
+	}
+
 	assets, err := fs.Sub(content, "assets")
 	if err != nil {
 		return fmt.Errorf("load web assets: %w", err)
@@ -38,7 +52,24 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(tmpl)))
+	mux.Handle(http.MethodGet+" /app/{$}", defaultMiddle(handlePage(homeTemplate, "Paperstacks", "Home", navItems("/app/"))))
+	for _, page := range []struct {
+		path     string
+		pageName string
+		title    string
+		template string
+	}{
+		{path: "/app/papers", pageName: "Papers", title: "Papers", template: "paper"},
+		{path: "/app/search", pageName: "Search", title: "Search", template: "search"},
+		{path: "/app/settings", pageName: "Settings", title: "Settings", template: "settings"},
+	} {
+		pageTemplate, err := pageTemplateSet(tmpl, page.template)
+		if err != nil {
+			return err
+		}
+
+		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handlePage(pageTemplate, page.title, page.pageName, navItems(page.path))))
+	}
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
 
 	return nil
@@ -74,12 +105,30 @@ func templateFiles(content fs.FS) ([]string, error) {
 	return files, nil
 }
 
-func handleIndex(tmpl *template.Template) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+func navItems(activePath string) []navItem {
+	items := []navItem{
+		{Label: "Home", Path: "/app/"},
+		{Label: "Papers", Path: "/app/papers"},
+		{Label: "Search", Path: "/app/search"},
+		{Label: "Settings", Path: "/app/settings"},
+	}
 
-		if err := tmpl.ExecuteTemplate(w, "layout", pageData{Title: "Paperstacks"}); err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-	})
+	for i := range items {
+		items[i].Active = items[i].Path == activePath
+	}
+
+	return items
+}
+
+func pageTemplateSet(base *template.Template, pageTemplate string) (*template.Template, error) {
+	cloned, err := base.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("clone web templates: %w", err)
+	}
+
+	if _, err := cloned.Parse(`{{define "page-body"}}{{template "` + pageTemplate + `" .}}{{end}}`); err != nil {
+		return nil, fmt.Errorf("parse page template alias: %w", err)
+	}
+
+	return cloned, nil
 }

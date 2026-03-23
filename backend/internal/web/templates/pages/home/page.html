@@ -1,0 +1,42 @@
+{{define "home"}}
+<div
+  class="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 lg:px-10"
+>
+  <div class="w-full max-w-4xl space-y-6">
+    <section class="space-y-4">
+      <p
+        class="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground"
+      >
+        Paperstacks
+      </p>
+      <h1 class="text-4xl font-semibold tracking-tight">
+        Collect and revisit the papers that matter.
+      </h1>
+      <p class="max-w-2xl text-base text-muted-foreground">
+        The Paperstacks backend now serves the landing shell, bundled styles,
+        and HTMX assets directly from the Go app.
+      </p>
+    </section>
+
+    <section>
+      <div
+        class="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm sm:max-w-2xl"
+      >
+        <div class="border-b border-border px-5 py-4">
+          <p class="text-xl font-semibold tracking-tight">
+            Contributor information
+          </p>
+        </div>
+        <div class="space-y-2 px-5 py-4 text-sm text-muted-foreground">
+          <p>Hello from Andi!</p>
+          <p>
+            This shell stays static for now while the responsive layout is
+            introduced.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+{{end}}
