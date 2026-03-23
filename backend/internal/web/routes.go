@@ -29,6 +29,21 @@ type navItem struct {
 	Active bool
 }
 
+func navItems(activePath string) []navItem {
+	items := []navItem{
+		{Label: "Home", Path: "/app/"},
+		{Label: "Papers", Path: "/app/papers"},
+		{Label: "Search", Path: "/app/search"},
+		{Label: "Settings", Path: "/app/settings"},
+	}
+
+	for i := range items {
+		items[i].Active = items[i].Path == activePath
+	}
+
+	return items
+}
+
 func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -52,7 +67,7 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /app/{$}", defaultMiddle(handlePage(homeTemplate, "Paperstacks", "Home", navItems("/app/"))))
+	mux.Handle(http.MethodGet+" /app/{$}", defaultMiddle(handleIndex(homeTemplate, "Paperstacks", "Home", navItems("/app/"))))
 	for _, page := range []struct {
 		path     string
 		pageName string
@@ -68,7 +83,7 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 			return err
 		}
 
-		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handlePage(pageTemplate, page.title, page.pageName, navItems(page.path))))
+		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, page.title, page.pageName, navItems(page.path))))
 	}
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
 
@@ -103,21 +118,6 @@ func templateFiles(content fs.FS) ([]string, error) {
 	slices.Sort(files)
 
 	return files, nil
-}
-
-func navItems(activePath string) []navItem {
-	items := []navItem{
-		{Label: "Home", Path: "/app/"},
-		{Label: "Papers", Path: "/app/papers"},
-		{Label: "Search", Path: "/app/search"},
-		{Label: "Settings", Path: "/app/settings"},
-	}
-
-	for i := range items {
-		items[i].Active = items[i].Path == activePath
-	}
-
-	return items
 }
 
 func pageTemplateSet(base *template.Template, pageTemplate string) (*template.Template, error) {

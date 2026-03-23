@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func handlePage(tmpl *template.Template, title string, pageName string, navItems []navItem) http.Handler {
+func handleIndex(tmpl *template.Template, title string, pageName string, navItems []navItem) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
