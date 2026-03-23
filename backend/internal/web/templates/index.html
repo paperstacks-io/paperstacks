@@ -1,0 +1,95 @@
+{{define "layout"}}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{.Title}} · Paperstacks</title>
+    <link rel="stylesheet" href="/app/assets/styles.css" />
+    <script src="/app/assets/htmx.min.js" defer></script>
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    {{template "content" .}}
+  </body>
+</html>
+{{end}}
+
+{{define "content"}}
+<div class="flex min-h-screen bg-background">
+  <div
+    id="sidebar-backdrop"
+    class="fixed inset-0 z-40 hidden bg-foreground/40 lg:hidden"
+    onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full');this.classList.add('hidden')"
+  ></div>
+
+  <aside
+    id="mobile-sidebar"
+    class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg transition-transform lg:static lg:z-auto lg:translate-x-0 lg:shadow-none"
+  >
+    <div class="flex items-center justify-between border-b border-sidebar-border px-5 py-4">
+      <div>
+        <p class="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">Paperstacks</p>
+        <p class="mt-1 text-lg font-semibold">Workspace</p>
+      </div>
+      <button
+        type="button"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-sidebar-border text-sm lg:hidden"
+        aria-label="Close sidebar"
+        onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full');document.getElementById('sidebar-backdrop').classList.add('hidden')"
+      >
+        ✕
+      </button>
+    </div>
+
+    <nav class="flex-1 space-y-1 px-3 py-4">
+      <a href="#" class="flex items-center rounded-md bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-accent-foreground">Home</a>
+      <a href="#" class="flex items-center rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">Papers</a>
+      <a href="#" class="flex items-center rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">Search</a>
+      <a href="#" class="flex items-center rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">Settings</a>
+    </nav>
+
+    <div class="border-t border-sidebar-border px-5 py-4 text-sm text-muted-foreground">
+      Static landing shell preview
+    </div>
+  </aside>
+
+  <main class="flex min-h-screen min-w-0 flex-1 flex-col">
+    <header class="flex items-center gap-3 border-b border-border bg-background px-4 py-4 sm:px-6 lg:hidden">
+      <button
+        type="button"
+        class="inline-flex items-center rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground shadow-sm"
+        aria-controls="mobile-sidebar"
+        aria-label="Open sidebar"
+        onclick="document.getElementById('mobile-sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-backdrop').classList.remove('hidden')"
+      >
+        Menu
+      </button>
+      <p class="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">Paperstacks</p>
+    </header>
+
+    <div class="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
+      <div class="w-full max-w-4xl space-y-6">
+        <section class="space-y-4">
+          <p class="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">Paperstacks</p>
+          <h1 class="text-4xl font-semibold tracking-tight">Collect and revisit the papers that matter.</h1>
+          <p class="max-w-2xl text-base text-muted-foreground">
+            The Paperstacks backend now serves the landing shell, bundled styles, and HTMX assets directly from the Go app.
+          </p>
+        </section>
+
+        <section>
+          <div class="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm sm:max-w-2xl">
+            <div class="border-b border-border px-5 py-4">
+              <p class="text-xl font-semibold tracking-tight">Contributor information</p>
+            </div>
+            <div class="space-y-2 px-5 py-4 text-sm text-muted-foreground">
+              <p>Hello from Andi!</p>
+              <p>This shell stays static for now while the responsive layout is introduced.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+{{end}}
