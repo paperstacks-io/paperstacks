@@ -1,0 +1,20 @@
+{{ define "list-papers"}}
+<div class="bg-card text-card-forground">
+  <table class="table-auto">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>DOI</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .}}
+      <tr>
+        <td>{{ .Title }}</td>
+        <td>{{ .DOI }}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

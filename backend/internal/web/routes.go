@@ -86,6 +86,7 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
 	}
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
+	mux.Handle(http.MethodGet+" /app/papers/all", defaultMiddle(handlePapersAll(tmpl)))
 
 	return nil
 }
