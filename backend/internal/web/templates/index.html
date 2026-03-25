@@ -12,7 +12,10 @@
     {{template "app" .}}
   </body>
 </html>
-{{end}} {{define "app"}}
+{{end}}
+
+<!-- App -->
+{{define "app"}}
 <div id="{{.AppTargetID}}" class="flex min-h-screen bg-background">
   <div
     id="sidebar-backdrop"
@@ -107,7 +110,10 @@
     {{template "page-content" .}}
   </main>
 </div>
-{{end}} {{define "page-content"}}
+{{end}}
+
+<!-- The content of each page -->
+{{define "page-content"}}
 <div id="{{.PageContentID}}" class="flex min-h-0 min-w-0 flex-1 flex-col">
   {{template "page-body" .}}
 </div>

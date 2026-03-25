@@ -1,5 +1,18 @@
 {{define "paper"}}
 
-<div hx-get="/app/papers/all" hx-trigger="load">Is loading</div>
-
+<div class="flex px-4 py-10 sm:px-6 lg:px-10">
+  <!-- Card -->
+  <div
+    class="bg-card text-card-foreground divide-y divide-gray-200 overflow-hidden rounded-md shadow-sm"
+  >
+    <div class="px-4 py-5 sm:px-6">
+      <!-- Card header goes here -->
+      <p class="text-muted-foreground">List of papers</p>
+    </div>
+    <div class="px-4 py-5 sm:p-6">
+      <!-- Content goes here -->
+      <div hx-get="/app/papers/all" hx-trigger="load">Is loading</div>
+    </div>
+  </div>
+</div>
 {{end}}
