@@ -50,7 +50,7 @@ func run(
 		paperService,
 	)
 	doiHttp.AddDOIRoute(handle, logger, doiService)
-	web.AddRoute(handle, logger)
+	web.AddRoute(handle, logger, paperService)
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(host, port),

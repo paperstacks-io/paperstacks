@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 )
 
@@ -45,7 +46,11 @@ func navItems(activePath string) []navItem {
 	return items
 }
 
-func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
+func AddRoute(
+	mux *http.ServeMux,
+	logger *slog.Logger,
+	paperService *application.PaperService,
+) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
 		return err
@@ -86,7 +91,7 @@ func AddRoute(mux *http.ServeMux, logger *slog.Logger) error {
 		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
 	}
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
-	mux.Handle(http.MethodGet+" /app/papers/all", defaultMiddle(handlePapersAll(tmpl)))
+	mux.Handle(http.MethodGet+" /app/papers/all", defaultMiddle(handlePapersAll(tmpl, paperService)))
 
 	return nil
 }
