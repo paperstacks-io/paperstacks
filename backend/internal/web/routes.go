@@ -17,14 +17,6 @@ import (
 //go:embed assets/* all:templates
 var content embed.FS
 
-type pageData struct {
-	Title         string
-	PageName      string
-	NavItems      []navItem
-	AppTargetID   string
-	PageContentID string
-}
-
 type navItem struct {
 	Label  string
 	Path   string
