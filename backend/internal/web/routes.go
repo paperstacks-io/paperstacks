@@ -56,10 +56,7 @@ func AddRoute(
 		return err
 	}
 
-	tmpl, err := template.ParseFS(content, templateFiles...)
-	if err != nil {
-		return fmt.Errorf("parse web templates: %w", err)
-	}
+	tmpl := template.Must(template.ParseFS(content, templateFiles...))
 
 	homeTemplate, err := pageTemplateSet(tmpl, "home")
 	if err != nil {
