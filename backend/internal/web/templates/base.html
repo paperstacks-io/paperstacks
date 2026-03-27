@@ -1,6 +1,6 @@
 {{define "base"}}
 <!doctype html>
-<html lang="en">
+<html data-theme="emerald" lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/app/assets/styles.css" />
     <script src="/app/assets/htmx.min.js" defer></script>
   </head>
-  <body class="min-h-screen bg-red text-foreground">
+  <body class="bg-base-200">
     {{template "app" .}}
   </body>
 </html>
@@ -16,103 +16,75 @@
 
 <!-- App -->
 {{define "app"}}
-<div id="{{.AppTargetID}}" class="flex min-h-screen bg-background">
-  <div
-    id="sidebar-backdrop"
-    class="fixed inset-0 z-40 hidden bg-foreground/40 lg:hidden"
-    onclick="
-      document
-        .getElementById('mobile-sidebar')
-        .classList.add('-translate-x-full');
-      this.classList.add('hidden');
-    "
-  ></div>
-
-  <aside
-    id="mobile-sidebar"
-    class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg transition-transform lg:static lg:z-auto lg:translate-x-0 lg:shadow-none"
-  >
-    <div
-      class="flex items-center justify-between border-b border-sidebar-border px-5 py-4"
-    >
-      <div>
-        <p
-          class="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground"
-        >
-          Paperstacks
-        </p>
-        <p class="mt-1 text-lg font-semibold">Workspace</p>
-      </div>
-      <button
-        type="button"
-        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-sidebar-border text-sm lg:hidden"
-        aria-label="Close sidebar"
-        onclick="
-          document
-            .getElementById('mobile-sidebar')
-            .classList.add('-translate-x-full');
-          document.getElementById('sidebar-backdrop').classList.add('hidden');
-        "
-      >
-        ✕
-      </button>
-    </div>
-
-    <nav class="flex-1 space-y-1 px-3 py-4">
-      {{range .NavItems}}
-      <a
-        href="{{.Path}}"
-        hx-get="{{.Path}}"
-        hx-target="#{{$.AppTargetID}}"
-        hx-select="#{{$.AppTargetID}}"
-        hx-swap="outerHTML"
-        hx-push-url="true"
-        class="flex items-center rounded-md px-3 py-2 text-sm transition-colors {{if .Active}}bg-sidebar-accent font-medium text-sidebar-accent-foreground{{else}}text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground{{end}}"
-        >{{.Label}}</a
-      >
-      {{end}}
-    </nav>
-
-    <div
-      class="border-t border-sidebar-border px-5 py-4 text-sm text-muted-foreground"
-    >
-      {{ .AppVersion}}
-      <span
-        class="inline-flex items-center rounded-full bg-pink-50 px-2 py-1 text-xs font-medium text-pink-700 inset-ring inset-ring-pink-700/10 dark:bg-pink-400/10 dark:text-pink-400 dark:inset-ring-pink-400/20"
-        >development build</span
-      >
-    </div>
-  </aside>
-
-  <main class="flex min-h-screen min-w-0 flex-1 flex-col">
-    <header
-      class="flex items-center gap-3 border-b border-border bg-background px-4 py-4 sm:px-6 lg:hidden"
-    >
-      <button
-        type="button"
-        class="inline-flex items-center rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground shadow-sm"
-        aria-controls="mobile-sidebar"
+<div id="{{.AppTargetID}}" class="drawer lg:drawer-open">
+  <input id="app-drawer" type="checkbox" class="drawer-toggle" />
+  <div class="drawer-content flex flex-col items-center justify-center">
+    <!-- Navbar -->
+    <nav class="navbar bg-base-300 w-full lg:hidden">
+      <label
+        for="app-drawer"
+        class="btn drawer-button"
+        aria-controls="app-drawer"
         aria-label="Open sidebar"
-        onclick="
-          document
-            .getElementById('mobile-sidebar')
-            .classList.remove('-translate-x-full');
-          document
-            .getElementById('sidebar-backdrop')
-            .classList.remove('hidden');
-        "
       >
-        Menu
-      </button>
-      <p
-        class="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground"
-      >
-        Paperstacks
-      </p>
-    </header>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          class="inline-block h-5 w-5 stroke-current"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"
+          ></path>
+        </svg>
+      </label>
 
+      <div class="px-4">
+        <span
+          class="text-sm font-semibold uppercase tracking-[0.2em] opacity-70"
+          >Paperstacks.io</span
+        >
+      </div>
+    </nav>
+    <!-- Page content here -->
     {{template "page-content" .}}
-  </main>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="drawer-side bg-base-300">
+    <label
+      for="app-drawer"
+      aria-label="close sidebar"
+      class="drawer-overlay"
+    ></label>
+
+    <div class="flex p-4">
+      <span class="text-sm font-semibold uppercase tracking-[0.2em] opacity-70"
+        >Paperstacks.io</span
+      >
+    </div>
+    <ul class="menu bg-base-300 border-b border-base-300 min-h-full w-64 p-4">
+      {{range .NavItems}}
+      <li>
+        <a
+          href="{{.Path}}"
+          hx-get="{{.Path}}"
+          hx-target="#{{$.AppTargetID}}"
+          hx-select="#{{$.AppTargetID}}"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          class="{{if .Active}}menu-active{{end}}"
+          >{{.Label}}</a
+        >
+      </li>
+      {{end}}
+      <div class="divider"></div>
+      <div>{{ .AppVersion}} (dev build)</div>
+    </ul>
+  </div>
 </div>
 {{end}}
 
