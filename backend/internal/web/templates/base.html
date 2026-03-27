@@ -16,7 +16,7 @@
 
 <!-- App -->
 {{define "app"}}
-<div id="{{.AppTargetID}}" class="drawer lg:drawer-open">
+<div id="{{.AppTargetID}}" class="drawer min-h-screen lg:drawer-open">
   <input id="app-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col items-center justify-center">
     <!-- Navbar -->
@@ -66,7 +66,7 @@
         >Paperstacks.io</span
       >
     </div>
-    <ul class="menu bg-base-300 border-b border-base-300 min-h-full w-64 p-4">
+    <ul class="menu border-b border-base-300 w-64 p-4">
       {{range .NavItems}}
       <li>
         <a
