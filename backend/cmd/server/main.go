@@ -18,6 +18,7 @@ import (
 	phttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
+	"github.com/paperstacks.io/paperstacks/internal/web"
 )
 
 func run(
@@ -49,6 +50,7 @@ func run(
 		paperService,
 	)
 	doiHttp.AddDOIRoute(handle, logger, doiService)
+	web.AddRoute(handle, logger, paperService)
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(host, port),

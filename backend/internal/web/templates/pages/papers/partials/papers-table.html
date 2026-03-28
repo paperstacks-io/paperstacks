@@ -1,0 +1,18 @@
+{{ define "papers/partials/papers-table"}}
+<table class="table table-zebra">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>DOI</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .}}
+    <tr>
+      <td>{{ .Title }}</td>
+      <td>{{ .DOI }}</td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

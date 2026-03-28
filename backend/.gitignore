@@ -1,6 +1,8 @@
 # Build artifacts
 tmp/
 coverage.out
+node_modules/
+.gocache/
 
 /server
 /server.exe

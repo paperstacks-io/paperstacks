@@ -1,0 +1,18 @@
+{
+  "name": "paperstacks-backend",
+  "private": true,
+  "scripts": {
+    "build:web-assets": "npm run build:css && npm run build:htmx",
+    "build:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --minify",
+    "build:htmx": "node ./scripts/copy-htmx.mjs",
+    "watch:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --watch"
+  },
+  "devDependencies": {
+    "daisyui": "^5.5.19",
+    "tailwindcss": "^4.2.2"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "htmx.org": "^2.0.8"
+  }
+}

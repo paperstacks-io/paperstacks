@@ -1,0 +1,11 @@
+{{define "paper"}}
+
+<div class="flex px-4 py-10 sm:px-6 lg:px-10">
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title">List of all papers</h2>
+      <div hx-get="/app/papers/all" hx-trigger="load">Is loading</div>
+    </div>
+  </div>
+</div>
+{{end}}

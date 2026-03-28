@@ -1,0 +1,13 @@
+@config "../../../tailwind.config.js";
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark,
+    emerald;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
