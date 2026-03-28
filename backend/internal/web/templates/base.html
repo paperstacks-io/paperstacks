@@ -54,7 +54,7 @@
   </div>
 
   <!-- Sidebar -->
-  <div class="drawer-side bg-base-300">
+  <div class="drawer-side flex flex-col flex-1 bg-base-300">
     <label
       for="app-drawer"
       aria-label="close sidebar"
@@ -82,8 +82,12 @@
       </li>
       {{end}}
       <div class="divider"></div>
-      <div>{{ .AppVersion}} (dev build)</div>
     </ul>
+    <div class="flex flex-1"></div>
+    <div id="sidebar-footer" class="flex flex-col p-4 w-full">
+      <div class="divider"></div>
+      <span> {{ .AppVersion}} (dev build) </span>
+    </div>
   </div>
 </div>
 {{end}}
