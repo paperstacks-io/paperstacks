@@ -166,10 +166,19 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 
 func handleSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		title := strings.TrimSpace(r.URL.Query().Get("title"))
-		keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
+		title := normalizeQueryParam(r.URL.Query().Get("title"))
+		keyword := normalizeQueryParam(r.URL.Query().Get("keyword"))
+		sortBy := normalizeQueryParam(r.URL.Query().Get("sortBy"))
 
-		papers, err := service.Search(r.Context(), title, keyword)
+		sortBy, desc := strings.CutPrefix(sortBy, "-")
+
+		isAllowedSortKey := sortBy == "title" || sortBy == "year"
+		if sortBy != "" && !isAllowedSortKey {
+			http.Error(w, "invalid 'sortBy': allowed values are 'title', 'year'", http.StatusBadRequest)
+			return
+		}
+
+		papers, err := service.Search(r.Context(), title, keyword, sortBy, desc)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -184,4 +193,8 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			return
 		}
 	})
+}
+
+func normalizeQueryParam(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }

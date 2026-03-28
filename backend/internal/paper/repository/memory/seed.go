@@ -35,6 +35,7 @@ func seedData() []domain.Paper {
 				PublishedIn: "2005 International Symposium on Empirical Software Engineering, 2005.",
 				Pages:       "82-91",
 			},
+			PublicationYear: "2005",
 		},
 		{
 			DOI:   "10.1016/j.infsof.2023.107299",
@@ -60,6 +61,7 @@ func seedData() []domain.Paper {
 				PublishedIn: "Information and Software Technology",
 				Pages:       "107299",
 			},
+			PublicationYear: "2023",
 		},
 		{
 			DOI:   "10.1109/icstw58534.2023.00015",
@@ -81,7 +83,7 @@ func seedData() []domain.Paper {
 				"Common tool",
 				"Visual model",
 				"Time zones",
-				"Incremental change",
+				"Incremental changes",
 				"Changes in integrity",
 				"Global organization",
 				"Unified modeling language",
@@ -111,6 +113,7 @@ func seedData() []domain.Paper {
 				PublishedIn: "2023 IEEE International Conference on Software Testing, Verification and Validation Workshops (ICSTW)",
 				Pages:       "1-9",
 			},
+			PublicationYear: "2023",
 		},
 		{
 			DOI:   "10.1007/s10664-024-10522-z",
@@ -128,6 +131,7 @@ func seedData() []domain.Paper {
 				"Bayesian data analysis",
 			},
 			Type: "journal-article",
+			PublicationYear: "2024",
 		},
 	}
 }

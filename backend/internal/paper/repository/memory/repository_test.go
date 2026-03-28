@@ -26,7 +26,7 @@ func TestRepositorySearchByTitle(t *testing.T) {
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "exploratory testing", "")
+	papers, err := repo.Search(context.Background(), "exploratory testing", "", "", false)
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -43,7 +43,7 @@ func TestRepositorySearchByKeyword(t *testing.T) {
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "", "gui testing")
+	papers, err := repo.Search(context.Background(), "", "gui testing", "", false)
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -57,7 +57,7 @@ func TestRepositorySearchByTitleAndKeywordSamePaper(t *testing.T) {
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "augmented testing", "bayesian data analysis")
+	papers, err := repo.Search(context.Background(), "augmented testing", "bayesian data analysis", "", false)
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -74,7 +74,7 @@ func TestRepositorySearchByTitleAndKeywordDifferentPapers(t *testing.T) {
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "a multiple case study", "bayesian data analysis")
+	papers, err := repo.Search(context.Background(), "a multiple case study", "bayesian data analysis", "", false)
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -88,7 +88,7 @@ func TestRepositorySearchNoResultReturnsNotFound(t *testing.T) {
 
 	repo := NewRepository()
 
-	result, err := repo.Search(context.Background(), "nonexistent title", "")
+	result, err := repo.Search(context.Background(), "nonexistent title", "", "", false)
 	if len(result) != 0 {
 		t.Fatalf("Search() result = %v, want empty slice", len(result))
 	}
