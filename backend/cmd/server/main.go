@@ -27,7 +27,7 @@ func run(
 ) error {
 	host := getenv("HOST")
 	if host == "" {
-		host = "localhost"
+		host = "0.0.0.0"
 	}
 	port := getenv("PORT")
 	if port == "" {

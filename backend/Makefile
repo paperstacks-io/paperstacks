@@ -26,6 +26,12 @@ build-server: ## Build server application
 	mkdir -p $(BINARY_DIR)
 	$(GOCMD) build -o $(BINARY_DIR)/server ./cmd/server/
 
+.PHONY: build-docker
+build-docker: ## Build Docker image for server
+	@GO_VERSION=$$(grep '^go ' go.mod | cut -d' ' -f2) && \
+	echo "Using Go version $$GO_VERSION from go.mod" && \
+	docker build --build-arg GO_VERSION=$$GO_VERSION -t paperstacks .
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
