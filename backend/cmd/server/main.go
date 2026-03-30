@@ -4,14 +4,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -89,9 +92,35 @@ func run(
 	return nil
 }
 
+const bannerLogo = `
+                                 _             _          _       
+                                | |           | |        (_)      
+ _ __   __ _ _ __   ___ _ __ ___| |_ __ _  ___| | _____   _  ___  
+| '_ \ / _' | '_ \ / _ \ '__/ __| __/ _' |/ __| |/ / __| | |/ _ \ 
+| |_) | (_| | |_) |  __/ |  \__ \ || (_| | (__|   <\__ \_| | (_) |
+| .__/ \__,_| .__/ \___|_|  |___/\__\__,_|\___|_|\_\___(_)_|\___/ 
+| |         | |                                                   
+|_|         |_|                                                   
+`
+
+func banner(w io.Writer) {
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+
+	fmt.Fprint(tw, bannerLogo)
+	fmt.Fprintln(tw)
+	fmt.Fprintln(tw, "  Version:\t"+build.Version)
+	fmt.Fprintln(tw, "  Git hash:\t"+build.GitHash)
+	fmt.Fprintln(tw, "  Build time:\t"+build.BuildTime)
+	fmt.Fprintln(tw)
+
+	_ = tw.Flush()
+}
+
 func main() {
+	banner(os.Stdout)
+
 	if err := run(context.Background(), os.Getenv); err != nil {
-		fmt.Fprintf(os.Stderr, "%s:n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }

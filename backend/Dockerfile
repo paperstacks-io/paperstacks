@@ -2,6 +2,10 @@
 ARG GO_VERSION=tip
 FROM golang:${GO_VERSION}-alpine AS build
 
+ARG APP_VERSION
+ARG APP_GIT_HASH
+ARG APP_BUILD_TIME
+
 RUN apk add --no-cache make
 
 WORKDIR /app
