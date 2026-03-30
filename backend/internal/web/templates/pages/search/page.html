@@ -1,6 +1,22 @@
 {{define "search"}}
+<div class="flex px-4 py-10 sm:px-6 lg:px-10 flex-col gap-4">
 
-<div class="flex px-4 py-10 sm:px-6 lg:px-10 flex-col">
-  Search page {{template "shared/partials/not-implemented-alert"}}
+  <form
+    hx-get="/app/search"
+    hx-target="#results"
+    hx-push-url="true"
+    class="max-w-md"
+  >
+    <input
+      type="text"
+      name="title"
+      placeholder="Search..."
+      value="{{.SearchTitle}}"
+      class="input input-bordered w-full"
+    />
+  </form>
+
+  <div id="results"></div>
+
 </div>
 {{end}}

@@ -69,7 +69,6 @@ func AddRoute(
 		template string
 	}{
 		{path: "/app/papers", template: "paper"},
-		{path: "/app/search", template: "search"},
 		{path: "/app/settings", template: "settings"},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
@@ -79,10 +78,16 @@ func AddRoute(
 
 		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
 	}
+	searchTemplate, err := pageTemplateSet(tmpl, "search")
+	if err != nil {
+		return err
+	}
+
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodGet+" /app/papers/all", defaultMiddle(handlePapersAll(tmpl, paperService)))
+	mux.Handle(http.MethodGet+" /app/search", defaultMiddle(handlePapersSearch(logger, searchTemplate, tmpl, paperService)))
 
-	return nil
+	return nil 
 }
 
 func templateFiles(content fs.FS) ([]string, error) {
