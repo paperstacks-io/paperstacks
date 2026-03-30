@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
+	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 type pageData struct {
@@ -19,7 +20,7 @@ type pageData struct {
 	PageContentID string
 	SearchTitle   string
 	HasSearch     bool
-	Papers 	      any
+	Papers 	      []domain.Paper
 }
 
 func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
@@ -79,7 +80,6 @@ func handlePapersSearch(
 		}
 
 		hasSearch := title != "" || keyword != "" || sortBy != ""
-
 		data := pageData{
 			Title:         "Search",
 			AppVersion:    "v0.1.0",
@@ -88,7 +88,7 @@ func handlePapersSearch(
 			PageContentID: "page-content",
 			SearchTitle:   title,
 			HasSearch:     hasSearch,
-			Papers:        nil,
+			Papers:        []domain.Paper{},
 		}
 		
 		isHX := r.Header.Get("HX-Request") == "true"
