@@ -3,8 +3,10 @@ package web
 import (
 	"context"
 	"html/template"
+	"log"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -55,13 +57,33 @@ func handlePapersSearch(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		search := r.FormValue("search")
-		sortDesc := r.FormValue("sort") == "title_desc" 
+		search := normalizeQueryParam(r.FormValue("search"))
+		sortRaw := normalizeQueryParam(r.FormValue("sortBy"))
 
-		data, _ := paperService.Search(context.Background(), search, search, "title", sortDesc)
+		sortBy, desc := sortRaw, false
+		if s, ok := strings.CutPrefix(sortRaw, "-"); ok {
+			sortBy, desc = s, true
+		} else if s, ok := strings.CutPrefix(sortRaw, "+"); ok {
+			sortBy = s
+		}
+
+		data, err := paperService.Search(context.Background(), search, search, sortBy, desc)
+		if err != nil {
+			logger.Error("read papers", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for i := range data {
+			log.Println("paper", data[i].PublicationYear)
+		}
+
 		templateName := "papers/partials/papers-table"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
+}
+
+func normalizeQueryParam(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }

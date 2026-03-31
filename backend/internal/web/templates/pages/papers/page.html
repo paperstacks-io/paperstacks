@@ -14,11 +14,13 @@
 	  type="search"
 	  name="search"
 	  placeholder="Search Papers..."
-	>
+	/>
 
-	<select class="from-control input-bordered w-full" name="sort">
-          <option value="title_asc">Title (A-Z)</option>
-          <option value="title_desc">Title (Z-A)</option>
+	<select class="from-control input-bordered w-full" name="sortBy">
+          <option value="+title">Title (A-Z)</option>
+          <option value="-title">Title (Z-A)</option>
+          <option value="+year">Oldest</option>
+          <option value="-year">Newest</option>
         </select>
 	
       </form>
