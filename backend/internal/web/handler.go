@@ -6,12 +6,15 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 )
 
 type pageData struct {
 	Title         string
 	AppVersion    string
+	AppGitHash    string
+	AppBuildTime  string
 	PageName      string
 	NavItems      []navItem
 	AppTargetID   string
@@ -24,7 +27,9 @@ func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		data := pageData{
-			AppVersion:    "v0.1.0",
+			AppVersion:    build.Version,
+			AppGitHash:    build.GitHash,
+			AppBuildTime:  build.BuildTime,
 			NavItems:      navItems,
 			AppTargetID:   "app-shell",
 			PageContentID: "page-content",
