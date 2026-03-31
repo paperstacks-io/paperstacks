@@ -56,8 +56,9 @@ func handlePapersSearch(
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		search := r.FormValue("search")
+		sortDesc := r.FormValue("sort") == "title_desc" 
 
-		data, _ := paperService.Search(context.Background(), search, search, "title", false)
+		data, _ := paperService.Search(context.Background(), search, search, "title", sortDesc)
 		templateName := "papers/partials/papers-table"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

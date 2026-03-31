@@ -4,16 +4,25 @@
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">
       <h2 class="card-title">List of all papers</h2>
-      <input
-        class="form-control"
-        type="search"
-        name="search"
-        placeholder="Search Papers..."
-        hx-post="/app/papers/search"
-        hx-trigger="input changed delay:500ms, keyup[key=='Enter'], load"
-        hx-target="#search-results"
-        hx-indicator=".htmx-indicator"
-      />
+      <form 
+	  hx-post="/app/papers/search"
+	  hx-target="#search-results"
+          hx-trigger="input changed delay:500ms, keyup[key=='Enter'], load"
+      >   
+        <input
+    	  class="form-control"
+	  type="search"
+	  name="search"
+	  placeholder="Search Papers..."
+	>
+
+	<select class="from-control input-bordered w-full" name="sort">
+          <option value="title_asc">Title (A-Z)</option>
+          <option value="title_desc">Title (Z-A)</option>
+        </select>
+	
+      </form>
+
       <div id="search-results">Is loading</div>
     </div>
   </div>
