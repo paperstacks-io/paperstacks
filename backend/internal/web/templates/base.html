@@ -86,7 +86,8 @@
     <div class="flex flex-1"></div>
     <div id="sidebar-footer" class="flex flex-col p-4 w-full">
       <div class="divider"></div>
-      <span> {{ .AppVersion}} (dev build) </span>
+      <p class="text-sm text-secondary">{{ .AppVersion}} {{ .AppGitHash }}</p>
+      <p class="text-sm text-secondary">{{ .AppBuildTime}}</p>
     </div>
   </div>
 </div>
