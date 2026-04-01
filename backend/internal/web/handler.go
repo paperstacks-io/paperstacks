@@ -3,10 +3,10 @@ package web
 import (
 	"context"
 	"html/template"
-	"log"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -57,8 +57,8 @@ func handlePapersSearch(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		search := normalizeQueryParam(r.FormValue("search"))
-		sortRaw := normalizeQueryParam(r.FormValue("sortBy"))
+		search := normalizeFormParam(r.FormValue("search"))
+		sortRaw := normalizeFormParam(r.FormValue("sortBy"))
 
 		sortBy, desc := sortRaw, false
 		if s, ok := strings.CutPrefix(sortRaw, "-"); ok {
@@ -73,9 +73,8 @@ func handlePapersSearch(
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		for i := range data {
-			log.Println("paper", data[i].PublicationYear)
-		}
+
+		time.Sleep(2 * time.Second)
 
 		templateName := "papers/partials/papers-table"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
@@ -84,6 +83,6 @@ func handlePapersSearch(
 	})
 }
 
-func normalizeQueryParam(s string) string {
+func normalizeFormParam(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }

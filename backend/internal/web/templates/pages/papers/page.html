@@ -4,28 +4,43 @@
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">
       <h2 class="card-title">List of all papers</h2>
-      <form 
-	  hx-post="/app/papers/search"
-	  hx-target="#search-results"
-          hx-trigger="input changed delay:500ms, keyup[key=='Enter'], load"
-      >   
+      <form hx-target="#search-results">
         <input
-    	  class="form-control"
-	  type="search"
-	  name="search"
-	  placeholder="Search Papers..."
-	/>
+          class="input input-bordered w-full"
+          type="search"
+          name="search"
+          placeholder="Search Papers..."
+	  hx-post="/app/papers/search"
+	  hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+          hx-indicator="#search-loading"
+        />
 
-	<select class="from-control input-bordered w-full" name="sortBy">
+        <select 
+          class="select select-bordered" 
+          name="sortBy"
+	  hx-post="/app/papers/search"
+          hx-trigger="change"
+          hx-indicator="#sort-loading"
+        >
           <option value="+title">Title (A-Z)</option>
           <option value="-title">Title (Z-A)</option>
           <option value="+year">Oldest</option>
           <option value="-year">Newest</option>
         </select>
-	
+
+        <div id="search-loading" class="htmx-indicator">
+          <span class="loading loading-spinner loading-sm"></span>
+          <span class="text-xs">Searching...</span>
+        </div>
+
+        <div id="sort-loading" class="htmx-indicator">
+          <span class="loading loading-spinner loading-sm"></span>
+          <span class="text-xs">Sorting...</span>
+        </div>
       </form>
 
-      <div id="search-results">Is loading</div>
+      <div id="search-results"></div>
+
     </div>
   </div>
 </div>
