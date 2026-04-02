@@ -52,14 +52,13 @@ jobs:
         working-directory: ./backend
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: pnpm
+          cache: npm
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Format
-        run: pnpm run fmt:check
+        run: npm run fmt:check
