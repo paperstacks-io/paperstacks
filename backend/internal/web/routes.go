@@ -80,7 +80,7 @@ func AddRoute(
 		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
 	}
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
-	mux.Handle(http.MethodGet+" /app/papers/all", defaultMiddle(handlePapersAll(tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /app/papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
 	return nil
 }
