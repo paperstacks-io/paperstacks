@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -58,26 +57,20 @@ func handlePapersSearch(
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		search := normalizeFormParam(r.FormValue("search"))
-		sortRaw := normalizeFormParam(r.FormValue("sortBy"))
+		sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
 
-		sortBy, desc := sortRaw, false
-		if s, ok := strings.CutPrefix(sortRaw, "-"); ok {
-			sortBy, desc = s, true
-		} else if s, ok := strings.CutPrefix(sortRaw, "+"); ok {
-			sortBy = s
-		}
+		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
+		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
-		data, err := paperService.Search(context.Background(), search, search, sortBy, desc)
+		foundPapers, err := paperService.Search(context.Background(), search, search, sortBy, desc)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		time.Sleep(2 * time.Second)
-
 		templateName := "papers/partials/papers-table"
-		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+		if err := tmpl.ExecuteTemplate(w, templateName, foundPapers); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
