@@ -82,7 +82,7 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /app/papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
-	return nil 
+	return nil
 }
 
 func templateFiles(content fs.FS) ([]string, error) {

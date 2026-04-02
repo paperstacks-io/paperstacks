@@ -20,7 +20,6 @@ type pageData struct {
 	NavItems      []navItem
 	AppTargetID   string
 	PageContentID string
-	SearchTitle   string
 }
 
 func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
@@ -34,7 +33,6 @@ func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
 			NavItems:      navItems,
 			AppTargetID:   "app-shell",
 			PageContentID: "page-content",
-			SearchTitle:   "",
 		}
 
 		templateName := "base"
