@@ -1,4 +1,4 @@
-name: Go
+name: Backend
 
 on:
   push:
@@ -44,3 +44,21 @@ jobs:
 
       - name: Integration Test
         run: make test-integration
+
+  format-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: pnpm run fmt
