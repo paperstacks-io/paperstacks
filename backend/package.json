@@ -9,13 +9,13 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "htmx.org": "^2.0.8"
+  },
   "devDependencies": {
     "daisyui": "^5.5.19",
     "oxfmt": "^0.43.0",
     "tailwindcss": "^4.2.2"
-  },
-  "dependencies": {
-    "@tailwindcss/cli": "^4.2.2",
-    "htmx.org": "^2.0.8"
   }
 }
