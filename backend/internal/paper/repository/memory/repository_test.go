@@ -7,6 +7,33 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
+func TestRepositoryGetByUUID(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	ctx := context.Background()
+	uuid := "6752de78-0264-4ac5-8bd3-4eed7d3f5484"
+	res, err := repo.GetByUUID(ctx, uuid)
+	if err != nil {
+		t.Fatalf("GetByUUID() err = %v, want nil", err)
+	}
+
+	if res.UUID != uuid {
+		t.Fatalf("GetByUUID() = %q, want %q", res.UUID, uuid)
+	}
+
+	uuid = "202a0a80-dec8-48ea-b140-5fd26fee8dbd"
+	res, err = repo.GetByUUID(ctx, uuid)
+	if err != nil {
+		t.Fatalf("GetByUUID() err = %v, want nil", err)
+	}
+
+	if res.UUID != uuid {
+		t.Fatalf("GetByUUID() = %q, want %q", res.UUID, uuid)
+	}
+}
+
 func TestRepositorySaveReturnsAlreadyExists(t *testing.T) {
 	t.Parallel()
 

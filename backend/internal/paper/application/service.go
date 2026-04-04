@@ -20,6 +20,10 @@ func (s *PaperService) List(ctx context.Context) ([]domain.Paper, error) {
 	return s.repo.List(ctx)
 }
 
+func (s *PaperService) GetByUUID(ctx context.Context, uuid string) (domain.Paper, error) {
+	return s.repo.GetByUUID(ctx, strings.TrimSpace(uuid))
+}
+
 func (s *PaperService) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
 	return s.repo.GetByDOI(ctx, strings.TrimSpace(doi))
 }

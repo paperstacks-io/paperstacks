@@ -19,6 +19,19 @@ func NewRepository() *Repository {
 	return &Repository{data: seedData()}
 }
 
+func (r *Repository) GetByUUID(_ context.Context, uuid string) (domain.Paper, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, item := range r.data {
+		if item.UUID == uuid {
+			return item, nil
+		}
+	}
+
+	return domain.Paper{}, domain.ErrPaperNotFound
+}
+
 func (r *Repository) GetByDOI(_ context.Context, doi string) (domain.Paper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
