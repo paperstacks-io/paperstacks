@@ -46,6 +46,10 @@ func (s *PaperService) Update(ctx context.Context, doi string, paper domain.Pape
 		return domain.ErrInvalidPaper
 	}
 
+	if paper.DOI != doi {
+		return domain.ErrDOIMismatch
+	}
+
 	if err := paper.Validate(); err != nil {
 		return err
 	}

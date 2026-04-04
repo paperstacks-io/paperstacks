@@ -47,6 +47,7 @@ func TestServiceUpdateRejectsMismatchedDOI(t *testing.T) {
 	service := NewPaperService(memory.NewRepository())
 
 	err := service.Update(context.Background(), "10.1109/isese.2005.1541817", domain.Paper{
+		UUID:  "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
 		DOI:   "10.9999/other",
 		Title: "Updated",
 	})
