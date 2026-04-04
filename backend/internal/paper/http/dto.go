@@ -3,6 +3,7 @@ package http
 import "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 
 type PaperRequest struct {
+	UUID                       string          `json:"uuid"`
 	DOI                        string          `json:"DOI"`
 	Title                      string          `json:"title"`
 	TitleShort                 string          `json:"title-short"`
@@ -18,6 +19,7 @@ type PaperRequest struct {
 }
 
 type PaperResponse struct {
+	UUID                       string           `json:"uuid"`
 	DOI                        string           `json:"DOI"`
 	Title                      string           `json:"title"`
 	TitleShort                 string           `json:"title-short"`
@@ -85,6 +87,7 @@ func (r PaperRequest) toDomain() domain.Paper {
 	}
 
 	return domain.Paper{
+		UUID:                       r.UUID,
 		DOI:                        r.DOI,
 		Title:                      r.Title,
 		TitleShort:                 r.TitleShort,
@@ -107,6 +110,7 @@ func NewPaperResponse(p domain.Paper) PaperResponse {
 	}
 
 	return PaperResponse{
+		UUID:                       p.UUID,
 		DOI:                        p.DOI,
 		Title:                      p.Title,
 		TitleShort:                 p.TitleShort,

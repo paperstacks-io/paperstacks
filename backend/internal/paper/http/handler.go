@@ -36,6 +36,37 @@ func handleListPapers(logger *slog.Logger, service *application.PaperService) ht
 	)
 }
 
+func handleGetPaperByUUID(logger *slog.Logger, service *application.PaperService) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			id := r.PathValue("uuid")
+			if id == "" {
+				http.Error(w, "missing paper uuid", http.StatusBadRequest)
+				return
+			}
+
+			p, err := service.GetByUUID(r.Context(), id)
+			if err != nil {
+				if errors.Is(err, domain.ErrPaperNotFound) {
+					logger.Error("read paper", "uuid", id, "error", err.Error())
+					http.Error(w, err.Error(), http.StatusNotFound)
+					return
+				}
+
+				logger.Error("read paper", "uuid", id, "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			resp := NewPaperResponse(p)
+			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+				logger.Error("encode paper resp", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		},
+	)
+}
+
 func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
