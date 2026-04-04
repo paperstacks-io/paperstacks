@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -24,6 +25,7 @@ func (s *PaperService) GetByDOI(ctx context.Context, doi string) (domain.Paper, 
 }
 
 func (s *PaperService) Create(ctx context.Context, paper domain.Paper) error {
+	paper.UUID = uuid.NewString()
 	paper = paper.Normalize()
 	if err := paper.Validate(); err != nil {
 		return err

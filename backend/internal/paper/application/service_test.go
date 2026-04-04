@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
@@ -24,6 +25,11 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 	got, err := service.GetByDOI(context.Background(), "10.1000/example")
 	if err != nil {
 		t.Fatalf("GetByDOI() error = %v", err)
+	}
+
+	_, err = uuid.Parse(got.UUID)
+	if got.UUID == "" || err != nil {
+		t.Fatalf("expected valid uuid, got %q", got.UUID)
 	}
 
 	if got.DOI != "10.1000/example" {

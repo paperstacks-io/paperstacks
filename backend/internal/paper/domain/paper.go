@@ -1,10 +1,17 @@
 package domain
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 // Paper represents a scientific publication with bibliographic metadata,
 // authors, and associated documents such as PDFs.
 type Paper struct {
+	// UUID (Version 4) is uniquely identifies a paper across the whole application
+	UUID string
+
 	// DOI is the Digital Object Identifier that uniquely identifies
 	// the publication (e.g. "10.1145/1234567.1234568").
 	DOI string
@@ -72,6 +79,11 @@ func (p Paper) Normalize() Paper {
 }
 
 func (p Paper) Validate() error {
+	_, err := uuid.Parse(p.UUID)
+	if err != nil {
+		return ErrInvalidPaper
+	}
+
 	if strings.TrimSpace(p.DOI) == "" {
 		return ErrInvalidPaper
 	}
