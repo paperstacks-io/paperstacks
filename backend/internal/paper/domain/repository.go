@@ -14,6 +14,7 @@ var (
 
 type Repository interface {
 	// queries
+	GetByUUID(ctx context.Context, uuid string) (Paper, error)
 	GetByDOI(ctx context.Context, doi string) (Paper, error)
 	Search(ctx context.Context, title, keyword string, sortBy string, orderDesc bool) ([]Paper, error)
 	List(ctx context.Context) ([]Paper, error)

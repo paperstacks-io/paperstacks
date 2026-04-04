@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -19,11 +20,16 @@ func (s *PaperService) List(ctx context.Context) ([]domain.Paper, error) {
 	return s.repo.List(ctx)
 }
 
+func (s *PaperService) GetByUUID(ctx context.Context, uuid string) (domain.Paper, error) {
+	return s.repo.GetByUUID(ctx, strings.TrimSpace(uuid))
+}
+
 func (s *PaperService) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
 	return s.repo.GetByDOI(ctx, strings.TrimSpace(doi))
 }
 
 func (s *PaperService) Create(ctx context.Context, paper domain.Paper) error {
+	paper.UUID = uuid.NewString()
 	paper = paper.Normalize()
 	if err := paper.Validate(); err != nil {
 		return err
@@ -40,9 +46,7 @@ func (s *PaperService) Update(ctx context.Context, doi string, paper domain.Pape
 		return domain.ErrInvalidPaper
 	}
 
-	if paper.DOI == "" {
-		paper.DOI = doi
-	} else if paper.DOI != doi {
+	if paper.DOI != doi {
 		return domain.ErrDOIMismatch
 	}
 

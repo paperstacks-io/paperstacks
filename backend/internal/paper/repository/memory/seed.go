@@ -5,6 +5,7 @@ import "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 func seedData() []domain.Paper {
 	return []domain.Paper{
 		{
+			UUID:  "bc627807-19f5-4328-8ccf-4a8f78ad170b",
 			DOI:   "10.1109/isese.2005.1541817",
 			Title: "Exploratory testing: a multiple case study",
 			Authors: []domain.Author{
@@ -38,6 +39,7 @@ func seedData() []domain.Paper {
 			PublicationYear: "2005",
 		},
 		{
+			UUID:  "202a0a80-dec8-48ea-b140-5fd26fee8dbd",
 			DOI:   "10.1016/j.infsof.2023.107299",
 			Title: "Code review guidelines for GUI-based testing artifacts",
 			Authors: []domain.Author{
@@ -64,6 +66,7 @@ func seedData() []domain.Paper {
 			PublicationYear: "2023",
 		},
 		{
+			UUID:  "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
 			DOI:   "10.1109/icstw58534.2023.00015",
 			Title: "We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
 			Authors: []domain.Author{
@@ -116,6 +119,7 @@ func seedData() []domain.Paper {
 			PublicationYear: "2023",
 		},
 		{
+			UUID:  "6752de78-0264-4ac5-8bd3-4eed7d3f5484",
 			DOI:   "10.1007/s10664-024-10522-z",
 			Title: "Augmented testing to support manual GUI-based regression testing: An empirical study",
 			Authors: []domain.Author{
@@ -130,7 +134,7 @@ func seedData() []domain.Paper {
 				"Manual testing",
 				"Bayesian data analysis",
 			},
-			Type: "journal-article",
+			Type:            "journal-article",
 			PublicationYear: "2024",
 		},
 	}

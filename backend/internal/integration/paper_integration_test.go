@@ -26,6 +26,22 @@ func TestIntegrationListPapers(t *testing.T) {
 	}
 }
 
+func TestIntegrationGetPaperByUUID(t *testing.T) {
+	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	endpoint := testAPIPath + "/papers/uuid/" + uuid
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+
+	assertStatusCode(t, resp, http.StatusOK)
+
+	var paper paperHttp.PaperResponse
+	decodeJSON(t, resp, &paper)
+
+	if paper.UUID != uuid {
+		t.Fatalf("expected paper to have UUID %s, got %s", uuid, paper.UUID)
+	}
+}
+
 func TestIntegrationGetPaperByDOI(t *testing.T) {
 	doi := "10.1109/isese.2005.1541817"
 	endpoint := testAPIPath + "/papers/doi/" + doi
@@ -73,12 +89,20 @@ func TestIntegrationSavePaper(t *testing.T) {
 
 func TestIntegrationUpdatePaper(t *testing.T) {
 	doi := "10.1109/isese.2005.1541817"
-	paperBody := paperHttp.PaperRequest{
+	endpoint := testAPIPath + "/papers/doi/" + doi
+
+	resp := doGetRequest(t, endpoint)
+	defer resp.Body.Close()
+	var before paperHttp.PaperResponse
+	decodeJSON(t, resp, &before)
+
+	update := paperHttp.PaperRequest{
+		UUID:  before.UUID,
+		DOI:   before.DOI,
 		Title: "Updated Paper",
 	}
 
-	endpoint := testAPIPath + "/papers/doi/" + doi
-	resp := doPutRequest(t, endpoint, paperBody)
+	resp = doPutRequest(t, endpoint, update)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusNoContent)
@@ -228,7 +252,7 @@ func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
 }
 
 func TestIntegrationPapersSortByTitleDesc(t *testing.T) {
-	endpoint :=  testAPIPath + "/papers?title=gui&sortBy=-title"
+	endpoint := testAPIPath + "/papers?title=gui&sortBy=-title"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -255,7 +279,7 @@ func TestIntegrationPapersSortByTitleDesc(t *testing.T) {
 }
 
 func TestIntegrationPapersSortByTitleAsc(t *testing.T) {
-	endpoint :=  testAPIPath + "/papers?title=gui&sortBy=+title"
+	endpoint := testAPIPath + "/papers?title=gui&sortBy=+title"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -294,7 +318,7 @@ func TestIntegrationPapersSortByYearDesc(t *testing.T) {
 	if len(papers) != 3 {
 		t.Fatalf("expected 3 papers, got %d", len(papers))
 	}
-	
+
 	year := math.MaxInt
 	for i, paper := range papers {
 		paperYear, err := strconv.Atoi(paper.PublicationYear)
@@ -304,7 +328,7 @@ func TestIntegrationPapersSortByYearDesc(t *testing.T) {
 
 		if paperYear <= year {
 			year = paperYear
-		}else {
+		} else {
 			t.Fatalf("exptected paper at index %d to have publication year less than or equal to %d, got %d", i, year, paperYear)
 		}
 	}
@@ -323,8 +347,8 @@ func TestIntegrationPapersSortByYearAsc(t *testing.T) {
 	if len(papers) != 3 {
 		t.Fatalf("expected 3 papers, got %d", len(papers))
 	}
-	
-	year :=  math.MinInt
+
+	year := math.MinInt
 	for i, paper := range papers {
 
 		paperYear, err := strconv.Atoi(paper.PublicationYear)

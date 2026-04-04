@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
@@ -26,6 +27,11 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 		t.Fatalf("GetByDOI() error = %v", err)
 	}
 
+	_, err = uuid.Parse(got.UUID)
+	if got.UUID == "" || err != nil {
+		t.Fatalf("expected valid uuid, got %q", got.UUID)
+	}
+
 	if got.DOI != "10.1000/example" {
 		t.Fatalf("stored DOI = %q, want %q", got.DOI, "10.1000/example")
 	}
@@ -41,6 +47,7 @@ func TestServiceUpdateRejectsMismatchedDOI(t *testing.T) {
 	service := NewPaperService(memory.NewRepository())
 
 	err := service.Update(context.Background(), "10.1109/isese.2005.1541817", domain.Paper{
+		UUID:  "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
 		DOI:   "10.9999/other",
 		Title: "Updated",
 	})
