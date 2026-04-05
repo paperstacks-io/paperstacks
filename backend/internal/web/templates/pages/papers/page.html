@@ -1,8 +1,7 @@
 {{define "paper"}}
-
 <div class="flex px-4 py-10 sm:px-6 lg:px-10">
-  <div class="card bg-base-100 shadow-sm">
-    <div class="card-body">
+  <div class="card bg-base-100 shadow-sm w-full">
+    <div class="card-body w-full">
       <h2 class="card-title">List of papers</h2>
       <form hx-target="#search-results">
         <div class="card-body">
@@ -26,12 +25,14 @@
             </select>
           </label>
 
-          <div id="loading" class="htmx-indicator">
+          <div id="loading" class="htmx-indicator hidden">
             <span class="loading loading-spinner loading-sm"></span>
             <span class="text-xs">Loading...</span>
           </div>
         </div>
       </form>
+
+      <div hx-get="/app/papers/dummy" hx-target="#search-results" hx-trigger="load once" hx-indicator="#loading"></div>
 
       <div id="search-results"></div>
     </div>

@@ -3,9 +3,11 @@ package web
 import (
 	"context"
 	"html/template"
+	"log"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -46,6 +48,34 @@ func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
 	})
 }
 
+func handlePaperDummy(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *application.PaperService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		paper, err := paperService.Search(
+			context.Background(),
+			"We Tried and Failed: An Experience Report on a Collaborative Workflow for GUI-based Testing",
+			"",
+			"",
+			false,
+		)
+		if err != nil {
+			logger.Error("read papers", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		templateName := "papers/partials/papers-list"
+		if err := tmpl.ExecuteTemplate(w, templateName, paper); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+	})
+}
+
 func handlePapersSearch(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -61,11 +91,15 @@ func handlePapersSearch(
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
 		foundPapers, err := paperService.Search(context.Background(), search, search, sortBy, desc)
+		dummyPaper, _ := paperService.GetByDOI(context.Background(), "10.1109/icstw58534.2023.00015")
+		foundPapers = append(foundPapers, dummyPaper)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		time.Sleep(2 * time.Second)
 
 		templateName := "papers/partials/papers-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, foundPapers); err != nil {
