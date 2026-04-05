@@ -15,5 +15,6 @@ func AddRoute(
 ) {
 	defaultMiddle := middleware.NewDefault(logger)
 
+	mux.Handle(http.MethodGet+" /", defaultMiddle(handleRoot()))
 	mux.Handle(http.MethodGet+" /healthz", defaultMiddle(handleHealthz()))
 }
