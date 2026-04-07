@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"html/template"
-	"log"
 	"log/slog"
 	"net/http"
 	"strings"
