@@ -1,3 +1,4 @@
+// Package http provides HTTP routes and handlers for paper resources.
 package http
 
 import (
@@ -16,7 +17,7 @@ func AddPaperRoute(
 	defaultMiddle := middleware.NewDefault(logger)
 
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handleListOrSearchPapers(logger, paperService)))
-	mux.Handle(http.MethodGet+" /papers/uuid/{uuid...}", defaultMiddle(handleGetPaperByUUID(logger, paperService)))
+	mux.Handle(http.MethodGet+" /papers/{uuid}", defaultMiddle(handleGetPaperByUUID(logger, paperService)))
 	mux.Handle(http.MethodGet+" /papers/doi/{doi...}", defaultMiddle(handleGetPaperByDOI(logger, paperService)))
 
 	mux.Handle(http.MethodDelete+" /papers/doi/{doi...}", defaultMiddle(handleDeletePaper(logger, paperService)))

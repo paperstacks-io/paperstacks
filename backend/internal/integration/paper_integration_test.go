@@ -28,7 +28,7 @@ func TestIntegrationListPapers(t *testing.T) {
 
 func TestIntegrationGetPaperByUUID(t *testing.T) {
 	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
-	endpoint := testAPIPath + "/api/papers/uuid/" + uuid
+	endpoint := testAPIPath + "/api/papers/" + uuid
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
