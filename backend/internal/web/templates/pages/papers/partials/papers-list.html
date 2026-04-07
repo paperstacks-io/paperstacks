@@ -1,15 +1,5 @@
 {{ define "papers/partials/papers-list"}}
-<style>
-  .list > li:last-child {
-    opacity: 0;
-    height: 0px;
-    pointer-events: none;
-  }
-</style>
-
 <ul class="list">
-  <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">Results</li>
-
   {{range .}}
   <li class="list-row flex">
     <div class="grow">
