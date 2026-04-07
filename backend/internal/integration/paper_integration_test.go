@@ -12,7 +12,7 @@ import (
 )
 
 func TestIntegrationListPapers(t *testing.T) {
-	endpoint := testAPIPath + "/papers/"
+	endpoint := testAPIPath + "/api/papers"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -28,7 +28,7 @@ func TestIntegrationListPapers(t *testing.T) {
 
 func TestIntegrationGetPaperByUUID(t *testing.T) {
 	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
-	endpoint := testAPIPath + "/papers/uuid/" + uuid
+	endpoint := testAPIPath + "/api/papers/uuid/" + uuid
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -44,7 +44,7 @@ func TestIntegrationGetPaperByUUID(t *testing.T) {
 
 func TestIntegrationGetPaperByDOI(t *testing.T) {
 	doi := "10.1109/isese.2005.1541817"
-	endpoint := testAPIPath + "/papers/doi/" + doi
+	endpoint := testAPIPath + "/api/papers/doi/" + doi
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -59,7 +59,7 @@ func TestIntegrationGetPaperByDOI(t *testing.T) {
 }
 
 func TestIntegrationPapersGetPaperByDOIUnknown(t *testing.T) {
-	endpoint := testAPIPath + "/papers/doi/doesntexist"
+	endpoint := testAPIPath + "/api/papers/doi/doesntexist"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -73,14 +73,14 @@ func TestIntegrationSavePaper(t *testing.T) {
 		Title: "Created Paper",
 	}
 
-	endpoint := testAPIPath + "/papers/"
+	endpoint := testAPIPath + "/api/papers"
 	resp := doPostRequest(t, endpoint, paperReq)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusCreated)
 
 	// Verify it was created
-	verifyEndpoint := testAPIPath + "/papers/doi/" + paperReq.DOI
+	verifyEndpoint := testAPIPath + "/api/papers/doi/" + paperReq.DOI
 	verifyResp := doGetRequest(t, verifyEndpoint)
 	defer verifyResp.Body.Close()
 
@@ -89,7 +89,7 @@ func TestIntegrationSavePaper(t *testing.T) {
 
 func TestIntegrationUpdatePaper(t *testing.T) {
 	doi := "10.1109/isese.2005.1541817"
-	endpoint := testAPIPath + "/papers/doi/" + doi
+	endpoint := testAPIPath + "/api/papers/doi/" + doi
 
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -127,11 +127,11 @@ func TestIntegrationDeletePaper(t *testing.T) {
 	}
 
 	// Create the paper to delete
-	createEndpoint := testAPIPath + "/papers/doi/"
+	createEndpoint := testAPIPath + "/api/papers"
 	doPostRequest(t, createEndpoint, paperBody)
 
 	// Delete the paper
-	deleteEndpoint := testAPIPath + "/papers/doi/" + doiToDelete
+	deleteEndpoint := testAPIPath + "/api/papers/doi/" + doiToDelete
 	deleteResp := doDeleteRequest(t, deleteEndpoint)
 	defer deleteResp.Body.Close()
 
@@ -153,7 +153,7 @@ func TestIntegrationGetPaperByTitle(t *testing.T) {
 
 	for _, title := range titles {
 		t.Run(title, func(t *testing.T) {
-			u, err := url.Parse(testAPIPath + "/papers")
+			u, err := url.Parse(testAPIPath + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
 			}
@@ -185,7 +185,7 @@ func TestIntegrationGetPaperByTitle(t *testing.T) {
 }
 
 func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
-	endpoint := testAPIPath + "/papers?title=" + url.QueryEscape("doesntexist")
+	endpoint := testAPIPath + "/api/papers?title=" + url.QueryEscape("doesntexist")
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -195,7 +195,7 @@ func TestIntegrationPapersGetPaperByTitleUnknown(t *testing.T) {
 
 func TestIntegrationPapersGetByKeyword(t *testing.T) {
 	keyword := "Code review"
-	endpoint := testAPIPath + "/papers?keyword=" + url.QueryEscape(keyword)
+	endpoint := testAPIPath + "/api/papers?keyword=" + url.QueryEscape(keyword)
 
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -212,7 +212,7 @@ func TestIntegrationPapersGetByKeyword(t *testing.T) {
 
 func TestIntegrationPapersGetByKeywordWithSpaces(t *testing.T) {
 	keyword := "   Code review   "
-	endpoint := testAPIPath + "/papers?keyword=" + url.QueryEscape(keyword)
+	endpoint := testAPIPath + "/api/papers?keyword=" + url.QueryEscape(keyword)
 
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -231,7 +231,7 @@ func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
 	title := "Code review guidelines for GUI-based testing artifacts"
 	keyword := "Code review"
 
-	endpoint := testAPIPath + "/papers?title=" + url.QueryEscape(title) +
+	endpoint := testAPIPath + "/api/papers?title=" + url.QueryEscape(title) +
 		"&keyword=" + url.QueryEscape(keyword)
 
 	resp := doGetRequest(t, endpoint)
@@ -252,7 +252,7 @@ func TestIntegrationPapersSearchByTitleAndKeyword(t *testing.T) {
 }
 
 func TestIntegrationPapersSortByTitleDesc(t *testing.T) {
-	endpoint := testAPIPath + "/papers?title=gui&sortBy=-title"
+	endpoint := testAPIPath + "/api/papers?title=gui&sortBy=-title"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -279,7 +279,7 @@ func TestIntegrationPapersSortByTitleDesc(t *testing.T) {
 }
 
 func TestIntegrationPapersSortByTitleAsc(t *testing.T) {
-	endpoint := testAPIPath + "/papers?title=gui&sortBy=+title"
+	endpoint := testAPIPath + "/api/papers?title=gui&sortBy=+title"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -306,7 +306,7 @@ func TestIntegrationPapersSortByTitleAsc(t *testing.T) {
 }
 
 func TestIntegrationPapersSortByYearDesc(t *testing.T) {
-	endpoint := testAPIPath + "/papers?title=gui&sortBy=-year"
+	endpoint := testAPIPath + "/api/papers?title=gui&sortBy=-year"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
@@ -335,7 +335,7 @@ func TestIntegrationPapersSortByYearDesc(t *testing.T) {
 }
 
 func TestIntegrationPapersSortByYearAsc(t *testing.T) {
-	endpoint := testAPIPath + "/papers?title=gui&sortBy=+year"
+	endpoint := testAPIPath + "/api/papers?title=gui&sortBy=+year"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 

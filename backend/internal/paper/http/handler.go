@@ -36,6 +36,24 @@ func handleListPapers(logger *slog.Logger, service *application.PaperService) ht
 	)
 }
 
+func handleListOrSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
+	listHandler := handleListPapers(logger, service)
+	searchHandler := handleSearchPapers(logger, service)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		title := normalizeQueryParam(r.URL.Query().Get("title"))
+		keyword := normalizeQueryParam(r.URL.Query().Get("keyword"))
+		sortBy := normalizeQueryParam(r.URL.Query().Get("sortBy"))
+
+		if title == "" && keyword == "" && sortBy == "" {
+			listHandler.ServeHTTP(w, r)
+			return
+		}
+
+		searchHandler.ServeHTTP(w, r)
+	})
+}
+
 func handleGetPaperByUUID(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {

@@ -24,11 +24,12 @@ type navItem struct {
 }
 
 func navItems(activePath string) []navItem {
+	prefix := "/app"
 	items := []navItem{
-		{Label: "Home", Path: "/app/"},
-		{Label: "Papers", Path: "/app/papers"},
-		{Label: "Search", Path: "/app/search"},
-		{Label: "Settings", Path: "/app/settings"},
+		{Label: "Home", Path: prefix + "/"},
+		{Label: "Papers", Path: prefix + "/papers"},
+		{Label: "Search", Path: prefix + "/search"},
+		{Label: "Settings", Path: prefix + "/settings"},
 	}
 
 	for i := range items {
@@ -62,15 +63,15 @@ func AddRoute(
 
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /app/{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/app/"))))
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"))))
 
 	for _, page := range []struct {
 		path     string
 		template string
 	}{
-		{path: "/app/papers", template: "paper"},
-		{path: "/app/search", template: "search"},
-		{path: "/app/settings", template: "settings"},
+		{path: "/papers", template: "paper"},
+		{path: "/search", template: "search"},
+		{path: "/settings", template: "settings"},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
 		if err != nil {
@@ -79,9 +80,8 @@ func AddRoute(
 
 		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
 	}
-	mux.Handle(http.MethodGet+" /app/assets/", defaultMiddle(http.StripPrefix("/app/assets/", http.FileServerFS(assets))))
-	mux.Handle(http.MethodGet+" /app/papers/dummy", defaultMiddle(handlePaperDummy(logger, tmpl, paperService)))
-	mux.Handle(http.MethodPost+" /app/papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
+	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
+	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
 	return nil
 }
