@@ -41,6 +41,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 		{query: "gui", sortBy: "", page: 1, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 2, expectedFirstUUID: "202a0"},
 		{query: "gui", sortBy: "", page: 2, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "6752de"},
 		{query: "gui", sortBy: "", page: 1, pageSize: 3, HTTPStatusCode: http.StatusOK, expectedLen: 3, expectedFirstUUID: "202a0"},
+		{query: "", sortBy: "", page: 5, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 0, expectedFirstUUID: ""},
 		// bad request
 		{query: "gui", sortBy: "bad-sort", page: 1, pageSize: 0, HTTPStatusCode: http.StatusBadRequest, expectedLen: 1, expectedFirstUUID: ""},
 	}
@@ -95,6 +96,104 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 
 			if !strings.HasPrefix(papers[0].UUID, tc.expectedFirstUUID) {
 				t.Fatalf("expected first UUID to start with %q, got %q", tc.expectedFirstUUID, papers[0].UUID)
+			}
+		})
+	}
+}
+
+func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name             string
+		query            string
+		sortBy           string
+		page             int
+		pageSize         int
+		expectedPage     string
+		expectedPageSize string
+		expectedTotal    string
+		expectedHasNext  string
+	}
+
+	tests := []testCase{
+		{
+			name:             "first page has next",
+			query:            "gui",
+			page:             1,
+			pageSize:         2,
+			expectedPage:     "1",
+			expectedPageSize: "2",
+			expectedTotal:    "3",
+			expectedHasNext:  "true",
+		},
+		{
+			name:             "second page has no next",
+			query:            "gui",
+			page:             2,
+			pageSize:         2,
+			expectedPage:     "2",
+			expectedPageSize: "2",
+			expectedTotal:    "3",
+			expectedHasNext:  "false",
+		},
+		{
+			name:             "defaults from service",
+			query:            "gui",
+			expectedPage:     "1",
+			expectedPageSize: "10",
+			expectedTotal:    "3",
+			expectedHasNext:  "false",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			u, err := url.Parse(testAPIPath + "/api/papers")
+			if err != nil {
+				t.Fatalf("failed to parse url: %v", err)
+			}
+
+			q := u.Query()
+			if tc.query != "" {
+				q.Set("q", tc.query)
+			}
+			if tc.sortBy != "" {
+				q.Set("sortBy", tc.sortBy)
+			}
+			if tc.page > 0 {
+				q.Set("page", strconv.Itoa(tc.page))
+			}
+			if tc.pageSize > 0 {
+				q.Set("pageSize", strconv.Itoa(tc.pageSize))
+			}
+			u.RawQuery = q.Encode()
+
+			resp := doGetRequest(t, u.String())
+			defer resp.Body.Close()
+
+			assertStatusCode(t, resp, http.StatusOK)
+
+			if got := resp.Header.Get("X-Page"); got != tc.expectedPage {
+				t.Fatalf("expected X-Page %q, got %q", tc.expectedPage, got)
+			}
+			if got := resp.Header.Get("X-Page-Size"); got != tc.expectedPageSize {
+				t.Fatalf("expected X-Page-Size %q, got %q", tc.expectedPageSize, got)
+			}
+			if got := resp.Header.Get("X-Total-Count"); got != tc.expectedTotal {
+				t.Fatalf("expected X-Total-Count %q, got %q", tc.expectedTotal, got)
+			}
+			if got := resp.Header.Get("X-Has-Next"); got != tc.expectedHasNext {
+				t.Fatalf("expected X-Has-Next %q, got %q", tc.expectedHasNext, got)
+			}
+
+			exposed := resp.Header.Get("Access-Control-Expose-Headers")
+			for _, key := range []string{"X-Page", "X-Page-Size", "X-Total-Count", "X-Has-Next"} {
+				if !strings.Contains(exposed, key) {
+					t.Fatalf("expected Access-Control-Expose-Headers to contain %q, got %q", key, exposed)
+				}
 			}
 		})
 	}

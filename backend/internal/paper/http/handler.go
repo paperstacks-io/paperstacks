@@ -41,6 +41,7 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 		}
 
 		resp := NewPaperResponses(result.Items)
+		setSearchPaginationHeaders(w, result)
 
 		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 			logger.Error("encode paper response", "error", err)
@@ -48,6 +49,14 @@ func handleSearchPapers(logger *slog.Logger, service *application.PaperService) 
 			return
 		}
 	})
+}
+
+func setSearchPaginationHeaders(w http.ResponseWriter, result domain.SearchResult) {
+	w.Header().Set("X-Page", strconv.Itoa(result.Page))
+	w.Header().Set("X-Page-Size", strconv.Itoa(result.PageSize))
+	w.Header().Set("X-Total-Count", strconv.Itoa(result.Total))
+	w.Header().Set("X-Has-Next", strconv.FormatBool(result.HasNext))
+	w.Header().Set("Access-Control-Expose-Headers", "X-Page, X-Page-Size, X-Total-Count, X-Has-Next")
 }
 
 func handleGetPaperByUUID(logger *slog.Logger, service *application.PaperService) http.Handler {
