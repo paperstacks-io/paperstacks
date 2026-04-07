@@ -41,25 +41,27 @@ func run(
 	paperService := paperApp.NewPaperService(memory.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
 
-	root := http.NewServeMux()
-	api := http.NewServeMux()
+	rootMux := http.NewServeMux()
+	apiMux := http.NewServeMux()
+	webMux := http.NewServeMux()
 	server.AddRoute(
-		root,
+		rootMux,
 		ctx,
 		logger,
 	)
 	phttp.AddPaperRoute(
-		api,
+		apiMux,
 		logger,
 		paperService,
 	)
-	doiHttp.AddDOIRoute(api, logger, doiService)
-	web.AddRoute(root, logger, paperService)
-	root.Handle("/api/", http.StripPrefix("/api", api))
+	doiHttp.AddDOIRoute(apiMux, logger, doiService)
+	web.AddRoute(webMux, logger, paperService)
+	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
+	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(host, port),
-		Handler:      root,
+		Handler:      rootMux,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
 	}
