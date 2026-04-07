@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
@@ -11,46 +12,41 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-func handleListPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			papers, err := service.List(r.Context())
-			if err != nil {
-				if errors.Is(err, domain.ErrPaperNotFound) {
-					logger.Error("read papers", "error", err.Error())
-					http.Error(w, err.Error(), http.StatusNotFound)
-					return
-				}
+func handleSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := normalizeQueryParam(r.URL.Query().Get("q"))
+		sortByRaw := normalizeQueryParam(r.URL.Query().Get("sortBy"))
+		page, _ := strconv.Atoi(normalizeQueryParam(r.URL.Query().Get("page")))
+		pageSize, _ := strconv.Atoi(normalizeQueryParam(r.URL.Query().Get("pageSize")))
 
-				logger.Error("read papers", "error", err.Error())
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+		sortBy, desc := strings.CutPrefix(sortByRaw, "-")
+		sortBy, _ = strings.CutPrefix(sortBy, "+")
+
+		result, err := service.Search(r.Context(), domain.SearchOptions{
+			Query:    query,
+			SortBy:   sortBy,
+			Desc:     desc,
+			Page:     page,
+			PageSize: pageSize,
+		})
+		if err != nil {
+			if errors.Is(err, domain.ErrInvalidSearch) {
+				http.Error(w, "invalid search options", http.StatusBadRequest)
 				return
 			}
 
-			resp := NewPaperResponses(papers)
-			if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-				logger.Error("encode paper resp", "error", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-		},
-	)
-}
-
-func handleListOrSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
-	listHandler := handleListPapers(logger, service)
-	searchHandler := handleSearchPapers(logger, service)
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		title := normalizeQueryParam(r.URL.Query().Get("title"))
-		keyword := normalizeQueryParam(r.URL.Query().Get("keyword"))
-		sortBy := normalizeQueryParam(r.URL.Query().Get("sortBy"))
-
-		if title == "" && keyword == "" && sortBy == "" {
-			listHandler.ServeHTTP(w, r)
+			logger.Error("read papers", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		searchHandler.ServeHTTP(w, r)
+		resp := NewPaperResponses(result.Items)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode paper response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	})
 }
 
@@ -211,37 +207,6 @@ func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) h
 			w.WriteHeader(http.StatusNoContent)
 		},
 	)
-}
-
-func handleSearchPapers(logger *slog.Logger, service *application.PaperService) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		title := normalizeQueryParam(r.URL.Query().Get("title"))
-		keyword := normalizeQueryParam(r.URL.Query().Get("keyword"))
-		sortBy := normalizeQueryParam(r.URL.Query().Get("sortBy"))
-
-		sortBy, desc := strings.CutPrefix(sortBy, "-")
-
-		isAllowedSortKey := sortBy == "title" || sortBy == "year"
-		if sortBy != "" && !isAllowedSortKey {
-			http.Error(w, "invalid 'sortBy': allowed values are 'title', 'year'", http.StatusBadRequest)
-			return
-		}
-
-		papers, err := service.Search(r.Context(), title, keyword, sortBy, desc)
-		if err != nil {
-			logger.Error("read papers", "error", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		resp := NewPaperResponses(papers)
-
-		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-			logger.Error("encode paper response", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	})
 }
 
 func normalizeQueryParam(s string) string {

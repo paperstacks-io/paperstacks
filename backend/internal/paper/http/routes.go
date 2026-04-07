@@ -16,7 +16,7 @@ func AddPaperRoute(
 ) {
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handleListOrSearchPapers(logger, paperService)))
+	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handleSearchPapers(logger, paperService)))
 	mux.Handle(http.MethodGet+" /papers/{uuid}", defaultMiddle(handleGetPaperByUUID(logger, paperService)))
 	mux.Handle(http.MethodGet+" /papers/doi/{doi...}", defaultMiddle(handleGetPaperByDOI(logger, paperService)))
 

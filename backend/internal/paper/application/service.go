@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -71,9 +73,14 @@ func (s *PaperService) Search(ctx context.Context, opts domain.SearchOptions) (d
 	opts.Query = strings.ToLower(strings.TrimSpace(opts.Query))
 	opts.SortBy = strings.ToLower(strings.TrimSpace(opts.SortBy))
 
-	opts.Page = min(1, opts.Page)
-	opts.PageSize = min(1, opts.PageSize)
-	opts.PageSize = max(defaultSearchPageSize, opts.PageSize)
+	opts.Page = max(defaultSearchPage, opts.Page)
+
+	if opts.PageSize < 1 {
+		opts.PageSize = defaultSearchPageSize
+	}
+	opts.PageSize = min(maxSearchPageSize, opts.PageSize)
+
+	fmt.Println("pageSize handler:" + strconv.Itoa(opts.PageSize))
 
 	if opts.SortBy != "" && opts.SortBy != "title" && opts.SortBy != "year" {
 		return domain.SearchResult{}, domain.ErrInvalidSearch

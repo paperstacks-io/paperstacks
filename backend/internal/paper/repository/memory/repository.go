@@ -102,7 +102,6 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	result := make([]domain.Paper, 0, len(r.data))
 
 	for _, paper := range r.data {
