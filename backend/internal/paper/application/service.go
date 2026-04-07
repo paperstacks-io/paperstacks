@@ -8,6 +8,12 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
+const (
+	defaultSearchPage     = 1
+	defaultSearchPageSize = 10
+	maxSearchPageSize     = 100
+)
+
 type PaperService struct {
 	repo domain.Repository
 }
@@ -61,9 +67,20 @@ func (s *PaperService) Delete(ctx context.Context, doi string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(doi))
 }
 
-func (s *PaperService) Search(ctx context.Context, title, keyword string, sortBy string, orderDesc bool) ([]domain.Paper, error) {
-	keyword = strings.ToLower(keyword)
-	title = strings.ToLower(title)
+func (s *PaperService) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	opts.Query = strings.ToLower(strings.TrimSpace(opts.Query))
+	opts.SortBy = strings.ToLower(strings.TrimSpace(opts.SortBy))
 
-	return s.repo.Search(ctx, title, keyword, sortBy, orderDesc)
+	opts.Page = max(defaultSearchPage, opts.Page)
+
+	if opts.PageSize < 1 {
+		opts.PageSize = defaultSearchPageSize
+	}
+	opts.PageSize = min(maxSearchPageSize, opts.PageSize)
+
+	if opts.SortBy != "" && opts.SortBy != "title" && opts.SortBy != "year" {
+		return domain.SearchResult{}, domain.ErrInvalidSearch
+	}
+
+	return s.repo.Search(ctx, opts)
 }
