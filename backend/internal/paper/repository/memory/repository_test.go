@@ -53,15 +53,15 @@ func TestRepositorySearchByTitle(t *testing.T) {
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "exploratory testing", "", "", false)
+	result, err := repo.Search(context.Background(), domain.SearchOptions{Query: "exploratory testing"})
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
-	if len(papers) != 1 {
-		t.Fatalf("Search() returned %d papers, want 1", len(papers))
+	if len(result.Items) != 1 {
+		t.Fatalf("Search() returned %d papers, want 1", len(result.Items))
 	}
-	if papers[0].DOI != "10.1109/isese.2005.1541817" {
-		t.Fatalf("Search() DOI = %q, want %q", papers[0].DOI, "10.1109/isese.2005.1541817")
+	if result.Items[0].DOI != "10.1109/isese.2005.1541817" {
+		t.Fatalf("Search() DOI = %q, want %q", result.Items[0].DOI, "10.1109/isese.2005.1541817")
 	}
 }
 
@@ -70,56 +70,90 @@ func TestRepositorySearchByKeyword(t *testing.T) {
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "", "gui testing", "", false)
+	result, err := repo.Search(context.Background(), domain.SearchOptions{Query: "gui testing"})
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
-	if len(papers) != 3 {
-		t.Fatalf("Search() returned %d papers, want 3", len(papers))
+	if len(result.Items) != 3 {
+		t.Fatalf("Search() returned %d papers, want 3", len(result.Items))
 	}
 }
 
-func TestRepositorySearchByTitleAndKeywordSamePaper(t *testing.T) {
+func TestRepositorySearchEmptyQueryReturnsAllPapers(t *testing.T) {
 	t.Parallel()
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "augmented testing", "bayesian data analysis", "", false)
+	result, err := repo.Search(context.Background(), domain.SearchOptions{})
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
-	if len(papers) != 1 {
-		t.Fatalf("Search() returned %d papers, want 1", len(papers))
+	if result.Total != 4 {
+		t.Fatalf("Search() total = %d, want 4", result.Total)
 	}
-	if papers[0].DOI != "10.1007/s10664-024-10522-z" {
-		t.Fatalf("Search() DOI = %q, want %q", papers[0].DOI, "10.1007/s10664-024-10522-z")
+	if len(result.Items) != 4 {
+		t.Fatalf("Search() items = %d, want 4", len(result.Items))
 	}
 }
 
-func TestRepositorySearchByTitleAndKeywordDifferentPapers(t *testing.T) {
+func TestRepositorySearchSortByYearDescending(t *testing.T) {
 	t.Parallel()
 
 	repo := NewRepository()
 
-	papers, err := repo.Search(context.Background(), "a multiple case study", "bayesian data analysis", "", false)
+	result, err := repo.Search(context.Background(), domain.SearchOptions{SortBy: "year", Desc: true})
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
-	if len(papers) != 2 {
-		t.Fatalf("Search() returned %d papers, want 2", len(papers))
+	if len(result.Items) != 4 {
+		t.Fatalf("Search() returned %d papers, want 4", len(result.Items))
+	}
+	if result.Items[0].DOI != "10.1007/s10664-024-10522-z" {
+		t.Fatalf("Search() first DOI = %q, want %q", result.Items[0].DOI, "10.1007/s10664-024-10522-z")
 	}
 }
 
-func TestRepositorySearchNoResultReturnsNotFound(t *testing.T) {
+func TestRepositorySearchPaginatesResults(t *testing.T) {
 	t.Parallel()
 
 	repo := NewRepository()
 
-	result, err := repo.Search(context.Background(), "nonexistent title", "", "", false)
-	if len(result) != 0 {
-		t.Fatalf("Search() result = %v, want empty slice", len(result))
-	}
+	result, err := repo.Search(context.Background(), domain.SearchOptions{SortBy: "title", Page: 2, PageSize: 2})
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
+	}
+
+	if result.Total != 4 {
+		t.Fatalf("Search() total = %d, want 4", result.Total)
+	}
+	if len(result.Items) != 2 {
+		t.Fatalf("Search() items = %d, want 2", len(result.Items))
+	}
+	if result.Page != 2 {
+		t.Fatalf("Search() page = %d, want 2", result.Page)
+	}
+	if result.PageSize != 2 {
+		t.Fatalf("Search() pageSize = %d, want 2", result.PageSize)
+	}
+	if result.HasNext {
+		t.Fatalf("Search() hasNext = true, want false")
+	}
+
+	if result.Items[0].DOI != "10.1109/isese.2005.1541817" {
+		t.Fatalf("Search() first item DOI = %q, want %q", result.Items[0].DOI, "10.1109/isese.2005.1541817")
+	}
+}
+
+func TestRepositorySearchNoResultReturnsEmpty(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	result, err := repo.Search(context.Background(), domain.SearchOptions{Query: "nonexistent title"})
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil", err)
+	}
+	if len(result.Items) != 0 {
+		t.Fatalf("Search() result = %v, want empty slice", len(result.Items))
 	}
 }

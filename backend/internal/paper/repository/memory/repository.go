@@ -99,51 +99,70 @@ func (r *Repository) Delete(_ context.Context, doi string) error {
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) Search(_ context.Context, title, keyword string, sortBy string, orderDesc bool) ([]domain.Paper, error) {
+func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var result []domain.Paper
-
-	if title == "" && keyword == "" {
-		return []domain.Paper{}, nil
-	}
+	result := make([]domain.Paper, 0, len(r.data))
 
 	for _, paper := range r.data {
-
-		matchesTitle := title != "" && strings.Contains(strings.ToLower(paper.Title), title)
-		matchesKeyword := keyword != "" && containsText(paper.Keywords, keyword)
-
-		if matchesTitle || matchesKeyword {
+		if matchesQuery(paper, opts.Query) {
 			result = append(result, paper)
 		}
 	}
 
-	if sortBy != "" {
-		sortPapersByOrder(result, sortBy, orderDesc)
+	if opts.SortBy != "" {
+		sortPapersByOrder(result, opts.SortBy, opts.Desc)
 	}
 
-	return result, nil
+	page := max(1, opts.Page)
+
+	pageSize := len(result)
+	if opts.PageSize > 0 {
+		pageSize = opts.PageSize
+	}
+	pageSize = max(1, pageSize)
+
+	total := len(result)
+	start := min((page-1)*pageSize, total)
+	end := min(start+pageSize, total)
+
+	items := make([]domain.Paper, 0, end-start)
+	items = append(items, result[start:end]...)
+
+	return domain.SearchResult{
+		Items:    items,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		HasNext:  end < total,
+	}, nil
 }
 
-func sortPapersByOrder(papers []domain.Paper, sortBy string, desc bool) ([]domain.Paper, error) {
-	if len(papers) == 1 {
-		return papers, nil
-	}
-
+func sortPapersByOrder(papers []domain.Paper, sortBy string, desc bool) {
 	sort.Slice(papers, func(i, j int) bool {
+		if papers[i].DOI == papers[j].DOI {
+			return compare(papers[i].UUID, papers[j].UUID, false)
+		}
+
 		switch sortBy {
 		case "title":
+			if papers[i].Title == papers[j].Title {
+				return compare(papers[i].DOI, papers[j].DOI, false)
+			}
+
 			return compare(papers[i].Title, papers[j].Title, desc)
 		case "year":
+			if papers[i].PublicationYear == papers[j].PublicationYear {
+				return compare(papers[i].DOI, papers[j].DOI, false)
+			}
+
 			return compare(papers[i].PublicationYear, papers[j].PublicationYear, desc)
 
 		default:
-			return false
+			return compare(papers[i].DOI, papers[j].DOI, false)
 		}
 	})
-
-	return papers, nil
 }
 
 func compare[T cmp.Ordered](a, b T, desc bool) bool {
@@ -161,4 +180,16 @@ func containsText(slice []string, text string) bool {
 		}
 	}
 	return false
+}
+
+func matchesQuery(paper domain.Paper, query string) bool {
+	if query == "" {
+		return true
+	}
+
+	if strings.Contains(strings.ToLower(paper.Title), query) {
+		return true
+	}
+
+	return containsText(paper.Keywords, query)
 }
