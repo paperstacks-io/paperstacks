@@ -30,15 +30,17 @@ var client *http.Client
 
 func startApplication() bool {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	handle := http.NewServeMux()
-	server.AddRoute(handle, context.Background(), logger)
+	root := http.NewServeMux()
+	api := http.NewServeMux()
+	server.AddRoute(root, context.Background(), logger)
 
 	paperService := application.NewPaperService(memory.NewRepository())
-	paperHttp.AddPaperRoute(handle, logger, paperService)
+	paperHttp.AddPaperRoute(api, logger, paperService)
+	root.Handle("/api/", http.StripPrefix("/api", api))
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(testHost, testPort),
-		Handler:      handle,
+		Handler:      root,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
 	}
