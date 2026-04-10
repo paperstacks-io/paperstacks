@@ -63,8 +63,8 @@ func (s *PaperService) Update(ctx context.Context, doi string, paper domain.Pape
 	return s.repo.Update(ctx, doi, paper)
 }
 
-func (s *PaperService) Delete(ctx context.Context, doi string) error {
-	return s.repo.Delete(ctx, strings.TrimSpace(doi))
+func (s *PaperService) Delete(ctx context.Context, uuid string) error {
+	return s.repo.Delete(ctx, strings.TrimSpace(uuid))
 }
 
 func (s *PaperService) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {

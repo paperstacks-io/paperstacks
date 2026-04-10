@@ -125,21 +125,20 @@ func handleGetPaperByDOI(logger *slog.Logger, service *application.PaperService)
 func handleDeletePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			id := r.PathValue("doi")
+			id := r.PathValue("uuid")
 			if id == "" {
-				http.Error(w, "missing paper id", http.StatusBadRequest)
+				http.Error(w, "missing paper uuid", http.StatusBadRequest)
 				return
 			}
 
 			if err := service.Delete(r.Context(), id); err != nil {
+				logger.Error("delete paper", "uuid", id, "error", err)
 				if errors.Is(err, domain.ErrPaperNotFound) {
-					logger.Error("delete paper", "id", id, "error", err)
-					http.Error(w, "paper not found", http.StatusNotFound)
+					http.Error(w, "paper not found with UUID: "+id, http.StatusNotFound)
 					return
 				}
 
-				logger.Error("delete paper", "id", id, "error", err)
-				http.Error(w, "internal server error", http.StatusInternalServerError)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
