@@ -12,7 +12,7 @@ import (
 )
 
 func TestIntegrationSearchPapersQueryParams(t *testing.T) {
-	t.Parallel()
+	setupIntegrationTest(t)
 
 	type testCase struct {
 		query             string
@@ -48,8 +48,6 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.query+"_"+tc.sortBy, func(t *testing.T) {
-			t.Parallel()
-
 			u, err := url.Parse(testAPIPath + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
@@ -102,7 +100,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 }
 
 func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
-	t.Parallel()
+	setupIntegrationTest(t)
 
 	type testCase struct {
 		name             string
@@ -149,8 +147,6 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			u, err := url.Parse(testAPIPath + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
@@ -200,6 +196,8 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 }
 
 func TestIntegrationListPapers(t *testing.T) {
+	setupIntegrationTest(t)
+
 	endpoint := testAPIPath + "/api/papers"
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -215,6 +213,8 @@ func TestIntegrationListPapers(t *testing.T) {
 }
 
 func TestIntegrationGetPaperByUUID(t *testing.T) {
+	setupIntegrationTest(t)
+
 	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
 	endpoint := testAPIPath + "/api/papers/" + uuid
 	resp := doGetRequest(t, endpoint)
@@ -228,4 +228,16 @@ func TestIntegrationGetPaperByUUID(t *testing.T) {
 	if paper.UUID != uuid {
 		t.Fatalf("expected paper to have UUID %s, got %s", uuid, paper.UUID)
 	}
+}
+
+func TestIntegrationDeletePaper(t *testing.T) {
+	setupIntegrationTest(t)
+
+	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	endpoint := testAPIPath + "/api/papers/" + uuid
+	resp := doDeleteRequest(t, endpoint)
+	assertStatusCode(t, resp, http.StatusNoContent)
+
+	resp = doGetRequest(t, endpoint)
+	assertStatusCode(t, resp, http.StatusNotFound)
 }
