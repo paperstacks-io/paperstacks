@@ -7,7 +7,23 @@ import (
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
+
+func setupIntegrationTest(t *testing.T) {
+	t.Helper()
+
+	integrationTestMu.Lock()
+
+	if testRepo == nil {
+		integrationTestMu.Unlock()
+		t.Fatal("integration test repository is not initialized")
+	}
+
+	testRepo = memory.NewRepository()
+	t.Cleanup(integrationTestMu.Unlock)
+}
 
 // doRequest makes an HTTP request and returns the response.
 // The caller is responsible for closing resp.Body.

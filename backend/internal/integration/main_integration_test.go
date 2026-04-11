@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,6 +28,8 @@ const (
 )
 
 var client *http.Client
+var testRepo *memory.Repository
+var integrationTestMu sync.Mutex
 
 func startApplication() bool {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -34,7 +37,8 @@ func startApplication() bool {
 	api := http.NewServeMux()
 	server.AddRoute(root, context.Background(), logger)
 
-	paperService := application.NewPaperService(memory.NewRepository())
+	testRepo = memory.NewRepository()
+	paperService := application.NewPaperService(testRepo)
 	paperHttp.AddPaperRoute(api, logger, paperService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
