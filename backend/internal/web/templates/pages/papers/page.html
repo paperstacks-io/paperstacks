@@ -1,42 +1,70 @@
 {{define "paper"}}
-<div class="flex px-4 py-10 sm:px-6 lg:px-10">
+<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
   <div class="card bg-base-100 shadow-sm w-full">
     <div class="card-body w-full">
       <h2 class="card-title">List of papers</h2>
-      <form hx-target="#search-results">
-        <div class="card-body">
-          <input
-            class="input input-bordered w-full"
-            type="search"
-            name="search"
-            placeholder="Search Papers..."
-            hx-post="/app/papers/search"
-            hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
-            hx-indicator="#loading"
-          />
+      <form hx-target="#search-results" hx-indicator="#loader">
+        <div class="card w-full">
+          <div class="flex flex-row gap-4">
+            <label class="input input-bordered flex items-center gap-2 w-full">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 opacity-50"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                />
+              </svg>
+              <input
+                type="search"
+                name="search"
+                placeholder="Search Papers..."
+                hx-post="/app/papers/search"
+                hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+                hx-target="#search-results"
+              />
+            </label>
 
-          <label class="select select-bordered w-full">
-            <select name="sortBy" hx-post="/app/papers/search" hx-trigger="change" hx-indicator="#loading">
-              <option value="" disabled selected>Select sorting option</option>
+            <select
+              class="select select-bordered block w-32"
+              name="sortBy"
+              hx-post="/app/papers/search"
+              hx-trigger="change"
+              hx-target="#search-results"
+            >
+              <option disabled selected>Sort by date</option>
               <option value="+title">Title (A-Z)</option>
               <option value="-title">Title (Z-A)</option>
               <option value="+year">Oldest</option>
               <option value="-year">Newest</option>
             </select>
-          </label>
-
-          <div id="loading" class="htmx-indicator hidden">
-            <span class="loading loading-spinner loading-sm"></span>
-            <span class="text-xs">Loading...</span>
           </div>
         </div>
       </form>
 
-      <div hx-get="/app/papers/dummy" hx-target="#search-results" hx-trigger="load once" hx-indicator="#loading"></div>
+      <style>
+        #loader {
+          display: none;
+        }
+
+        #loader.htmx-request {
+          display: flex;
+        }
+      </style>
+
+      <div id="loader" class="htmx-indicator hidden flex justify-center">
+        <span class="loading loading-spinner loading-sm"></span>
+        <span class="text-xs"></span>
+      </div>
 
       <div id="search-results"></div>
     </div>
   </div>
 </div>
-
 {{end}}
