@@ -182,32 +182,31 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 func handleUpdatePaper(logger *slog.Logger, service *application.PaperService) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			id := r.PathValue("doi")
+			id := r.PathValue("uuid")
 			if id == "" {
-				http.Error(w, "missing paper doi", http.StatusBadRequest)
+				http.Error(w, "missing paper uuid", http.StatusBadRequest)
 				return
 			}
 
 			req, err := server.Decode[PaperRequest](r)
 			if err != nil {
-				http.Error(w, "invalid req body", http.StatusBadRequest)
+				http.Error(w, "unable to parse request body as PaperRequest", http.StatusBadRequest)
 				return
 			}
 
 			p := req.toDomain()
 			if err := service.Update(r.Context(), id, p); err != nil {
+				logger.Error("update paper", "uuid", id, "error", err.Error())
 				if errors.Is(err, domain.ErrPaperNotFound) {
-					logger.Error("update paper", "id", id, "error", "paper "+err.Error())
 					http.Error(w, "paper not found", http.StatusNotFound)
 					return
 				}
 
-				if errors.Is(err, domain.ErrInvalidPaper) || errors.Is(err, domain.ErrDOIMismatch) {
+				if errors.Is(err, domain.ErrInvalidPaper) || errors.Is(err, domain.ErrUUIDMismatch) {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
 
-				logger.Error("update paper", "id", id, "error", err)
 				http.Error(w, "failed to update paper", http.StatusInternalServerError)
 				return
 			}

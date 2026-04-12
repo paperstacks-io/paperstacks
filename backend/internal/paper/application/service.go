@@ -44,23 +44,19 @@ func (s *PaperService) Create(ctx context.Context, paper domain.Paper) error {
 	return s.repo.Save(ctx, paper)
 }
 
-func (s *PaperService) Update(ctx context.Context, doi string, paper domain.Paper) error {
-	doi = strings.TrimSpace(doi)
+func (s *PaperService) Update(ctx context.Context, uuid string, paper domain.Paper) error {
+	uuid = strings.TrimSpace(uuid)
 	paper = paper.Normalize()
 
-	if doi == "" {
-		return domain.ErrInvalidPaper
-	}
-
-	if paper.DOI != doi {
-		return domain.ErrDOIMismatch
+	if paper.UUID != uuid {
+		return domain.ErrUUIDMismatch
 	}
 
 	if err := paper.Validate(); err != nil {
 		return err
 	}
 
-	return s.repo.Update(ctx, doi, paper)
+	return s.repo.Update(ctx, uuid, paper)
 }
 
 func (s *PaperService) Delete(ctx context.Context, uuid string) error {
