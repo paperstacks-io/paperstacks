@@ -2,8 +2,11 @@
 <div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
   <div class="card bg-base-100 shadow-sm w-full">
     <div class="card-body w-full">
-      <h2 class="card-title">List of papers</h2>
-      <form hx-target="#search-results" hx-indicator="#loader">
+      <h2 class="card-title">
+        List of papers
+        <span class="htmx-indicator loading loading-spinner loading-sm"></span>
+      </h2>
+      <form hx-target="#search-results" hx-indicator=".htmx-indicator">
         <div class="card w-full">
           <div class="flex flex-row gap-4">
             <label class="input input-bordered flex items-center gap-2 w-full">
@@ -47,22 +50,7 @@
         </div>
       </form>
 
-      <style>
-        #loader {
-          display: none;
-        }
-
-        #loader.htmx-request {
-          display: flex;
-        }
-      </style>
-
-      <div id="loader" class="htmx-indicator hidden flex justify-center">
-        <span class="loading loading-spinner loading-sm"></span>
-        <span class="text-xs"></span>
-      </div>
-
-      <div id="search-results"></div>
+      <div id="search-results" class="disabled"></div>
     </div>
   </div>
 </div>
