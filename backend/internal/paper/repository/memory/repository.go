@@ -71,12 +71,12 @@ func (r *Repository) Save(_ context.Context, paper domain.Paper) error {
 	return nil
 }
 
-func (r *Repository) Update(_ context.Context, doi string, paper domain.Paper) error {
+func (r *Repository) Update(_ context.Context, uuid string, paper domain.Paper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	for i, item := range r.data {
-		if item.DOI == doi {
+		if item.UUID == uuid {
 			r.data[i] = paper
 			return nil
 		}

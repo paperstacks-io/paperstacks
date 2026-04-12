@@ -9,7 +9,7 @@ var (
 	ErrPaperNotFound      = errors.New("paper not found")
 	ErrPaperAlreadyExists = errors.New("paper already exists")
 	ErrInvalidPaper       = errors.New("invalid paper")
-	ErrDOIMismatch        = errors.New("paper DOI does not match resource DOI")
+	ErrUUIDMismatch       = errors.New("paper UUID does not match")
 	ErrInvalidSearch      = errors.New("invalid search options")
 )
 
@@ -22,7 +22,7 @@ type Repository interface {
 
 	// commands
 	Save(ctx context.Context, paper Paper) error
-	Update(ctx context.Context, doi string, paper Paper) error
+	Update(ctx context.Context, uuid string, paper Paper) error
 	Delete(ctx context.Context, uuid string) error
 }
 

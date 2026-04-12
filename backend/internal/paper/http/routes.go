@@ -20,7 +20,7 @@ func AddPaperRoute(
 	mux.Handle(http.MethodGet+" /papers/{uuid}", defaultMiddle(handleGetPaperByUUID(logger, paperService)))
 	mux.Handle(http.MethodGet+" /papers/doi/{doi...}", defaultMiddle(handleGetPaperByDOI(logger, paperService)))
 
-	mux.Handle(http.MethodDelete+" /papers/{uuid}", defaultMiddle(handleDeletePaper(logger, paperService)))
 	mux.Handle(http.MethodPost+" /papers", defaultMiddle(handleSavePaper(logger, paperService)))
-	mux.Handle(http.MethodPut+" /papers/doi/{doi...}", defaultMiddle(handleUpdatePaper(logger, paperService)))
+	mux.Handle(http.MethodDelete+" /papers/{uuid}", defaultMiddle(handleDeletePaper(logger, paperService)))
+	mux.Handle(http.MethodPut+" /papers/{uuid}", defaultMiddle(handleUpdatePaper(logger, paperService)))
 }

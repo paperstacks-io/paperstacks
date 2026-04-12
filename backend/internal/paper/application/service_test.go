@@ -41,17 +41,17 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 	}
 }
 
-func TestServiceUpdateRejectsMismatchedDOI(t *testing.T) {
+func TestServiceUpdateRejectsMismatchedUUID(t *testing.T) {
 	t.Parallel()
 
 	service := NewPaperService(memory.NewRepository())
 
-	err := service.Update(context.Background(), "10.1109/isese.2005.1541817", domain.Paper{
-		UUID:  "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
+	err := service.Update(context.Background(), "a4b065f1-1b88-4f50-a7fe-1177f3489fcf", domain.Paper{
+		UUID:  "a4b065f1-other",
 		DOI:   "10.9999/other",
 		Title: "Updated",
 	})
-	if err != domain.ErrDOIMismatch {
-		t.Fatalf("Update() error = %v, want %v", err, domain.ErrDOIMismatch)
+	if err != domain.ErrUUIDMismatch {
+		t.Fatalf("Update() error = %v, want %v", err, domain.ErrUUIDMismatch)
 	}
 }
