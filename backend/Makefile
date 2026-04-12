@@ -21,7 +21,7 @@ test: ## Run all unit tests
 
 .PHONY: test-integration
 test-integration: ## Run all integration tests
-	INTEGRATION=1 $(GOCMD) test -run '^TestIntegration' ./... -coverprofile=coverage.out
+	INTEGRATION=1 $(GOCMD) test -parallel=1 -run '^TestIntegration' ./... -coverprofile=coverage.out
 
 .PHONY: build
 build: build-server ## Build all

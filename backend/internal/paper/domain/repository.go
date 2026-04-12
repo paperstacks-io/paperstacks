@@ -23,7 +23,7 @@ type Repository interface {
 	// commands
 	Save(ctx context.Context, paper Paper) error
 	Update(ctx context.Context, doi string, paper Paper) error
-	Delete(ctx context.Context, doi string) error
+	Delete(ctx context.Context, uuid string) error
 }
 
 type SearchOptions struct {

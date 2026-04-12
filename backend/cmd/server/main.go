@@ -30,7 +30,7 @@ func run(
 ) error {
 	host := getenv("HOST")
 	if host == "" {
-		host = "0.0.0.0"
+		host = "127.0.0.1"
 	}
 	port := getenv("PORT")
 	if port == "" {
@@ -84,7 +84,13 @@ func run(
 		close(done)
 	}()
 
-	slog.Info("Starting server:", slog.String("host", host), slog.String("port", port))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "\tStarting server:")
+	fmt.Fprintln(tw, "\tFrontend: \thttp://"+host+":"+port+"/app/")
+	fmt.Fprintln(tw, "\tAPI: \thttp://"+host+":"+port+"/api/")
+	fmt.Fprintln(tw)
+	_ = tw.Flush()
+
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("Could not listen", slog.String("port", port), slog.String("error", err.Error()))
 		return err

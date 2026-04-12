@@ -85,12 +85,12 @@ func (r *Repository) Update(_ context.Context, doi string, paper domain.Paper) e
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) Delete(_ context.Context, doi string) error {
+func (r *Repository) Delete(_ context.Context, uuid string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	for i, item := range r.data {
-		if item.DOI == doi {
+		if item.UUID == uuid {
 			r.data = append(r.data[:i], r.data[i+1:]...)
 			return nil
 		}
