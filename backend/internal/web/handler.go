@@ -71,7 +71,6 @@ func handlePapersSearch(
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		result.Items = append(result.Items)
 
 		templateName := "papers/partials/papers-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, result); err != nil {
