@@ -73,7 +73,7 @@ func handlePapersSearch(
 		}
 
 		templateName := "papers/partials/papers-list"
-		if err := tmpl.ExecuteTemplate(w, templateName, result.Items); err != nil {
+		if err := tmpl.ExecuteTemplate(w, templateName, result); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})

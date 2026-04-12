@@ -1,8 +1,10 @@
-{{ define "papers/partials/papers-list"}}
-<ul class="list">
-  <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">Results</li>
+{{ define "papers/partials/papers-list"}} {{ if eq .Total 0 }}
+<p class="text-sm opacity-60">No papers found</p>
+{{ else }}
+<p>{{ .Total }} papers found</p>
 
-  {{range .}}
+<ul class="list">
+  {{range .Items}}
   <li class="list-row flex">
     <div class="grow">
       <a class="link link-info font-bold">{{ .Title }}</a>
@@ -42,4 +44,4 @@
   </li>
   {{ end }}
 </ul>
-{{ end }}
+{{ end }} {{ end }}
