@@ -57,18 +57,18 @@ func (r *Repository) List(_ context.Context) ([]domain.Paper, error) {
 	return out, nil
 }
 
-func (r *Repository) Save(_ context.Context, paper domain.Paper) error {
+func (r *Repository) Save(_ context.Context, paper domain.Paper) (domain.Paper, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	for _, item := range r.data {
-		if item.DOI == paper.DOI {
-			return domain.ErrPaperAlreadyExists
+		if item.UUID == paper.UUID {
+			return domain.Paper{}, domain.ErrPaperAlreadyExists
 		}
 	}
 
 	r.data = append(r.data, paper)
-	return nil
+	return paper, nil
 }
 
 func (r *Repository) Update(_ context.Context, uuid string, paper domain.Paper) error {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 )
 
@@ -240,4 +241,28 @@ func TestIntegrationDeletePaper(t *testing.T) {
 
 	resp = doGetRequest(t, endpoint)
 	assertStatusCode(t, resp, http.StatusNotFound)
+}
+
+func TestIntegrationSavePaper(t *testing.T) {
+	setupIntegrationTest(t)
+
+	paper := domain.Paper{
+		DOI:   "10.1109/some_DOI",
+		Title: "Test article",
+	}
+	endpoint := testAPIPath + "/api/papers"
+	resp := doPostRequest(t, endpoint, paper)
+	defer resp.Body.Close()
+	assertStatusCode(t, resp, http.StatusCreated)
+
+	loc := resp.Header.Get("location")
+	if loc == "" {
+		t.Fatal("expected location header to be not empty")
+	}
+
+	var created paperHttp.PaperResponse
+	decodeJSON(t, resp, &created)
+	if created.UUID == "" {
+		t.Fatal("expected UUID to be not empty")
+	}
 }

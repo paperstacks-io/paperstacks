@@ -34,11 +34,11 @@ func (s *PaperService) GetByDOI(ctx context.Context, doi string) (domain.Paper, 
 	return s.repo.GetByDOI(ctx, strings.TrimSpace(doi))
 }
 
-func (s *PaperService) Create(ctx context.Context, paper domain.Paper) error {
+func (s *PaperService) Create(ctx context.Context, paper domain.Paper) (domain.Paper, error) {
 	paper.UUID = uuid.NewString()
 	paper = paper.Normalize()
 	if err := paper.Validate(); err != nil {
-		return err
+		return domain.Paper{}, err
 	}
 
 	return s.repo.Save(ctx, paper)

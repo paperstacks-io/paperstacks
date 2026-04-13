@@ -39,8 +39,8 @@ func TestRepositorySaveReturnsAlreadyExists(t *testing.T) {
 
 	repo := NewRepository()
 
-	err := repo.Save(context.Background(), domain.Paper{
-		DOI:   "10.1109/isese.2005.1541817",
+	_, err := repo.Save(context.Background(), domain.Paper{
+		UUID:  "6752de78-0264-4ac5-8bd3-4eed7d3f5484",
 		Title: "duplicate",
 	})
 	if err != domain.ErrPaperAlreadyExists {

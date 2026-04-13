@@ -14,7 +14,7 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 
 	service := NewPaperService(memory.NewRepository())
 
-	err := service.Create(context.Background(), domain.Paper{
+	_, err := service.Create(context.Background(), domain.Paper{
 		DOI:   " 10.1000/example ",
 		Title: " Example Paper ",
 	})

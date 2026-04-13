@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
@@ -18,20 +17,7 @@ func handleRoot() http.Handler {
 	}
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			scheme := "http"
-			if r.TLS != nil {
-				scheme = "https"
-			}
-			if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
-				scheme = forwardedProto
-			}
-
-			host := r.Host
-			if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
-				host = forwardedHost
-			}
-
-			baseURL := fmt.Sprintf("%s://%s", scheme, host)
+			baseURL := server.Location(r)
 
 			resp := RootResponse{
 				Message: "Welcome to paperstacks.io",

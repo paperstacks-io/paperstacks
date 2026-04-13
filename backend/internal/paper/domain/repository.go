@@ -21,7 +21,7 @@ type Repository interface {
 	List(ctx context.Context) ([]Paper, error)
 
 	// commands
-	Save(ctx context.Context, paper Paper) error
+	Save(ctx context.Context, paper Paper) (Paper, error)
 	Update(ctx context.Context, uuid string, paper Paper) error
 	Delete(ctx context.Context, uuid string) error
 }
