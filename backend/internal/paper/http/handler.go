@@ -157,7 +157,8 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 			}
 
 			p := req.toDomain()
-			if err := service.Create(r.Context(), p); err != nil {
+			created, err := service.Create(r.Context(), p)
+			if err != nil {
 				if errors.Is(err, domain.ErrPaperAlreadyExists) {
 					logger.Error("create paper", "doi", p.DOI, "error", err)
 					http.Error(w, err.Error(), http.StatusConflict)
@@ -174,7 +175,15 @@ func handleSavePaper(logger *slog.Logger, service *application.PaperService) htt
 				return
 			}
 
-			w.WriteHeader(http.StatusCreated)
+			resp := NewPaperResponse(created)
+
+			loc := server.Location(r) + "/" + created.UUID
+			w.Header().Set("location", loc)
+
+			if err := server.Encode(w, r, http.StatusCreated, resp); err != nil {
+				logger.Error("encode paper resp", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 		},
 	)
 }
