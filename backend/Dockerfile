@@ -12,6 +12,7 @@ WORKDIR /app
 
 COPY Makefile .
 COPY go.mod .
+COPY go.sum .
 COPY cmd/ cmd/
 COPY internal/ internal/
 
@@ -25,5 +26,6 @@ WORKDIR /app
 COPY --from=build /app/server .
 
 EXPOSE 8080
+ENV HOST 0.0.0.0
 
 CMD ["./server"]
