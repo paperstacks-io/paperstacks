@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
@@ -57,14 +58,29 @@ func handlePapersSearch(
 
 		search := normalizeFormParam(r.FormValue("search"))
 		sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
+		pageStr := normalizeFormParam(r.FormValue("page"))
+		pageSizeStr := normalizeFormParam(r.FormValue("pageSize"))
+
+		page := 1
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+
+		pageSize := 10
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+			pageSize = ps
+		}
+		print("Page: ", page, " PageSize: ", pageSize)
 
 		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
 		result, err := paperService.Search(context.Background(), domain.SearchOptions{
-			Query:  search,
-			SortBy: sortBy,
-			Desc:   desc,
+			Query:    search,
+			SortBy:   sortBy,
+			Desc:     desc,
+			Page:     page,
+			PageSize: pageSize,
 		})
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())

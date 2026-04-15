@@ -35,9 +35,11 @@ type SearchOptions struct {
 }
 
 type SearchResult struct {
-	Items    []Paper
-	Total    int
-	Page     int
-	PageSize int
-	HasNext  bool
+	Items         []Paper
+	Total         int
+	Page          int
+	NextPage      int
+	PageSize      int
+	SearchOptions SearchOptions
+	HasNext       bool
 }

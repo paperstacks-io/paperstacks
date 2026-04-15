@@ -1,21 +1,24 @@
-{{ define "papers/partials/papers-list"}} {{ if eq .Total 0 }}
+{{ define "papers/partials/papers-list" }} {{ if eq .Total 0 }}
 <p class="text-sm opacity-60">No papers found</p>
 {{ else }}
 <p>{{ .Total }} papers found</p>
 
 <ul class="list">
-  {{range .Items}}
+  {{ range .Items }}
   <li class="list-row flex">
     <div class="grow">
       <a class="link link-info font-bold">{{ .Title }}</a>
       <div class="flex flex-row">
-        <div class="text-xs uppercase font-semibold opacity-60 grow">{{range .Authors}} {{ .FullName }}; {{end}}</div>
+        <div class="text-xs uppercase font-semibold opacity-60 grow">
+          {{ range .Authors }} {{ .FullName }}; {{ end }}
+        </div>
         <div class="text-xs font-bold flex-none">{{ .PublicationYear }}</div>
       </div>
       <div>{{ .Metadata.PublishedIn }}</div>
     </div>
+
     <div class="flex-none">
-      <button class="btn btn-square btn-ghost" onClick="alert('Not implemented yet!');">
+      <button class="btn btn-square btn-ghost" onclick="alert('Not implemented yet!')">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -31,7 +34,8 @@
           />
         </svg>
       </button>
-      <button class="btn btn-square btn-ghost" onClick="alert('Not implemented yet!');">
+
+      <button class="btn btn-square btn-ghost" onclick="alert('Not implemented yet!')">
         <svg class="size-[1.2em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor">
             <path
@@ -44,4 +48,42 @@
   </li>
   {{ end }}
 </ul>
+<form class="mt-6">
+  <input type="hidden" name="search" value="{{ .SearchOptions.Query }}" />
+  <input type="hidden" name="sortBy" value="{{ .SearchOptions.SortBy }}" />
+  <input type="hidden" name="pageSize" value="{{ .PageSize }}" />
+
+  <div class="join flex justify-center">
+    {{ if gt .Page 1 }}
+    <button
+      type="button"
+      class="join-item btn"
+      hx-post="/app/papers/search"
+      hx-vals='{"page": {{ .Page }}}'
+      hx-target="#search-results"
+    >
+      «
+    </button>
+    {{ else }}
+    <button type="button" class="join-item btn pointer-events-none">«</button>
+    {{ end }}
+
+    <button type="button" class="join-item btn pointer-events-none">Page {{ .Page }}</button>
+
+    {{ if .HasNext }}
+    <button
+      type="button"
+      class="join-item btn"
+      hx-post="/app/papers/search"
+      hx-vals='{"page": {{ .NextPage }}}'
+      hx-target="#search-results"
+    >
+      »
+    </button>
+    {{ else }}
+    <button type="button" class="join-item btn pointer-events-none">»</button>
+    {{ end }}
+  </div>
+</form>
+
 {{ end }} {{ end }}

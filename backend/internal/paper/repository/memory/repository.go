@@ -131,11 +131,13 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 	items = append(items, result[start:end]...)
 
 	return domain.SearchResult{
-		Items:    items,
-		Total:    total,
-		Page:     page,
-		PageSize: pageSize,
-		HasNext:  end < total,
+		Items:         items,
+		Total:         total,
+		Page:          page,
+		NextPage:      page + 1,
+		PageSize:      pageSize,
+		SearchOptions: opts,
+		HasNext:       end < total,
 	}, nil
 }
 
