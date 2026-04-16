@@ -43,7 +43,6 @@ type SearchResult struct {
 	PageSize      int
 	SearchOptions SearchOptions
 	HasNext       bool
-	Pages         []int
 	Pagination    []PaginationItem
 }
 
