@@ -154,7 +154,6 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 		PageSize:      pageSize,
 		SearchOptions: opts,
 		HasNext:       end < total,
-		Pages:         pages,
 		Pagination:    pagination,
 	}, nil
 }
