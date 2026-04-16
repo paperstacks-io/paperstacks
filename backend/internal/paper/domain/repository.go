@@ -39,6 +39,7 @@ type SearchResult struct {
 	Total         int
 	Page          int
 	NextPage      int
+	PrevPage      int
 	PageSize      int
 	SearchOptions SearchOptions
 	HasNext       bool

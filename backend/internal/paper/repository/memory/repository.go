@@ -135,6 +135,7 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 		Total:         total,
 		Page:          page,
 		NextPage:      page + 1,
+		PrevPage:      page - 1,
 		PageSize:      pageSize,
 		SearchOptions: opts,
 		HasNext:       end < total,

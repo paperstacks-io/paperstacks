@@ -50,22 +50,24 @@
 </ul>
 <form class="mt-6">
   <input type="hidden" name="search" value="{{ .SearchOptions.Query }}" />
-  <input type="hidden" name="sortBy" value="{{ .SearchOptions.SortBy }}" />
-  <input type="hidden" name="pageSize" value="{{ .PageSize }}" />
-
+  <input
+    type="hidden"
+    name="sortBy"
+    value="{{ if .SearchOptions.Desc }}-{{ else }}+{{ end }}{{ .SearchOptions.SortBy }}"
+  />
   <div class="join flex justify-center">
     {{ if gt .Page 1 }}
     <button
       type="button"
       class="join-item btn"
       hx-post="/app/papers/search"
-      hx-vals='{"page": {{ .Page }}}'
+      hx-vals='{"page": {{ .PrevPage }}}'
       hx-target="#search-results"
     >
       «
     </button>
     {{ else }}
-    <button type="button" class="join-item btn pointer-events-none">«</button>
+    <button type="button" class="join-item btn btn-ghost pointer-events-none">«</button>
     {{ end }}
 
     <button type="button" class="join-item btn pointer-events-none">Page {{ .Page }}</button>
@@ -81,7 +83,7 @@
       »
     </button>
     {{ else }}
-    <button type="button" class="join-item btn pointer-events-none">»</button>
+    <button type="button" class="join-item btn btn-ghost pointer-events-none">»</button>
     {{ end }}
   </div>
 </form>
