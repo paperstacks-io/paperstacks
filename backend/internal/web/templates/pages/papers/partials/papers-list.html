@@ -55,7 +55,7 @@
     name="sortBy"
     value="{{ if .SearchOptions.Desc }}-{{ else }}+{{ end }}{{ .SearchOptions.SortBy }}"
   />
-  <div class="join flex justify-center">
+  <div class="join items-center justify-between w-full">
     {{ if gt .Page 1 }}
     <button
       type="button"
@@ -64,13 +64,39 @@
       hx-vals='{"page": {{ .PrevPage }}}'
       hx-target="#search-results"
     >
-      «
+      « Previous
     </button>
     {{ else }}
     <button type="button" class="join-item btn btn-ghost pointer-events-none">«</button>
     {{ end }}
 
-    <button type="button" class="join-item btn pointer-events-none">Page {{ .Page }}</button>
+    <div class="join">
+      {{ range .Pagination }} {{ if .IsEllipsis }}
+      <button
+        type="button"
+        class="join-item btn btn-ghost"
+        hx-post="/app/papers/search"
+        hx-include="closest form"
+        hx-vals='{"page": {{ .TargetPage }}}'
+        hx-target="#search-results"
+      >
+        ...
+      </button>
+      {{ else if .IsActive }}
+      <button class="join-item btn btn-active pointer-events-none">{{ .Page }}</button>
+      {{ else }}
+      <button
+        type="button"
+        class="join-item btn"
+        hx-post="/app/papers/search"
+        hx-include="closest form"
+        hx-vals='{"page": {{ .Page }}}'
+        hx-target="#search-results"
+      >
+        {{ .Page }}
+      </button>
+      {{ end }} {{ end }}
+    </div>
 
     {{ if .HasNext }}
     <button
@@ -80,7 +106,7 @@
       hx-vals='{"page": {{ .NextPage }}}'
       hx-target="#search-results"
     >
-      »
+      Next »
     </button>
     {{ else }}
     <button type="button" class="join-item btn btn-ghost pointer-events-none">»</button>

@@ -43,4 +43,13 @@ type SearchResult struct {
 	PageSize      int
 	SearchOptions SearchOptions
 	HasNext       bool
+	Pages         []int
+	Pagination    []PaginationItem
+}
+
+type PaginationItem struct {
+	Page       int
+	IsActive   bool
+	IsEllipsis bool
+	TargetPage int
 }

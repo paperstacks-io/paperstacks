@@ -59,6 +59,12 @@ func handlePapersSearch(
 		search := normalizeFormParam(r.FormValue("search"))
 		sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
 		pageStr := normalizeFormParam(r.FormValue("page"))
+		windowStr := normalizeFormParam(r.FormValue("window"))
+
+		window := 0
+		if w, err := strconv.Atoi(windowStr); err == nil {
+			window = w
+		}
 
 		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
