@@ -27,22 +27,22 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 
 	tests := []testCase{
 		// sort
-		{query: "", sortBy: "-title", page: 0, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 4, expectedFirstUUID: "a4b06"},
-		{query: "", sortBy: "+title", page: 0, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 4, expectedFirstUUID: "6752d"},
-		{query: "", sortBy: "-year", page: 0, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 4, expectedFirstUUID: "6752d"},
-		{query: "", sortBy: "+year", page: 0, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 4, expectedFirstUUID: "bc627"},
+		{query: "", sortBy: "-title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "a9d7c335"},
+		{query: "", sortBy: "+title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "df34d6d8"},
+		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "bc884ec1"},
+		{query: "", sortBy: "+year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "5966a651"},
 		// title
-		{query: "we tried", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "a4b06"},
-		{query: "regression testing", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "6752d"},
+		{query: "we tried", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "3df8adca"},
+		{query: "regression testing", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "55c2240f"},
 		// keyword
-		{query: "linux", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "a4b06"},
-		{query: "usability prob", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "bc627"},
+		{query: "diversity sample", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "1fa1a590"},
+		{query: "qualitative", sortBy: "", page: 1, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 15, expectedFirstUUID: "734c9f00"},
 		// pagignation
-		{query: "gui", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 3, expectedFirstUUID: "202a0"},
-		{query: "gui", sortBy: "", page: 1, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 2, expectedFirstUUID: "202a0"},
-		{query: "gui", sortBy: "", page: 2, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "6752de"},
-		{query: "gui", sortBy: "", page: 1, pageSize: 3, HTTPStatusCode: http.StatusOK, expectedLen: 3, expectedFirstUUID: "202a0"},
-		{query: "", sortBy: "", page: 5, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 0, expectedFirstUUID: ""},
+		{query: "gui", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 10, expectedFirstUUID: "fee26da6"},
+		{query: "gui", sortBy: "", page: 1, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 2, expectedFirstUUID: "fee26da6"},
+		{query: "gui", sortBy: "", page: 2, pageSize: 2, HTTPStatusCode: http.StatusOK, expectedLen: 2, expectedFirstUUID: "ce127349"},
+		{query: "gui", sortBy: "", page: 1, pageSize: 3, HTTPStatusCode: http.StatusOK, expectedLen: 3, expectedFirstUUID: "fee26da6"},
+		{query: "", sortBy: "", page: 5, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 0, expectedFirstUUID: ""},
 		// bad request
 		{query: "gui", sortBy: "bad-sort", page: 1, pageSize: 0, HTTPStatusCode: http.StatusBadRequest, expectedLen: 1, expectedFirstUUID: ""},
 	}
@@ -120,20 +120,20 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			name:             "first page has next",
 			query:            "gui",
 			page:             1,
-			pageSize:         2,
+			pageSize:         50,
 			expectedPage:     "1",
-			expectedPageSize: "2",
-			expectedTotal:    "3",
+			expectedPageSize: "50",
+			expectedTotal:    "62",
 			expectedHasNext:  "true",
 		},
 		{
 			name:             "second page has no next",
 			query:            "gui",
 			page:             2,
-			pageSize:         2,
+			pageSize:         50,
 			expectedPage:     "2",
-			expectedPageSize: "2",
-			expectedTotal:    "3",
+			expectedPageSize: "50",
+			expectedTotal:    "62",
 			expectedHasNext:  "false",
 		},
 		{
@@ -141,8 +141,8 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			query:            "gui",
 			expectedPage:     "1",
 			expectedPageSize: "10",
-			expectedTotal:    "3",
-			expectedHasNext:  "false",
+			expectedTotal:    "62",
+			expectedHasNext:  "true",
 		},
 	}
 
@@ -216,7 +216,7 @@ func TestIntegrationListPapers(t *testing.T) {
 func TestIntegrationGetPaperByUUID(t *testing.T) {
 	setupIntegrationTest(t)
 
-	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	uuid := "36583bb4-8cdc-554e-bcf5-f67b60d0b290"
 	endpoint := testAPIPath + "/api/papers/" + uuid
 	resp := doGetRequest(t, endpoint)
 	defer resp.Body.Close()
@@ -234,7 +234,7 @@ func TestIntegrationGetPaperByUUID(t *testing.T) {
 func TestIntegrationDeletePaper(t *testing.T) {
 	setupIntegrationTest(t)
 
-	uuid := "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	uuid := "0f324174-926b-585d-b121-3a1e3f7fee0b"
 	endpoint := testAPIPath + "/api/papers/" + uuid
 	resp := doDeleteRequest(t, endpoint)
 	assertStatusCode(t, resp, http.StatusNoContent)
