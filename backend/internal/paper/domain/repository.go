@@ -35,20 +35,9 @@ type SearchOptions struct {
 }
 
 type SearchResult struct {
-	Items         []Paper
-	Total         int
-	Page          int
-	NextPage      int
-	PrevPage      int
-	PageSize      int
-	SearchOptions SearchOptions
-	HasNext       bool
-	Pagination    []PaginationItem
-}
-
-type PaginationItem struct {
-	Page       int
-	IsActive   bool
-	IsEllipsis bool
-	TargetPage int
+	Items    []Paper
+	Total    int
+	Page     int
+	PageSize int
+	HasNext  bool
 }

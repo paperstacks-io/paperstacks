@@ -130,31 +130,12 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 	items := make([]domain.Paper, 0, end-start)
 	items = append(items, result[start:end]...)
 
-	println("total:", total)
-	println("page:", page)
-
-	totalPages := 0
-	if total > 0 {
-		totalPages = (total + pageSize - 1) / pageSize
-	}
-
-	pages := make([]int, 0, totalPages)
-	for i := 1; i <= totalPages; i++ {
-		pages = append(pages, i)
-	}
-
-	pagination := buildPagination(page, totalPages)
-
 	return domain.SearchResult{
-		Items:         items,
-		Total:         total,
-		Page:          page,
-		NextPage:      page + 1,
-		PrevPage:      page - 1,
-		PageSize:      pageSize,
-		SearchOptions: opts,
-		HasNext:       end < total,
-		Pagination:    pagination,
+		Items:    items,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		HasNext:  end < total,
 	}, nil
 }
 
@@ -211,103 +192,4 @@ func matchesQuery(paper domain.Paper, query string) bool {
 	}
 
 	return containsText(paper.Keywords, query)
-}
-
-func buildPagination(currentPage, totalPages int) []domain.PaginationItem {
-	if totalPages <= 0 {
-		return nil
-	}
-
-	const visiblePagesCount = 7
-
-	var items []domain.PaginationItem
-
-	firstPage := 1
-	lastPage := totalPages
-	windowSize := visiblePagesCount
-	lastWindowStart := totalPages - windowSize + 1
-	nextWindowTarget := windowSize + 1
-
-	// Show all pages if they fit within the visible window
-	if totalPages <= windowSize {
-		for page := firstPage; page <= lastPage; page++ {
-			items = appendPage(items, page, currentPage, totalPages)
-		}
-		return items
-	}
-
-	/*
-		Beginning:
-		Show the first window the last page
-		Example: 1 2 3 4 5 6 7 ... last
-	*/
-	if currentPage < windowSize {
-		for page := firstPage; page <= windowSize; page++ {
-			items = appendPage(items, page, currentPage, totalPages)
-		}
-		items = appendEllipsis(items, nextWindowTarget, totalPages)
-		items = appendPage(items, lastPage, currentPage, totalPages)
-		return items
-	}
-
-	/*
-		End:
-		Show first page, ellipsis, and the last window
-		Example: 1 ... last
-	*/
-	if currentPage > totalPages-(windowSize-1) {
-		items = appendPage(items, firstPage, currentPage, totalPages)
-		items = appendEllipsis(items, totalPages-windowSize, totalPages)
-
-		for page := lastWindowStart; page <= lastPage; page++ {
-			items = appendPage(items, page, currentPage, totalPages)
-		}
-		return items
-	}
-
-	/*
-		Middle:
-		Show first page, ellipsis, current page, ellipsis, and last page
-		Example: 1 ... [window] ... last
-	*/
-	halfWindowSize := windowSize / 2
-	windowStart := currentPage - halfWindowSize
-	windowEnd := currentPage + halfWindowSize
-
-	items = appendPage(items, firstPage, currentPage, totalPages)
-	items = appendEllipsis(items, currentPage-windowSize, totalPages)
-
-	for page := windowStart; page <= windowEnd; page++ {
-		items = appendPage(items, page, currentPage, totalPages)
-	}
-
-	items = appendEllipsis(items, currentPage+windowSize, totalPages)
-	items = appendPage(items, lastPage, currentPage, totalPages)
-
-	return items
-}
-
-func appendPage(items []domain.PaginationItem, page, currentPage, totalPages int) []domain.PaginationItem {
-	if page < 1 || page > totalPages {
-		return items
-	}
-
-	return append(items, domain.PaginationItem{
-		Page:     page,
-		IsActive: page == currentPage,
-	})
-}
-
-func appendEllipsis(items []domain.PaginationItem, targetPage, totalPages int) []domain.PaginationItem {
-	if targetPage < 1 {
-		targetPage = 1
-	}
-	if targetPage > totalPages {
-		targetPage = totalPages
-	}
-
-	return append(items, domain.PaginationItem{
-		IsEllipsis: true,
-		TargetPage: targetPage,
-	})
 }
