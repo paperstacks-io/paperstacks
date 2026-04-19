@@ -75,8 +75,8 @@ Run the server with live reload:
 air
 ```
 
-View all available Make targets:
+If you make modifications on the HTMX/CSS part also run:
 
 ```bash
-make help
+npm run watch:css
 ```
