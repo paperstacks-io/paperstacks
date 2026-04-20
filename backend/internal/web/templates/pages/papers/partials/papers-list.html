@@ -57,128 +57,120 @@
   />
 
   <div class="flex items-center justify-center w-full gap-x-2 sm:gap-x-3 md:gap-x-4">
-    {{ if gt .Page 1 }}
-    <button
-      type="button"
-      class="join-item btn flex-shrink-0 flex items-center gap-1 sm:gap-2 px-2 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-base font-medium text-gray-700 transition-all duration-200 hover:bg-black/50 hover:text-white hover:ring-1 hover:ring-gray-400 hover:shadow-sm hover:scale-105 mr-1 sm:mr-2 md:mr-3"
-      hx-post="/app/papers/search"
-      hx-include="closest form"
-      hx-vals='{"page": {{ .PrevPage }}}'
-      hx-target="#search-results"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m18 7-5 5 5 5" />
-        <path d="m11 7-5 5 5 5" />
-      </svg>
-      <span class="hidden sm:inline -mt-[2px]">Previous</span>
-    </button>
-
-    {{ else }}
-    <button
-      type="button"
-      class="join-item btn btn-ghost pointer-events-none flex-shrink-0 flex items-center justify-center px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 mr-1 sm:mr-2 md:mr-3"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 md:w-5 md:h-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m11 17-5-5 5-5" />
-        <path d="m18 17-5-5 5-5" />
-      </svg>
-    </button>
-    {{ end }}
-
-    <div class="join">
-      {{ range .Pagination }} {{ if .IsEllipsis }}
+    <div class="join gap-2">
+      {{ if gt .Page 1 }}
       <button
         type="button"
-        class="join-item btn btn-ghost px-2 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-base"
+        class="join-item btn flex items-center gap-1 sm:gap-2"
         hx-post="/app/papers/search"
         hx-include="closest form"
-        hx-vals='{"page": {{ .TargetPage }}}'
+        hx-vals='{"page": {{ .PrevPage }}}'
         hx-target="#search-results"
       >
-        ...
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m18 7-5 5 5 5" />
+          <path d="m11 7-5 5 5 5" />
+        </svg>
+        <span class="hidden sm:inline -mt-[2px]">Previous</span>
       </button>
-      {{ else if .IsActive }}
+
+      {{ else }}
+      <button type="button" class="join-item btn btn-ghost pointer-events-none">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4 md:w-5 md:h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m11 17-5-5 5-5" />
+          <path d="m18 17-5-5 5-5" />
+        </svg>
+      </button>
+      {{ end }}
+
+      <div class="join">
+        {{ range .Pagination }} {{ if .IsEllipsis }}
+        <button
+          type="button"
+          class="join-item btn btn-ghost"
+          hx-post="/app/papers/search"
+          hx-include="closest form"
+          hx-vals='{"page": {{ .TargetPage }}}'
+          hx-target="#search-results"
+        >
+          ...
+        </button>
+        {{ else if .IsActive }}
+        <button class="join-item btn bg-black/50 text-white pointer-events-none">{{ .Page }}</button>
+        {{ else }}
+        <button
+          type="button"
+          class="join-item btn"
+          hx-post="/app/papers/search"
+          hx-include="closest form"
+          hx-vals='{"page": {{ .Page }}}'
+          hx-target="#search-results"
+        >
+          {{ .Page }}
+        </button>
+        {{ end }} {{ end }}
+      </div>
+
+      {{ if .HasNext }}
       <button
-        class="join-item btn pointer-events-none bg-black/50 text-white ring-1 ring-gray-400 shadow-sm scale-105 relative z-10 px-2 text-sm sm:px-3 sm:text-sm md:px-4 md:text-base font-semibold"
+        type="button"
+        class="join-item btn flex items-center gap-1 sm:gap-2"
+        hx-post="/app/papers/search"
+        hx-include="closest form"
+        hx-vals='{"page": {{ .NextPage }}}'
+        hx-target="#search-results"
       >
-        {{ .Page }}
+        <span class="hidden sm:inline -mt-[2px]">Next</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m6 17 5-5-5-5" />
+          <path d="m13 17 5-5-5-5" />
+        </svg>
       </button>
       {{ else }}
-      <button
-        type="button"
-        class="join-item btn px-2 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-base"
-        hx-post="/app/papers/search"
-        hx-include="closest form"
-        hx-vals='{"page": {{ .Page }}}'
-        hx-target="#search-results"
-      >
-        {{ .Page }}
+      <button type="button" class="join-item btn btn-ghost pointer-events-none">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4 md:w-5 md:h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m6 17 5-5-5-5" />
+          <path d="m13 17 5-5-5-5" />
+        </svg>
       </button>
-      {{ end }} {{ end }}
+      {{ end }}
     </div>
-
-    {{ if .HasNext }}
-    <button
-      type="button"
-      class="join-item btn flex-shrink-0 flex items-center gap-1 sm:gap-2 px-2 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-base font-medium text-gray-700 transition-all duration-200 hover:bg-black/50 hover:text-white hover:ring-1 hover:ring-gray-400 hover:shadow-sm hover:scale-105 ml-1 sm:ml-2 md:ml-3"
-      hx-post="/app/papers/search"
-      hx-include="closest form"
-      hx-vals='{"page": {{ .NextPage }}}'
-      hx-target="#search-results"
-    >
-      <span class="hidden sm:inline -mt-[2px]">Next</span>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m6 17 5-5-5-5" />
-        <path d="m13 17 5-5-5-5" />
-      </svg>
-    </button>
-    {{ else }}
-    <button
-      type="button"
-      class="join-item btn btn-ghost pointer-events-none flex-shrink-0 flex items-center justify-center px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 ml-1 sm:ml-2 md:ml-3"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 md:w-5 md:h-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m6 17 5-5-5-5" />
-        <path d="m13 17 5-5-5-5" />
-      </svg>
-    </button>
-    {{ end }}
   </div>
 </form>
 
