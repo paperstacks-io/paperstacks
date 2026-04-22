@@ -95,8 +95,6 @@ func handlePapersSearch(
 			Page:          result.Page,
 			PageSize:      result.PageSize,
 			HasNext:       result.HasNext,
-			PrevPage:      max(1, result.Page-1),
-			NextPage:      result.Page + 1,
 			SearchOptions: opts,
 			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
