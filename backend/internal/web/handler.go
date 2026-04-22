@@ -30,6 +30,8 @@ type papersListData struct {
 	Page          int
 	PageSize      int
 	HasNext       bool
+	PrevPage      int
+	NextPage      int
 	SearchOptions domain.SearchOptions
 	Pagination    []PaginationItem
 }
@@ -93,6 +95,8 @@ func handlePapersSearch(
 			Page:          result.Page,
 			PageSize:      result.PageSize,
 			HasNext:       result.HasNext,
+			PrevPage:      result.Page - 1,
+			NextPage:      result.Page + 1,
 			SearchOptions: opts,
 			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
