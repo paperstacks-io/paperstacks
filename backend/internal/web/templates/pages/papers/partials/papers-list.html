@@ -69,13 +69,13 @@
     {{ range .Pagination }}
     <button
       type="button"
-      class="join-item btn {{if .IsActive}}btn-active{{ end }} {{if .IsEllipsis}}btn-disabled{{ end }} "
+      class="join-item btn {{if .IsActive}}btn-active{{ end }} {{if .IsSeperator}}btn-disabled{{ end }} "
       hx-post="/app/papers/search"
       hx-include="closest form"
       hx-vals='{"page": {{ .Page }}}'
       hx-target="#search-results"
     >
-      {{ if .IsEllipsis }} ... {{ else }} {{ .Page }} {{ end }}
+      {{ if .IsSeperator }} ... {{ else }} {{ .Page }} {{ end }}
     </button>
 
     {{ end }}

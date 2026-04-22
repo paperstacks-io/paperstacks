@@ -1,10 +1,10 @@
 package web
 
 type PaginationItem struct {
-	Page       int
-	IsActive   bool
-	IsEllipsis bool
-	TargetPage int
+	Page        int
+	IsActive    bool
+	IsSeperator bool
+	TargetPage  int
 }
 
 func BuildPagination(
@@ -46,7 +46,7 @@ func BuildPagination(
 		for page := firstPage; page <= windowSize; page++ {
 			items = appendPage(items, page, currentPage, totalPages)
 		}
-		items = appendEllipsis(items, nextWindowTarget, totalPages)
+		items = appendSeperator(items, nextWindowTarget, totalPages)
 		items = appendPage(items, lastPage, currentPage, totalPages)
 		return items
 	}
@@ -58,7 +58,7 @@ func BuildPagination(
 	*/
 	if currentPage > totalPages-(windowSize-1) {
 		items = appendPage(items, firstPage, currentPage, totalPages)
-		items = appendEllipsis(items, totalPages-windowSize, totalPages)
+		items = appendSeperator(items, totalPages-windowSize, totalPages)
 
 		for page := lastWindowStart; page <= lastPage; page++ {
 			items = appendPage(items, page, currentPage, totalPages)
@@ -76,13 +76,13 @@ func BuildPagination(
 	windowEnd := currentPage + halfWindowSize
 
 	items = appendPage(items, firstPage, currentPage, totalPages)
-	items = appendEllipsis(items, currentPage-windowSize, totalPages)
+	items = appendSeperator(items, currentPage-windowSize, totalPages)
 
 	for page := windowStart; page <= windowEnd; page++ {
 		items = appendPage(items, page, currentPage, totalPages)
 	}
 
-	items = appendEllipsis(items, currentPage+windowSize, totalPages)
+	items = appendSeperator(items, currentPage+windowSize, totalPages)
 	items = appendPage(items, lastPage, currentPage, totalPages)
 
 	return items
@@ -99,7 +99,7 @@ func appendPage(items []PaginationItem, page, currentPage, totalPages int) []Pag
 	})
 }
 
-func appendEllipsis(items []PaginationItem, targetPage, totalPages int) []PaginationItem {
+func appendSeperator(items []PaginationItem, targetPage, totalPages int) []PaginationItem {
 	if targetPage < 1 {
 		targetPage = 1
 	}
@@ -108,7 +108,7 @@ func appendEllipsis(items []PaginationItem, targetPage, totalPages int) []Pagina
 	}
 
 	return append(items, PaginationItem{
-		IsEllipsis: true,
-		TargetPage: targetPage,
+		IsSeperator: true,
+		TargetPage:  targetPage,
 	})
 }
