@@ -30,8 +30,6 @@ type papersListData struct {
 	Page          int
 	PageSize      int
 	HasNext       bool
-	PrevPage      int
-	NextPage      int
 	SearchOptions domain.SearchOptions
 	Pagination    []PaginationItem
 }
