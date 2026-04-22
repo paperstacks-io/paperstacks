@@ -1,114 +1,69 @@
 package web
 
 type PaginationItem struct {
-	Page        int
 	IsActive    bool
 	IsSeperator bool
 	TargetPage  int
 }
 
+// BuildPagination generates pagination items with a fixex size of 10
 func BuildPagination(
 	total, pageSize, currentPage int,
 ) []PaginationItem {
-	totalPages := 0
-	if total > 0 {
-		totalPages = (total + pageSize - 1) / pageSize
-	}
-
-	if totalPages <= 0 {
+	if total <= 0 || pageSize <= 0 {
 		return nil
 	}
 
-	const visiblePagesCount = 7
+	totalPages := (total + pageSize - 1) / pageSize
+	currentPage = max(1, min(currentPage, totalPages))
 
-	var items []PaginationItem
+	items := make([]PaginationItem, 0, min(totalPages, 10))
+	addPage := func(page int) {
+		items = append(items, PaginationItem{
+			IsActive:   page == currentPage,
+			TargetPage: page,
+		})
+	}
+	addSeparator := func(targetPage int) {
+		items = append(items, PaginationItem{
+			IsSeperator: true,
+			TargetPage:  targetPage,
+		})
+	}
 
-	firstPage := 1
-	lastPage := totalPages
-	windowSize := visiblePagesCount
-	lastWindowStart := totalPages - windowSize + 1
-	nextWindowTarget := windowSize + 1
-
-	// Show all pages if they fit within the visible window
-	if totalPages <= windowSize {
-		for page := firstPage; page <= lastPage; page++ {
-			items = appendPage(items, page, currentPage, totalPages)
+	if totalPages <= 10 {
+		for page := 1; page <= totalPages; page++ {
+			addPage(page)
 		}
 		return items
 	}
 
-	/*
-		Beginning:
-		Show the first window the last page
-		Example: 1 2 3 4 5 6 7 ... last
-	*/
-	if currentPage < windowSize {
-		for page := firstPage; page <= windowSize; page++ {
-			items = appendPage(items, page, currentPage, totalPages)
+	// Keep the control width stable at 10 items while still showing the
+	// current page, the boundaries, and separators when pages are skipped.
+	if currentPage <= 5 {
+		for page := 1; page <= 8; page++ {
+			addPage(page)
 		}
-		items = appendSeperator(items, nextWindowTarget, totalPages)
-		items = appendPage(items, lastPage, currentPage, totalPages)
+		addSeparator(9)
+		addPage(totalPages)
 		return items
 	}
 
-	/*
-		End:
-		Show first page, ellipsis, and the last window
-		Example: 1 ... last
-	*/
-	if currentPage > totalPages-(windowSize-1) {
-		items = appendPage(items, firstPage, currentPage, totalPages)
-		items = appendSeperator(items, totalPages-windowSize, totalPages)
-
-		for page := lastWindowStart; page <= lastPage; page++ {
-			items = appendPage(items, page, currentPage, totalPages)
+	if currentPage >= totalPages-4 {
+		addPage(1)
+		addSeparator(totalPages - 8)
+		for page := totalPages - 7; page <= totalPages; page++ {
+			addPage(page)
 		}
 		return items
 	}
 
-	/*
-		Middle:
-		Show first page, ellipsis, current page, ellipsis, and last page
-		Example: 1 ... [window] ... last
-	*/
-	halfWindowSize := windowSize / 2
-	windowStart := currentPage - halfWindowSize
-	windowEnd := currentPage + halfWindowSize
-
-	items = appendPage(items, firstPage, currentPage, totalPages)
-	items = appendSeperator(items, currentPage-windowSize, totalPages)
-
-	for page := windowStart; page <= windowEnd; page++ {
-		items = appendPage(items, page, currentPage, totalPages)
+	addPage(1)
+	addSeparator(currentPage - 3)
+	for page := currentPage - 2; page <= currentPage+3; page++ {
+		addPage(page)
 	}
-
-	items = appendSeperator(items, currentPage+windowSize, totalPages)
-	items = appendPage(items, lastPage, currentPage, totalPages)
-
+	addSeparator(currentPage + 4)
+	addPage(totalPages)
 	return items
-}
-
-func appendPage(items []PaginationItem, page, currentPage, totalPages int) []PaginationItem {
-	if page < 1 || page > totalPages {
-		return items
-	}
-
-	return append(items, PaginationItem{
-		Page:     page,
-		IsActive: page == currentPage,
-	})
-}
-
-func appendSeperator(items []PaginationItem, targetPage, totalPages int) []PaginationItem {
-	if targetPage < 1 {
-		targetPage = 1
-	}
-	if targetPage > totalPages {
-		targetPage = totalPages
-	}
-
-	return append(items, PaginationItem{
-		IsSeperator: true,
-		TargetPage:  targetPage,
-	})
 }

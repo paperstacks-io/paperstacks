@@ -72,10 +72,10 @@
       class="join-item btn {{if .IsActive}}btn-active{{ end }} {{if .IsSeperator}}btn-disabled{{ end }} "
       hx-post="/app/papers/search"
       hx-include="closest form"
-      hx-vals='{"page": {{ .Page }}}'
+      hx-vals='{"page": {{ .TargetPage }}}'
       hx-target="#search-results"
     >
-      {{ if .IsSeperator }} ... {{ else }} {{ .Page }} {{ end }}
+      {{ if .IsSeperator }} ... {{ else }} {{ .TargetPage }} {{ end }}
     </button>
 
     {{ end }}
