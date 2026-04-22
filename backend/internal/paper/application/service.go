@@ -19,7 +19,9 @@ type PaperService struct {
 }
 
 func NewPaperService(repo domain.Repository) *PaperService {
-	return &PaperService{repo: repo}
+	return &PaperService{
+		repo: repo,
+	}
 }
 
 func (s *PaperService) List(ctx context.Context) ([]domain.Paper, error) {

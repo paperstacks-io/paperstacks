@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
@@ -21,6 +22,16 @@ type pageData struct {
 	NavItems      []navItem
 	AppTargetID   string
 	PageContentID string
+}
+
+type papersListData struct {
+	Items         []domain.Paper
+	Total         int
+	Page          int
+	PageSize      int
+	HasNext       bool
+	SearchOptions domain.SearchOptions
+	Pagination    []PaginationItem
 }
 
 func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
@@ -57,23 +68,36 @@ func handlePapersSearch(
 
 		search := normalizeFormParam(r.FormValue("search"))
 		sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
+		pageStr := normalizeFormParam(r.FormValue("page"))
 
 		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
-		result, err := paperService.Search(context.Background(), domain.SearchOptions{
+		page, _ := strconv.Atoi(pageStr)
+		opts := domain.SearchOptions{
 			Query:  search,
 			SortBy: sortBy,
 			Desc:   desc,
-		})
+			Page:   page,
+		}
+		result, err := paperService.Search(context.Background(), opts)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		data := papersListData{
+			Items:         result.Items,
+			Total:         result.Total,
+			Page:          result.Page,
+			PageSize:      result.PageSize,
+			HasNext:       result.HasNext,
+			SearchOptions: opts,
+			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
+		}
 		templateName := "papers/partials/papers-list"
-		if err := tmpl.ExecuteTemplate(w, templateName, result); err != nil {
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})

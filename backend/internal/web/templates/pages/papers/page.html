@@ -31,6 +31,7 @@
                 hx-post="/app/papers/search"
                 hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
                 hx-target="#search-results"
+                hx-vals='{"page": 1}'
               />
             </label>
 
@@ -40,6 +41,7 @@
               hx-post="/app/papers/search"
               hx-trigger="change"
               hx-target="#search-results"
+              hx-vals='{"page": 1}'
             >
               <option value="+title">Title (A-Z)</option>
               <option value="-title">Title (Z-A)</option>
