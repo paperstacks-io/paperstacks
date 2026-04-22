@@ -33,7 +33,7 @@ type papersListData struct {
 	PrevPage      int
 	NextPage      int
 	SearchOptions domain.SearchOptions
-	Pagination    []application.PaginationItem
+	Pagination    []PaginationItem
 }
 
 func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
@@ -51,7 +51,6 @@ func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
 
 		templateName := "base"
 		if r.Header.Get("HX-Request") == "true" {
-
 			templateName = "app"
 		}
 
@@ -99,7 +98,7 @@ func handlePapersSearch(
 			PrevPage:      max(1, result.Page-1),
 			NextPage:      result.Page + 1,
 			SearchOptions: opts,
-			Pagination:    paperService.BuildPagination(result.Total, result.PageSize, result.Page),
+			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
 		templateName := "papers/partials/papers-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
