@@ -16,6 +16,6 @@
   "devDependencies": {
     "daisyui": "^5.5.19",
     "oxfmt": "^0.45.0",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.4"
   }
 }
