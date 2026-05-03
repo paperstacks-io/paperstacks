@@ -29,6 +29,7 @@ func navItems(activePath string) []navItem {
 		{Label: "Home", Path: prefix + "/"},
 		{Label: "Papers", Path: prefix + "/papers"},
 		{Label: "Search", Path: prefix + "/search"},
+		{Label: "Public Stacks", Path: prefix + "/stacks"},
 		{Label: "Settings", Path: prefix + "/settings"},
 	}
 
@@ -71,6 +72,7 @@ func AddRoute(
 	}{
 		{path: "/papers", template: "paper"},
 		{path: "/search", template: "search"},
+		{path: "/stacks", template: "stacks"},
 		{path: "/settings", template: "settings"},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
