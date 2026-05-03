@@ -7,7 +7,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/stacks/application"
 )
 
-func AddPaperRoute(
+func AddStackRoute(
 	mux *http.ServeMux,
 	logger *slog.Logger,
 	stackService *application.StackService,
