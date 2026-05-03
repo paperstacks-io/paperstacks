@@ -26,6 +26,9 @@ type Stack struct {
 	// Tags contains a list of keywords used for organizing and filtering stacks.
 	Tags []string
 
+	// Visibility defines whether the stack is public or private.
+	Visibility Visibility
+
 	// Papers contains all papers that belong to this stack.
 	Papers []paperDomain.Paper
 
