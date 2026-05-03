@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/paperstacks.io/paperstacks/internal/stacks/application"
+	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 )
 
 func AddStackRoute(

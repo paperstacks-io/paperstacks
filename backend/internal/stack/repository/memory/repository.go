@@ -3,7 +3,7 @@ package memory
 import (
 	"sync"
 
-	"github.com/paperstacks.io/paperstacks/internal/stacks/domain"
+	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
 type Repository struct {

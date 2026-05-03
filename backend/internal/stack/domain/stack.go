@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 type Stack struct {
@@ -27,7 +27,7 @@ type Stack struct {
 	Tags []string
 
 	// Papers contains all papers that belong to this stack.
-	Papers []domain.Paper
+	Papers []paperDomain.Paper
 
 	// CreatedAt records when the stack was initially created.
 	CreatedAt time.Time
