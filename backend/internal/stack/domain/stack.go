@@ -26,6 +26,7 @@ type Stack struct {
 	// Tags contains a list of keywords used for organizing and filtering stacks.
 	Tags []string
 
+	// Papers contains all papers that belong to this stack.
 	Papers []domain.Paper
 
 	// CreatedAt records when the stack was initially created.
