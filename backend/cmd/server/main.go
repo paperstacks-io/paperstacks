@@ -30,7 +30,7 @@ func run(
 ) error {
 	host := getenv("HOST")
 	if host == "" {
-		host = "127.0.0.1"
+		host = "localhost"
 	}
 	port := getenv("PORT")
 	if port == "" {
