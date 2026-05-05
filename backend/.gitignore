@@ -6,3 +6,6 @@ node_modules/
 
 /server
 /server.exe
+
+# Configs
+.env*
