@@ -7,5 +7,5 @@ node_modules/
 /server
 /server.exe
 
-# Configs
+# Envs
 .env*

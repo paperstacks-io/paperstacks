@@ -14,7 +14,9 @@ import (
 	"text/tabwriter"
 	"time"
 
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
+	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -26,16 +28,10 @@ import (
 
 func run(
 	ctx context.Context,
-	getenv func(string) string,
+	cfg config.Config,
 ) error {
-	host := getenv("HOST")
-	if host == "" {
-		host = "localhost"
-	}
-	port := getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	host := cfg.Host
+	port := cfg.Port
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	paperService := paperApp.NewPaperService(memory.NewRepository())
@@ -54,6 +50,7 @@ func run(
 		logger,
 		paperService,
 	)
+
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)
 	web.AddRoute(webMux, logger, paperService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
@@ -129,7 +126,9 @@ func banner(w io.Writer) {
 func main() {
 	banner(os.Stdout)
 
-	if err := run(context.Background(), os.Getenv); err != nil {
+	cfg := config.New()
+
+	if err := run(context.Background(), cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
