@@ -72,6 +72,7 @@ func AddRoute(
 		{path: "/papers", template: "paper"},
 		{path: "/search", template: "search"},
 		{path: "/settings", template: "settings"},
+		{path: "/auth", template: "auth"},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
 		if err != nil {
