@@ -126,9 +126,9 @@ func banner(w io.Writer) {
 func main() {
 	banner(os.Stdout)
 
-	conf := config.New()
+	cfg := config.New()
 
-	if err := run(context.Background(), conf); err != nil {
+	if err := run(context.Background(), cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
