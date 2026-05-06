@@ -33,13 +33,12 @@ type Stack struct {
 	UpdatedAt time.Time
 }
 
-func NewStack(uuid, name string, owner userDomain.User) *Stack {
+func NewStack(name string, owner userDomain.User) *Stack {
 	now := time.Now()
-	uuid = strings.TrimSpace(uuid)
 	name = strings.TrimSpace(name)
 
 	return &Stack{
-		UUID:      uuid,
+		UUID:      uuid.NewString(),
 		Name:      name,
 		Owner:     owner,
 		Papers:    []paperDomain.Paper{},
