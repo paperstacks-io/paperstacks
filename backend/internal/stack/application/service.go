@@ -1,6 +1,9 @@
 package application
 
-import "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+import (
+	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
+	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+)
 
 type StackService struct {
 }
@@ -12,7 +15,7 @@ func NewStackService() *StackService {
 // Add creates and stores a new stack in the in-memory repository.
 // It returns an error if the stack could not be created
 // (e.g. the stack name already exists in the user's stack list).
-func (s *StackService) Add() error {
+func (s *StackService) Add(user userDomain.User) error {
 	return nil
 }
 
@@ -24,8 +27,8 @@ func (s *StackService) Add() error {
 //   - the paper does not exist
 //   - the paper is already part of the stack
 //   - the stack reached the maximum number of papers
-func (s *StackService) AddPaper(stackUUID string, paperUUID string) (domain.Stack, error) {
-	return domain.Stack{}, nil
+func (s *StackService) AddPaper(user userDomain.User, stackUUID string, paperUUID string) (stackDomain.Stack, error) {
+	return stackDomain.Stack{}, nil
 }
 
 // RemovePaper removes a paper from the specified stack.
@@ -35,13 +38,12 @@ func (s *StackService) AddPaper(stackUUID string, paperUUID string) (domain.Stac
 //   - the stack does not exist
 //   - the paper does not exist
 //   - the paper is not part of the stack
-func (s *StackService) RemovePaper(stackUUID string, paperUUID string) (domain.Stack, error) {
-	return domain.Stack{}, nil
+func (s *StackService) RemovePaper(user userDomain.User, stackUUID string, paperUUID string) (stackDomain.Stack, error) {
+	return stackDomain.Stack{}, nil
 }
 
 // Delete removes the specified stack from the in-memory repository.
 // It returns an error if the stack does not exist
-// or could not be deleted.
-func (s *StackService) Delete(stackUUID string) error {
+func (s *StackService) Delete(user userDomain.User, stackUUID string) error {
 	return nil
 }
