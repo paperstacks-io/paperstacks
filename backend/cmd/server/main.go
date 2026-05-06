@@ -30,9 +30,6 @@ func run(
 	ctx context.Context,
 	cfg config.Config,
 ) error {
-	host := cfg.Host
-	port := cfg.Port
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	paperService := paperApp.NewPaperService(memory.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
@@ -52,12 +49,12 @@ func run(
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)
-	web.AddRoute(webMux, logger, paperService)
+	web.AddRoute(webMux, cfg, logger, paperService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
 	httpServer := &http.Server{
-		Addr:         net.JoinHostPort(host, port),
+		Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
 		Handler:      rootMux,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -83,13 +80,13 @@ func run(
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "\tStarting server:")
-	fmt.Fprintln(tw, "\tFrontend: \thttp://"+host+":"+port+"/app/")
-	fmt.Fprintln(tw, "\tAPI: \thttp://"+host+":"+port+"/api/")
+	fmt.Fprintln(tw, "\tFrontend: \thttp://"+cfg.Host+":"+cfg.Port+"/app/")
+	fmt.Fprintln(tw, "\tAPI: \thttp://"+cfg.Host+":"+cfg.Port+"/api/")
 	fmt.Fprintln(tw)
 	_ = tw.Flush()
 
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("Could not listen", slog.String("port", port), slog.String("error", err.Error()))
+		slog.Error("Could not listen", slog.String("port", cfg.Port), slog.String("error", err.Error()))
 		return err
 	}
 
@@ -126,11 +123,7 @@ func banner(w io.Writer) {
 func main() {
 	banner(os.Stdout)
 
-	cfg, err := config.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	}
+	cfg := config.New()
 
 	if err := run(context.Background(), cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)

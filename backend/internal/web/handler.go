@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -38,9 +37,7 @@ type papersListData struct {
 	Pagination    []PaginationItem
 }
 
-var hankoAPIURL string = os.Getenv("HANKO_API_URL")
-
-func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
+func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 

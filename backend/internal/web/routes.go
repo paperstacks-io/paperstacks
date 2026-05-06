@@ -7,10 +7,10 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
-	"os"
 	"path/filepath"
 	"slices"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/web/auth"
@@ -43,6 +43,7 @@ func navItems(activePath string) []navItem {
 
 func AddRoute(
 	mux *http.ServeMux,
+	cfg config.Config,
 	logger *slog.Logger,
 	paperService *application.PaperService,
 ) error {
@@ -65,8 +66,8 @@ func AddRoute(
 
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"))))
-	validator := auth.NewHankoSessionValidator(os.Getenv("HANKO_API_URL"))
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
+	validator := auth.NewHankoSessionValidator(cfg.HankoAPIURL)
 	authMiddle := auth.AuthMiddleware(validator)
 
 	for _, page := range []struct {
@@ -84,7 +85,7 @@ func AddRoute(
 			return err
 		}
 
-		pageHandler := defaultMiddle(handleIndex(pageTemplate, navItems(page.path)))
+		pageHandler := defaultMiddle(handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL))
 
 		if page.requiresAuth {
 			pageHandler = authMiddle(pageHandler)

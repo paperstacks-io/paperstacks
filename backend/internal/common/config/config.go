@@ -3,7 +3,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -15,17 +14,12 @@ type Config struct {
 }
 
 // New loads configuration from environment variables and applies defaults.
-func New() (Config, error) {
-	hankoAPIURL, err := getRequiredEnv("HANKO_API_URL")
-	if err != nil {
-		return Config{}, err
-	}
-
+func New() Config {
 	return Config{
 		Host:        getEnvOrDefault("HOST", "127.0.0.1"),
 		Port:        getEnvOrDefault("PORT", "8080"),
-		HankoAPIURL: hankoAPIURL,
-	}, nil
+		HankoAPIURL: getEnvOrDefault("HANKO_API_URL", ""),
+	}
 }
 
 func getEnvOrDefault(key, fallback string) string {
@@ -34,13 +28,4 @@ func getEnvOrDefault(key, fallback string) string {
 	}
 
 	return fallback
-}
-
-func getRequiredEnv(key string) (string, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return "", fmt.Errorf("required environment variable %q is not set", key)
-	}
-
-	return value, nil
 }
