@@ -1,5 +1,13 @@
 {{ define "settings"}}
-<div class="flex px-4 py-10 sm:px-6 lg:px-10 flex-col">
-  Settings page {{template "shared/partials/not-implemented-alert"}}
+<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
+  <div class="card bg-base-100 shadow-sm w-full">
+    <div class="card-body w-full">
+      <h2 class="card-title">App Settings</h2>
+      No application settings yet.
+      <div class="divider"></div>
+      <h2 class="card-title">User Account Settings</h2>
+      <hanko-profile />
+    </div>
+  </div>
 </div>
 {{end}}

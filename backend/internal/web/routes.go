@@ -7,11 +7,13 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
+	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 //go:embed assets/* all:templates
@@ -64,22 +66,29 @@ func AddRoute(
 	defaultMiddle := middleware.NewDefault(logger)
 
 	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"))))
+	validator := auth.NewHankoSessionValidator(os.Getenv("HANKO_API_URL"))
+	authMiddle := auth.AuthMiddleware(validator)
 
 	for _, page := range []struct {
-		path     string
-		template string
+		path         string
+		template     string
+		requiresAuth bool
 	}{
-		{path: "/papers", template: "paper"},
-		{path: "/search", template: "search"},
-		{path: "/settings", template: "settings"},
-		{path: "/auth", template: "auth"},
+		{path: "/papers", template: "paper", requiresAuth: false},
+		{path: "/search", template: "search", requiresAuth: false},
+		{path: "/settings", template: "settings", requiresAuth: true},
+		{path: "/auth", template: "auth", requiresAuth: false},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
 		if err != nil {
 			return err
 		}
 
-		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
+		if page.requiresAuth {
+			mux.Handle(http.MethodGet+" "+page.path, authMiddle(handleIndex(pageTemplate, navItems(page.path))))
+		} else {
+			mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
+		}
 	}
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))

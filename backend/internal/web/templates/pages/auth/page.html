@@ -3,18 +3,14 @@
 <div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">
-      <!-- <hanko-auth /> -->
-      <hanko-profile />
+      <hanko-auth id="authComponent"></hanko-auth>
     </div>
   </div>
 </div>
 
 <script type="module">
-  import { register } from "https://esm.run/@teamhanko/hanko-elements"
-
-  const { hanko } = await register("{{.HankoAPIURL}}")
-
-  hanko.onSessionCreated(() => {
+  const authComponent = document.getElementById("authComponent")
+  authComponent.addEventListener("onSessionCreated", () => {
     document.location.href = "/app"
   })
 </script>

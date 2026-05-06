@@ -7,6 +7,95 @@
     <title>{{.Title}} · Paperstacks</title>
     <link rel="stylesheet" href="/app/assets/styles.css" />
     <script src="/app/assets/htmx.min.js" defer></script>
+    <script type="module">
+      import { register } from "https://esm.run/@teamhanko/hanko-elements"
+      window.hanko = register("{{.HankoAPIURL}}")
+
+      const currentUserStorageKey = "paperstacks.currentUser"
+
+      function setUserEmail(email) {
+        const userEmail = document.getElementById("user-email")
+        if (!userEmail) {
+          return
+        }
+
+        userEmail.textContent = email ?? ""
+      }
+
+      function readCachedUser() {
+        const rawUser = sessionStorage.getItem(currentUserStorageKey)
+        if (!rawUser) {
+          return null
+        }
+
+        try {
+          return JSON.parse(rawUser)
+        } catch {
+          sessionStorage.removeItem(currentUserStorageKey)
+          return null
+        }
+      }
+
+      function cacheUser(user) {
+        if (!user?.email) {
+          sessionStorage.removeItem(currentUserStorageKey)
+          return
+        }
+
+        sessionStorage.setItem(currentUserStorageKey, JSON.stringify({ email: user.email }))
+      }
+
+      async function updateUserEmail() {
+        const cachedUser = readCachedUser()
+        if (cachedUser?.email) {
+          setUserEmail(cachedUser.email)
+        }
+
+        try {
+          const { hanko } = await window.hanko
+          const user = await hanko.getUser()
+
+          cacheUser(user)
+          setUserEmail(user?.email)
+          setLogoutVisibility(true)
+        } catch (error) {
+          console.error("Failed to resolve Hanko user", error)
+          sessionStorage.removeItem(currentUserStorageKey)
+
+          if (!cachedUser?.email) {
+            setUserEmail("")
+          }
+
+          setLogoutVisibility(false)
+        }
+      }
+
+      function setLogoutVisibility(isVisible) {
+        const logoutButton = document.getElementById("logout")
+        if (!logoutButton) {
+          return
+        }
+        logoutButton.classList.toggle("hidden", !isVisible)
+      }
+
+      updateUserEmail()
+
+      async function registerLogout() {
+        const { hanko } = await window.hanko
+        document.getElementById("logout").addEventListener("click", (event) => {
+          event.preventDefault()
+          hanko.user.logout()
+        })
+
+        hanko.onUserLoggedOut(() => {
+          sessionStorage.removeItem(currentUserStorageKey)
+          updateUserEmail()
+          document.location.href = "/app"
+        })
+      }
+      document.addEventListener("htmx:afterSwap", updateUserEmail)
+      document.addEventListener("htmx:afterSwap", registerLogout)
+    </script>
   </head>
   <body class="bg-base-200">
     {{template "app" .}}
@@ -66,6 +155,8 @@
     </ul>
     <div class="flex flex-1"></div>
     <div id="sidebar-footer" class="flex flex-col p-4 w-full">
+      <p id="user-email" class="text-sm text-center"></p>
+      <button id="logout" class="btn btn-sm btn-neutral hidden">Logout</button>
       <div class="divider"></div>
       <p class="text-sm text-secondary">{{ .AppVersion}} {{ .AppGitHash }}</p>
       <p class="text-sm text-secondary">{{ .AppBuildTime}}</p>
