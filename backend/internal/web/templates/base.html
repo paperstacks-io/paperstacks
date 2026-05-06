@@ -13,13 +13,26 @@
 
       const currentUserStorageKey = "paperstacks.currentUser"
 
-      function setUserEmail(email) {
-        const userEmail = document.getElementById("user-email")
-        if (!userEmail) {
-          return
+      function getUserEmailElement() {
+        return document.getElementById("user-email")
+      }
+
+      function getLogoutButton() {
+        return document.getElementById("logout")
+      }
+
+      function renderUser(user) {
+        const userEmail = getUserEmailElement()
+        const logoutButton = document.getElementById("logout")
+        const email = user?.email ?? ""
+
+        if (userEmail) {
+          userEmail.textContent = email
         }
 
-        userEmail.textContent = email ?? ""
+        if (logoutButton) {
+          logoutButton.classList.toggle("hidden", !email)
+        }
       }
 
       function readCachedUser() {
@@ -36,7 +49,7 @@
         }
       }
 
-      function cacheUser(user) {
+      function writeCachedUser(user) {
         if (!user?.email) {
           sessionStorage.removeItem(currentUserStorageKey)
           return
@@ -45,56 +58,63 @@
         sessionStorage.setItem(currentUserStorageKey, JSON.stringify({ email: user.email }))
       }
 
-      async function updateUserEmail() {
+      async function fetchCurrentUser() {
+        const { hanko } = await window.hanko
+        return hanko.getUser()
+      }
+
+      async function resolveCurrentUser() {
         const cachedUser = readCachedUser()
-        if (cachedUser?.email) {
-          setUserEmail(cachedUser.email)
-        }
+        renderUser(cachedUser)
 
         try {
-          const { hanko } = await window.hanko
-          const user = await hanko.getUser()
-
-          cacheUser(user)
-          setUserEmail(user?.email)
-          setLogoutVisibility(true)
+          const user = await fetchCurrentUser()
+          writeCachedUser(user)
+          renderUser(user)
+          return user
         } catch (error) {
           console.error("Failed to resolve Hanko user", error)
           sessionStorage.removeItem(currentUserStorageKey)
-
-          if (!cachedUser?.email) {
-            setUserEmail("")
-          }
-
-          setLogoutVisibility(false)
+          renderUser(null)
+          return null
         }
       }
 
-      function setLogoutVisibility(isVisible) {
-        const logoutButton = document.getElementById("logout")
-        if (!logoutButton) {
+      async function handleLogout(event) {
+        event.preventDefault()
+
+        const { hanko } = await window.hanko
+        hanko.user.logout()
+      }
+
+      function bindLogout() {
+        const logoutButton = getLogoutButton()
+        if (!logoutButton || logoutButton.dataset.bound === "true") {
           return
         }
-        logoutButton.classList.toggle("hidden", !isVisible)
+
+        logoutButton.addEventListener("click", handleLogout)
+        logoutButton.dataset.bound = "true"
       }
 
-      updateUserEmail()
+      async function init() {
+        await resolveCurrentUser()
+        bindLogout()
 
-      async function registerLogout() {
-        const { hanko } = await window.hanko
-        document.getElementById("logout").addEventListener("click", (event) => {
-          event.preventDefault()
-          hanko.user.logout()
+        document.addEventListener("htmx:afterSwap", () => {
+          renderUser(readCachedUser())
+          bindLogout()
         })
 
+        const { hanko } = await window.hanko
         hanko.onUserLoggedOut(() => {
           sessionStorage.removeItem(currentUserStorageKey)
-          updateUserEmail()
+          renderUser(null)
           document.location.href = "/app"
         })
       }
-      document.addEventListener("htmx:afterSwap", updateUserEmail)
-      document.addEventListener("htmx:afterSwap", registerLogout)
+
+      init()
     </script>
   </head>
   <body class="bg-base-200">
