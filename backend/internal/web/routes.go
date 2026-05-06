@@ -84,11 +84,13 @@ func AddRoute(
 			return err
 		}
 
+		pageHandler := defaultMiddle(handleIndex(pageTemplate, navItems(page.path)))
+
 		if page.requiresAuth {
-			mux.Handle(http.MethodGet+" "+page.path, authMiddle(handleIndex(pageTemplate, navItems(page.path))))
-		} else {
-			mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
+			pageHandler = authMiddle(pageHandler)
 		}
+
+		mux.Handle(http.MethodGet+" "+page.path, pageHandler)
 	}
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
