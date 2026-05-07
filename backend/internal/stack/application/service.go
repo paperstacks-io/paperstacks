@@ -12,8 +12,7 @@ func NewStackService() *StackService {
 	return &StackService{}
 }
 
-// Add creates and stores a new stack.
-// It returns an error if the stack could not be created
+// Add creates and stores a new stack // It returns an error if the stack could not be created
 // (e.g. the stack name already exists in the user's stack list).
 func (s *StackService) Create(name string, user userDomain.User) error {
 	return nil
@@ -42,5 +41,5 @@ func (s *StackService) Delete(user userDomain.User, stackUUID string) error {
 //
 // It returns an error if the stacks could not be loaded.
 func (s *StackService) List(user userDomain.User) ([]stackDomain.Stack, error) {
-	return nil, nil
+	return []stackDomain.Stack{}, nil
 }
