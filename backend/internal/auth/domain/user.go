@@ -6,9 +6,3 @@ type User struct {
 	// Email is the user's email address as provided by the authentication system.
 	Email string
 }
-
-func NewTestUser() *User {
-	return &User{
-		Email: "test@example.com",
-	}
-}
