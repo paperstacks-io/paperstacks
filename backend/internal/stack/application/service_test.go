@@ -12,7 +12,7 @@ var testUser = userDomain.User{
 }
 
 // Create tests
-func TestServiceCreateValidStack(t *testing.T) {
+func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 	t.Parallel()
 	stack := domain.NewStack(" Test Stack ", testUser)
 
@@ -51,25 +51,12 @@ func TestServiceCreateValidStack(t *testing.T) {
 	t.Skip("service not fully implemented")
 }
 
-func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
-	t.Parallel()
-	t.Skip("service not implemented yet")
-}
-
-// Update tests
-func TestServiceUpdateStacke(t *testing.T) {
-	t.Parallel()
-	t.Skip("service not implemented yet")
-}
-
-// Delete tests
 func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
 	t.Parallel()
 	t.Skip("service not implemented yet")
 }
 
-// List tests
-func TestServiceListReturnsStacks(t *testing.T) {
+func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	t.Parallel()
 	t.Skip("service not implemented yet")
 }
