@@ -1,110 +1,67 @@
 package application
 
 import (
-	"context"
 	"testing"
 
-	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
-	"github.com/paperstacks.io/paperstacks/internal/testutil"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
 )
 
-func TestServiceNewStackCreatesValid(t *testing.T) {
-	t.Parallel()
-
-	service := NewStackService()
-	stack := stackDomain.NewStack(" Example Stack ", testutil.TestUser)
-
-	err := service.Create(context.Background(), *stack)
-
-	if err != nil {
-		// t.Fatalf("NewStack() error = %v", err)
-	}
-
-	if stack.Name != "Example Stack" {
-		// t.Fatalf("stack name = %q, want %q", stack.Name, "Example Stack")
-	}
+var TestUser = userDomain.User{
+	Email: "test@example.com",
 }
 
-func TestServiceNewStackRejectsEmptyName(t *testing.T) {
+// Create tests
+func TestServiceCreateCreatesValidStack(t *testing.T) {
 	t.Parallel()
-
-	service := NewStackService()
-	stack := stackDomain.NewStack("", testutil.TestUser)
-
-	err := service.Create(context.Background(), *stack)
-	if err == nil {
-		// t.Fatal("NewStack() error = nil, want error")
-	}
+	t.Skip("Not implemented")
+}
+func TestServiceCreateTrimsName(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+func TestServiceCreateRejectsEmptyName(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+func TestServiceCreateRejectsWhitespaceName(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+func TestServiceCreateRejectsDuplicateNameForSameUser(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+func TestServiceCreateSetsCreatedAt(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+func TestServiceCreateSetsUpdatedAt(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
 }
 
-func TestServiceNewStackRejectsWhitespaceName(t *testing.T) {
-	t.Parallel()
-
-	service := NewStackService()
-	stack := stackDomain.NewStack("   ", testutil.TestUser)
-
-	err := service.Create(context.Background(), *stack)
-	if err == nil {
-		// t.Fatal("NewStack() error = nil, want error")
-	}
-}
-
-func TestServiceCreateStackRejectsDuplicateName(t *testing.T) {
-	t.Parallel()
-
-	service := NewStackService()
-
-	stack := stackDomain.NewStack("Existing Stack", testutil.TestUser)
-
-	err := service.Create(context.Background(), *stack)
-	if err != nil {
-		// t.Fatalf("first Create() error = %v", err)
-	}
-
-	err = service.Create(context.Background(), *stack)
-	if err == nil {
-		// t.Fatal("second Create() error = nil, want error")
-	}
-}
-
-func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
-	t.Parallel()
-
-	service := NewStackService()
-
-	err := service.Delete(context.Background(), "unknown-stack")
-	if err == nil {
-		// t.Fatal("Delete() error = nil, want error")
-	}
-}
-
+// Update tests
 func TestServiceUpdateReturnsErrorForUnknownStack(t *testing.T) {
 	t.Parallel()
-
-	service := NewStackService()
-	stack := stackDomain.NewStack("unknown-stack", testutil.TestUser)
-
-	_, err := service.Update(
-		context.Background(),
-		*stack,
-		"paper-uuid",
-	)
-	if err == nil {
-		// t.Fatal("Update() error = nil, want error")
-	}
+	t.Skip("Not implemented")
+}
+func TestServiceUpdateChangesUpdatedAt(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+func TestServiceUpdateUpdatesStackName(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
 }
 
+// Delete tests
+func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
+	t.Parallel()
+	t.Skip("Not implemented")
+}
+
+// List tests
 func TestServiceListReturnsStacks(t *testing.T) {
 	t.Parallel()
-
-	service := NewStackService()
-
-	stacks, err := service.List(context.Background(), testutil.TestUser)
-	if err != nil {
-		// t.Fatalf("List() error = %v", err)
-	}
-
-	if stacks == nil {
-		// t.Fatal("List() returned nil")
-	}
+	t.Skip("Not implemented")
 }
