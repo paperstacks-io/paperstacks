@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
+	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 //go:embed assets/* all:templates
@@ -41,6 +43,7 @@ func navItems(activePath string) []navItem {
 
 func AddRoute(
 	mux *http.ServeMux,
+	cfg config.Config,
 	logger *slog.Logger,
 	paperService *application.PaperService,
 ) error {
@@ -63,27 +66,50 @@ func AddRoute(
 
 	defaultMiddle := middleware.NewDefault(logger)
 
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"))))
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
+
+	authMiddle := getAuthMiddleware(cfg.HankoAPIURL)
 
 	for _, page := range []struct {
-		path     string
-		template string
+		path         string
+		template     string
+		requiresAuth bool
 	}{
-		{path: "/papers", template: "paper"},
-		{path: "/search", template: "search"},
-		{path: "/settings", template: "settings"},
+		{path: "/papers", template: "paper", requiresAuth: false},
+		{path: "/search", template: "search", requiresAuth: false},
+		{path: "/settings", template: "settings", requiresAuth: true},
+		{path: "/auth", template: "auth", requiresAuth: false},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
 		if err != nil {
 			return err
 		}
 
-		mux.Handle(http.MethodGet+" "+page.path, defaultMiddle(handleIndex(pageTemplate, navItems(page.path))))
+		pageHandler := defaultMiddle(handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL))
+
+		if page.requiresAuth {
+			pageHandler = authMiddle(pageHandler)
+		}
+
+		mux.Handle(http.MethodGet+" "+page.path, pageHandler)
 	}
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
 	return nil
+}
+
+func getAuthMiddleware(hankoAPIURL string) func(http.Handler) http.Handler {
+	if hankoAPIURL == "" {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
+			})
+		}
+	}
+
+	validator := auth.NewHankoSessionValidator(hankoAPIURL)
+	return auth.AuthMiddleware(validator)
 }
 
 func templateFiles(content fs.FS) ([]string, error) {

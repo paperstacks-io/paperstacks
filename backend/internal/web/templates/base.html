@@ -5,8 +5,123 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{.Title}} · Paperstacks</title>
-    <link rel="stylesheet" href="/app/assets/styles.css" />
+    <!-- CSS for production -->
+    <!-- <link rel="stylesheet" href="/app/assets/styles.css" /> -->
+    <!-- CSS for development -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+
     <script src="/app/assets/htmx.min.js" defer></script>
+    <script type="module">
+      import { register } from "https://esm.run/@teamhanko/hanko-elements"
+      window.hanko = register("{{.HankoAPIURL}}")
+
+      const currentUserStorageKey = "paperstacks.currentUser"
+
+      function getUserEmailElement() {
+        return document.getElementById("user-email")
+      }
+
+      function getLogoutButton() {
+        return document.getElementById("logout")
+      }
+
+      function renderUser(user) {
+        const userEmail = getUserEmailElement()
+        const logoutButton = document.getElementById("logout")
+        const email = user?.email ?? ""
+
+        if (userEmail) {
+          userEmail.textContent = email
+        }
+
+        if (logoutButton) {
+          logoutButton.classList.toggle("hidden", !email)
+        }
+      }
+
+      function readCachedUser() {
+        const rawUser = sessionStorage.getItem(currentUserStorageKey)
+        if (!rawUser) {
+          return null
+        }
+
+        try {
+          return JSON.parse(rawUser)
+        } catch {
+          sessionStorage.removeItem(currentUserStorageKey)
+          return null
+        }
+      }
+
+      function writeCachedUser(user) {
+        if (!user?.email) {
+          sessionStorage.removeItem(currentUserStorageKey)
+          return
+        }
+
+        sessionStorage.setItem(currentUserStorageKey, JSON.stringify({ email: user.email }))
+      }
+
+      async function fetchCurrentUser() {
+        const { hanko } = await window.hanko
+        return hanko.getUser()
+      }
+
+      async function resolveCurrentUser() {
+        const cachedUser = readCachedUser()
+        renderUser(cachedUser)
+
+        try {
+          const user = await fetchCurrentUser()
+          writeCachedUser(user)
+          renderUser(user)
+          return user
+        } catch (error) {
+          console.error("Failed to resolve Hanko user", error)
+          sessionStorage.removeItem(currentUserStorageKey)
+          renderUser(null)
+          return null
+        }
+      }
+
+      async function handleLogout(event) {
+        event.preventDefault()
+
+        const { hanko } = await window.hanko
+        hanko.user.logout()
+      }
+
+      function bindLogout() {
+        const logoutButton = getLogoutButton()
+        if (!logoutButton || logoutButton.dataset.bound === "true") {
+          return
+        }
+
+        logoutButton.addEventListener("click", handleLogout)
+        logoutButton.dataset.bound = "true"
+      }
+
+      async function init() {
+        await resolveCurrentUser()
+        bindLogout()
+
+        document.addEventListener("htmx:afterSwap", () => {
+          renderUser(readCachedUser())
+          bindLogout()
+        })
+
+        const { hanko } = await window.hanko
+        hanko.onUserLoggedOut(() => {
+          sessionStorage.removeItem(currentUserStorageKey)
+          renderUser(null)
+          document.location.href = "/app"
+        })
+      }
+
+      init()
+    </script>
   </head>
   <body class="bg-base-200">
     {{template "app" .}}
@@ -66,6 +181,8 @@
     </ul>
     <div class="flex flex-1"></div>
     <div id="sidebar-footer" class="flex flex-col p-4 w-full">
+      <p id="user-email" class="text-sm text-center"></p>
+      <button id="logout" class="btn btn-sm btn-neutral hidden">Logout</button>
       <div class="divider"></div>
       <p class="text-sm text-secondary">{{ .AppVersion}} {{ .AppGitHash }}</p>
       <p class="text-sm text-secondary">{{ .AppBuildTime}}</p>

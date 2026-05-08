@@ -2,26 +2,30 @@
 // environment variables.
 package config
 
-import "os"
+import (
+	"os"
+)
 
 // Config contains application startup configuration.
 type Config struct {
-	Host string
-	Port string
+	Host        string
+	Port        string
+	HankoAPIURL string
 }
 
 // New loads configuration from environment variables and applies defaults.
 func New() Config {
 	return Config{
-		Host: getEnv("HOST", "127.0.0.1"),
-		Port: getEnv("PORT", "8080"),
+		Host:        getEnvOrDefault("HOST", "127.0.0.1"),
+		Port:        getEnvOrDefault("PORT", "8080"),
+		HankoAPIURL: getEnvOrDefault("HANKO_API_URL", ""),
 	}
 }
 
-func getEnv(key string, defaultVal string) string {
-	if value, exists := os.LookupEnv(key); exists {
+func getEnvOrDefault(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
 
-	return defaultVal
+	return fallback
 }
