@@ -1,6 +1,7 @@
 package application
 
 import (
+	"context"
 	"testing"
 
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -13,7 +14,7 @@ func TestServiceNewStackCreatesValid(t *testing.T) {
 	service := NewStackService()
 	stack := stackDomain.NewStack(" Example Stack ", testutil.TestUser)
 
-	err := service.Create(stack.Name, stack.Owner)
+	err := service.Create(context.Background(), stack.Name, stack.Owner)
 	if err != nil {
 		// t.Fatalf("NewStack() error = %v", err)
 	}
@@ -29,7 +30,7 @@ func TestServiceNewStackRejectsEmptyName(t *testing.T) {
 	service := NewStackService()
 	stack := stackDomain.NewStack("", testutil.TestUser)
 
-	err := service.Create(stack.Name, stack.Owner)
+	err := service.Create(context.Background(), stack.Name, stack.Owner)
 	if err == nil {
 		// t.Fatal("NewStack() error = nil, want error")
 	}
@@ -41,7 +42,7 @@ func TestServiceNewStackRejectsWhitespaceName(t *testing.T) {
 	service := NewStackService()
 	stack := stackDomain.NewStack("   ", testutil.TestUser)
 
-	err := service.Create(stack.Name, stack.Owner)
+	err := service.Create(context.Background(), stack.Name, stack.Owner)
 	if err == nil {
 		// t.Fatal("NewStack() error = nil, want error")
 	}
@@ -54,12 +55,12 @@ func TestServiceCreateStackRejectsDuplicateName(t *testing.T) {
 
 	stack := stackDomain.NewStack("Existing Stack", testutil.TestUser)
 
-	err := service.Create(stack.Name, stack.Owner)
+	err := service.Create(context.Background(), stack.Name, stack.Owner)
 	if err != nil {
 		// t.Fatalf("first Create() error = %v", err)
 	}
 
-	err = service.Create(stack.Name, stack.Owner)
+	err = service.Create(context.Background(), stack.Name, stack.Owner)
 	if err == nil {
 		// t.Fatal("second Create() error = nil, want error")
 	}
@@ -70,7 +71,7 @@ func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
 
 	service := NewStackService()
 
-	err := service.Delete(testutil.TestUser, "unknown-stack")
+	err := service.Delete(context.Background(), "unknown-stack")
 	if err == nil {
 		// t.Fatal("Delete() error = nil, want error")
 	}
@@ -82,7 +83,7 @@ func TestServiceUpdateReturnsErrorForUnknownStack(t *testing.T) {
 	service := NewStackService()
 
 	_, err := service.Update(
-		testutil.TestUser,
+		context.Background(),
 		"unknown-stack",
 		"paper-uuid",
 	)
@@ -96,7 +97,7 @@ func TestServiceListReturnsStacks(t *testing.T) {
 
 	service := NewStackService()
 
-	stacks, err := service.List(testutil.TestUser)
+	stacks, err := service.List(context.Background(), testutil.TestUser)
 	if err != nil {
 		// t.Fatalf("List() error = %v", err)
 	}

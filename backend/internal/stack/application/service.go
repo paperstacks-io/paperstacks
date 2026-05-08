@@ -1,6 +1,8 @@
 package application
 
 import (
+	"context"
+
 	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
@@ -14,7 +16,7 @@ func NewStackService() *StackService {
 
 // Add creates and stores a new stack // It returns an error if the stack could not be created
 // (e.g. the stack name already exists in the user's stack list).
-func (s *StackService) Create(name string, user userDomain.User) error {
+func (s *StackService) Create(ctx context.Context, name string, user userDomain.User) error {
 	return nil
 }
 
@@ -26,13 +28,13 @@ func (s *StackService) Create(name string, user userDomain.User) error {
 //   - the paper does not exist
 //   - the paper is not part of the stack
 //   - the stack reached the maximum number of papers
-func (s *StackService) Update(user userDomain.User, stackUUID string, paperUUID string) (stackDomain.Stack, error) {
+func (s *StackService) Update(ctx context.Context, stackUUID string, paperUUID string) (stackDomain.Stack, error) {
 	return stackDomain.Stack{}, nil
 }
 
 // Delete removes the specified stack from User.
 // It returns an error if the stack does not exist
-func (s *StackService) Delete(user userDomain.User, stackUUID string) error {
+func (s *StackService) Delete(ctx context.Context, stackUUID string) error {
 	return nil
 }
 
@@ -40,6 +42,6 @@ func (s *StackService) Delete(user userDomain.User, stackUUID string) error {
 // This includes public and private stacks.
 //
 // It returns an error if the stacks could not be loaded.
-func (s *StackService) List(user userDomain.User) ([]stackDomain.Stack, error) {
+func (s *StackService) List(ctx context.Context, user userDomain.User) ([]stackDomain.Stack, error) {
 	return []stackDomain.Stack{}, nil
 }
