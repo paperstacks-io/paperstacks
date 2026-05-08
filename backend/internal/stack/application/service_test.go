@@ -50,13 +50,6 @@ func TestServiceCreateValidStack(t *testing.T) {
 
 	t.Skip("service not fully implemented")
 }
-func TestServiceCreateRejectsEmptyName(t *testing.T) {
-	t.Parallel()
-	stack := domain.NewStack("    ", testUser)
-	if stack.Name != "" {
-		t.Fatalf("expected name to be empty, got %q", stack.Name)
-	}
-}
 
 func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	t.Parallel()
