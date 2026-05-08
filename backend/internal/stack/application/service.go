@@ -14,9 +14,10 @@ func NewStackService() *StackService {
 	return &StackService{}
 }
 
-// Add creates and stores a new stack // It returns an error if the stack could not be created
+// Add creates and stores a new stack
+// It returns an error if the stack could not be created
 // (e.g. the stack name already exists in the user's stack list).
-func (s *StackService) Create(ctx context.Context, name string, user userDomain.User) error {
+func (s *StackService) Create(ctx context.Context, stack stackDomain.Stack) error {
 	return nil
 }
 
@@ -28,11 +29,11 @@ func (s *StackService) Create(ctx context.Context, name string, user userDomain.
 //   - the paper does not exist
 //   - the paper is not part of the stack
 //   - the stack reached the maximum number of papers
-func (s *StackService) Update(ctx context.Context, stackUUID string, paperUUID string) (stackDomain.Stack, error) {
+func (s *StackService) Update(ctx context.Context, modified stackDomain.Stack, paperUUID string) (stackDomain.Stack, error) {
 	return stackDomain.Stack{}, nil
 }
 
-// Delete removes the specified stack from User.
+// Delete removes the specified stack.
 // It returns an error if the stack does not exist
 func (s *StackService) Delete(ctx context.Context, stackUUID string) error {
 	return nil

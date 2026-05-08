@@ -14,7 +14,8 @@ func TestServiceNewStackCreatesValid(t *testing.T) {
 	service := NewStackService()
 	stack := stackDomain.NewStack(" Example Stack ", testutil.TestUser)
 
-	err := service.Create(context.Background(), stack.Name, stack.Owner)
+	err := service.Create(context.Background(), *stack)
+
 	if err != nil {
 		// t.Fatalf("NewStack() error = %v", err)
 	}
@@ -30,7 +31,7 @@ func TestServiceNewStackRejectsEmptyName(t *testing.T) {
 	service := NewStackService()
 	stack := stackDomain.NewStack("", testutil.TestUser)
 
-	err := service.Create(context.Background(), stack.Name, stack.Owner)
+	err := service.Create(context.Background(), *stack)
 	if err == nil {
 		// t.Fatal("NewStack() error = nil, want error")
 	}
@@ -42,7 +43,7 @@ func TestServiceNewStackRejectsWhitespaceName(t *testing.T) {
 	service := NewStackService()
 	stack := stackDomain.NewStack("   ", testutil.TestUser)
 
-	err := service.Create(context.Background(), stack.Name, stack.Owner)
+	err := service.Create(context.Background(), *stack)
 	if err == nil {
 		// t.Fatal("NewStack() error = nil, want error")
 	}
@@ -55,12 +56,12 @@ func TestServiceCreateStackRejectsDuplicateName(t *testing.T) {
 
 	stack := stackDomain.NewStack("Existing Stack", testutil.TestUser)
 
-	err := service.Create(context.Background(), stack.Name, stack.Owner)
+	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		// t.Fatalf("first Create() error = %v", err)
 	}
 
-	err = service.Create(context.Background(), stack.Name, stack.Owner)
+	err = service.Create(context.Background(), *stack)
 	if err == nil {
 		// t.Fatal("second Create() error = nil, want error")
 	}
@@ -81,10 +82,11 @@ func TestServiceUpdateReturnsErrorForUnknownStack(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService()
+	stack := stackDomain.NewStack("unknown-stack", testutil.TestUser)
 
 	_, err := service.Update(
 		context.Background(),
-		"unknown-stack",
+		*stack,
 		"paper-uuid",
 	)
 	if err == nil {
