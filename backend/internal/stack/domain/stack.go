@@ -43,6 +43,7 @@ func NewStack(name string, owner userDomain.User) *Stack {
 		Name:      name,
 		Owner:     owner,
 		Papers:    []paperDomain.Paper{},
+		IsPublic:  false,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
