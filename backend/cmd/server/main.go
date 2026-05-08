@@ -30,9 +30,6 @@ func run(
 	ctx context.Context,
 	cfg config.Config,
 ) error {
-	host := cfg.Host
-	port := cfg.Port
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	paperService := paperApp.NewPaperService(memory.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
@@ -52,12 +49,12 @@ func run(
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)
-	web.AddRoute(webMux, logger, paperService)
+	web.AddRoute(webMux, cfg, logger, paperService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
 	httpServer := &http.Server{
-		Addr:         net.JoinHostPort(host, port),
+		Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
 		Handler:      rootMux,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -83,13 +80,13 @@ func run(
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "\tStarting server:")
-	fmt.Fprintln(tw, "\tFrontend: \thttp://"+host+":"+port+"/app/")
-	fmt.Fprintln(tw, "\tAPI: \thttp://"+host+":"+port+"/api/")
+	fmt.Fprintln(tw, "\tFrontend: \thttp://"+cfg.Host+":"+cfg.Port+"/app/")
+	fmt.Fprintln(tw, "\tAPI: \thttp://"+cfg.Host+":"+cfg.Port+"/api/")
 	fmt.Fprintln(tw)
 	_ = tw.Flush()
 
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("Could not listen", slog.String("port", port), slog.String("error", err.Error()))
+		slog.Error("Could not listen", slog.String("port", cfg.Port), slog.String("error", err.Error()))
 		return err
 	}
 
@@ -110,7 +107,7 @@ const bannerLogo = `
 |_|         |_|                                                   
 `
 
-func banner(w io.Writer) {
+func banner(w io.Writer, cfg config.Config) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	fmt.Fprint(tw, bannerLogo)
@@ -119,14 +116,15 @@ func banner(w io.Writer) {
 	fmt.Fprintln(tw, "  Git hash:\t"+build.GitHash)
 	fmt.Fprintln(tw, "  Build time:\t"+build.BuildTime)
 	fmt.Fprintln(tw)
+	fmt.Fprintln(tw, "  Hanko API URL:\t"+cfg.HankoAPIURL)
+	fmt.Fprintln(tw)
 
 	_ = tw.Flush()
 }
 
 func main() {
-	banner(os.Stdout)
-
 	cfg := config.New()
+	banner(os.Stdout, cfg)
 
 	if err := run(context.Background(), cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)

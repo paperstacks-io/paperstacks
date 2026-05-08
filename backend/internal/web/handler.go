@@ -22,6 +22,7 @@ type pageData struct {
 	NavItems      []navItem
 	AppTargetID   string
 	PageContentID string
+	HankoAPIURL   string
 }
 
 type papersListData struct {
@@ -36,7 +37,7 @@ type papersListData struct {
 	Pagination    []PaginationItem
 }
 
-func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
+func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -47,6 +48,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem) http.Handler {
 			NavItems:      navItems,
 			AppTargetID:   "app-shell",
 			PageContentID: "page-content",
+			HankoAPIURL:   hankoAPIURL,
 		}
 
 		templateName := "base"
