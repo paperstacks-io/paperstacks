@@ -107,7 +107,7 @@ const bannerLogo = `
 |_|         |_|                                                   
 `
 
-func banner(w io.Writer) {
+func banner(w io.Writer, cfg config.Config) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	fmt.Fprint(tw, bannerLogo)
@@ -116,14 +116,15 @@ func banner(w io.Writer) {
 	fmt.Fprintln(tw, "  Git hash:\t"+build.GitHash)
 	fmt.Fprintln(tw, "  Build time:\t"+build.BuildTime)
 	fmt.Fprintln(tw)
+	fmt.Fprintln(tw, "  Hanko API URL:\t"+cfg.HankoAPIURL)
+	fmt.Fprintln(tw)
 
 	_ = tw.Flush()
 }
 
 func main() {
-	banner(os.Stdout)
-
 	cfg := config.New()
+	banner(os.Stdout, cfg)
 
 	if err := run(context.Background(), cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
