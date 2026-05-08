@@ -67,18 +67,8 @@ func AddRoute(
 	defaultMiddle := middleware.NewDefault(logger)
 
 	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
-	var authMiddle func(http.Handler) http.Handler
 
-	if cfg.HankoAPIURL == "" {
-		authMiddle = func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
-			})
-		}
-	} else {
-		validator := auth.NewHankoSessionValidator(cfg.HankoAPIURL)
-		authMiddle = auth.AuthMiddleware(validator)
-	}
+	authMiddle := getAuthMiddleware(cfg.HankoAPIURL)
 
 	for _, page := range []struct {
 		path         string
@@ -107,6 +97,19 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
 	return nil
+}
+
+func getAuthMiddleware(hankoAPIURL string) func(http.Handler) http.Handler {
+	if hankoAPIURL == "" {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
+			})
+		}
+	}
+
+	validator := auth.NewHankoSessionValidator(hankoAPIURL)
+	return auth.AuthMiddleware(validator)
 }
 
 func templateFiles(content fs.FS) ([]string, error) {
