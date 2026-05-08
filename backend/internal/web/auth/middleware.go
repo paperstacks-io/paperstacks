@@ -11,7 +11,6 @@ func AuthMiddleware(validator SessionValidator) func(http.Handler) http.Handler 
 				return
 			}
 
-			// Validate the session token
 			isValid, err := validator.ValidateSession(cookie.Value)
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
