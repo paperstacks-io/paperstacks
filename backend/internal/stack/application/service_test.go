@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-// Create tests
 func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 	t.Parallel()
 	t.Skip("service not fully implemented")
