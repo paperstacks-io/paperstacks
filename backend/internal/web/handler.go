@@ -25,6 +25,12 @@ type pageData struct {
 	HankoAPIURL   string
 }
 
+type authData struct {
+	HankoAPIURL     string
+	IsAuthenticated bool
+	Email           string
+}
+
 type papersListData struct {
 	Items         []domain.Paper
 	Total         int

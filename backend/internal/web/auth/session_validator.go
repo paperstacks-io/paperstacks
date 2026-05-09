@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // SessionValidator defines the interface for session validation
@@ -20,7 +21,8 @@ type HankoSessionValidator struct {
 
 // ValidationResponse represents the Hanko API response
 type ValidationResponse struct {
-	IsValid bool `json:"is_valid"`
+	IsValid        bool      `json:"is_valid"`
+	ExpirationTime time.Time `json:"expiration_time"`
 }
 
 func NewHankoSessionValidator(apiURL string) *HankoSessionValidator {
