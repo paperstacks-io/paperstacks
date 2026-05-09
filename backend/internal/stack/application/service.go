@@ -2,7 +2,9 @@ package application
 
 import (
 	"context"
+	"time"
 
+	"github.com/google/uuid"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
@@ -14,10 +16,15 @@ func NewStackService() *StackService {
 }
 
 func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
+	err := uuid.Validate(stack.UUID)
+	if err != nil {
+		stack.UUID = uuid.NewString()
+	}
 	panic("Not implemented")
 }
 
 func (s *StackService) Update(ctx context.Context, modified domain.Stack) (domain.Stack, error) {
+	modified.UpdatedAt = time.Now()
 	panic("Not implemented")
 }
 
