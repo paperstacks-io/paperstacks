@@ -24,7 +24,7 @@ type Stack struct {
 	// Papers contains all papers that belong to this stack.
 	Papers []paperDomain.Paper
 
-	// Visibility defines whether the stack is public or private.
+	// IsPublic defines whether the stack is public or private.
 	IsPublic bool
 
 	// CreatedAt records when the stack was initially created.
@@ -43,6 +43,7 @@ func NewStack(name string, owner userDomain.User) *Stack {
 		Name:      name,
 		Owner:     owner,
 		Papers:    []paperDomain.Paper{},
+		IsPublic:  false,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
