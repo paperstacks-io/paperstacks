@@ -12,6 +12,7 @@ import (
 
 type SessionService interface {
 	ResolveSession(ctx context.Context, token string) (*Session, error)
+	LogoutSession(ctx context.Context, token string) error
 }
 
 type HankoSessionService struct {
@@ -90,4 +91,29 @@ func (s *HankoSessionService) fetchSession(ctx context.Context, token string) (*
 	session := response.Session(token)
 
 	return session, nil
+}
+
+func (s *HankoSessionService) LogoutSession(ctx context.Context, token string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.apiURL+"/logout", nil)
+	if err != nil {
+		return fmt.Errorf("create logout request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	res, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("send logout request: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("logout session: unexpected status %d", res.StatusCode)
+	}
+
+	s.mu.Lock()
+	delete(s.cache, token)
+	s.mu.Unlock()
+
+	return nil
 }

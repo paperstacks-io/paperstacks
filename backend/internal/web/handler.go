@@ -117,6 +117,33 @@ func handlePapersSearch(
 	})
 }
 
+func handleLogout(
+	logger *slog.Logger,
+	sessionService auth.SessionService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, ok := auth.SessionFromContext(r.Context())
+		if !ok {
+			session = &auth.Session{}
+		}
+
+		err := sessionService.LogoutSession(r.Context(), session.Token)
+		if err != nil {
+			logger.Error("error while logout", "error", err.Error())
+			http.Error(w, "failed to logout session", http.StatusInternalServerError)
+			return
+		}
+
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/app/")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		http.Redirect(w, r, "/app/", http.StatusSeeOther)
+	})
+}
+
 func normalizeFormParam(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
