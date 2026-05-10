@@ -11,6 +11,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 type pageData struct {
@@ -23,12 +24,7 @@ type pageData struct {
 	AppTargetID   string
 	PageContentID string
 	HankoAPIURL   string
-}
-
-type authData struct {
-	HankoAPIURL     string
-	IsAuthenticated bool
-	Email           string
+	Session       auth.Session
 }
 
 type papersListData struct {
@@ -47,6 +43,11 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
+		session, ok := auth.SessionFromContext(r.Context())
+		if !ok {
+			session = &auth.Session{}
+		}
+
 		data := pageData{
 			AppVersion:    build.Version,
 			AppGitHash:    build.GitHash,
@@ -55,6 +56,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 			AppTargetID:   "app-shell",
 			PageContentID: "page-content",
 			HankoAPIURL:   hankoAPIURL,
+			Session:       *session,
 		}
 
 		templateName := "base"

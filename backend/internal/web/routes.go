@@ -108,8 +108,8 @@ func getAuthMiddleware(hankoAPIURL string) func(http.Handler) http.Handler {
 		}
 	}
 
-	validator := auth.NewHankoSessionValidator(hankoAPIURL)
-	return auth.AuthMiddleware(validator)
+	service := auth.NewHankoSessionService(hankoAPIURL, nil)
+	return auth.AuthMiddleware(service)
 }
 
 func templateFiles(content fs.FS) ([]string, error) {
