@@ -11,6 +11,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 type pageData struct {
@@ -23,6 +24,7 @@ type pageData struct {
 	AppTargetID   string
 	PageContentID string
 	HankoAPIURL   string
+	Session       auth.Session
 }
 
 type papersListData struct {
@@ -41,6 +43,11 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
+		session, ok := auth.SessionFromContext(r.Context())
+		if !ok {
+			session = &auth.Session{}
+		}
+
 		data := pageData{
 			AppVersion:    build.Version,
 			AppGitHash:    build.GitHash,
@@ -49,6 +56,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 			AppTargetID:   "app-shell",
 			PageContentID: "page-content",
 			HankoAPIURL:   hankoAPIURL,
+			Session:       *session,
 		}
 
 		templateName := "base"
@@ -106,6 +114,33 @@ func handlePapersSearch(
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+	})
+}
+
+func handleLogout(
+	logger *slog.Logger,
+	sessionService auth.SessionService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, ok := auth.SessionFromContext(r.Context())
+		if !ok {
+			session = &auth.Session{}
+		}
+
+		err := sessionService.LogoutSession(r.Context(), session.Token)
+		if err != nil {
+			logger.Error("error while logout", "error", err.Error())
+			http.Error(w, "failed to logout session", http.StatusInternalServerError)
+			return
+		}
+
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/app/")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		http.Redirect(w, r, "/app/", http.StatusSeeOther)
 	})
 }
 

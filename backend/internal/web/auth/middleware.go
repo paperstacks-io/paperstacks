@@ -1,23 +1,44 @@
 package auth
 
-import "net/http"
+import (
+	"net/http"
+)
 
-func AuthMiddleware(validator SessionValidator) func(http.Handler) http.Handler {
+func SessionMiddleware(service SessionService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if service == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			cookie, err := r.Cookie("hanko")
 			if err != nil {
-				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			isValid, err := validator.ValidateSession(cookie.Value)
+			session, err := service.ResolveSession(r.Context(), cookie.Value)
 			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			if !isValid {
+			if session == nil || !session.IsValid {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			next.ServeHTTP(w, r.WithContext(ContextWithSession(r.Context(), session)))
+		})
+	}
+}
+
+func RequireAuthMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session, ok := SessionFromContext(r.Context())
+			if !ok || session == nil || !session.IsValid {
 				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
 				return
 			}
