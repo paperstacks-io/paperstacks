@@ -46,6 +46,7 @@ func AddRoute(
 	cfg config.Config,
 	logger *slog.Logger,
 	paperService *application.PaperService,
+	sessionService auth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -68,7 +69,7 @@ func AddRoute(
 
 	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
 
-	authMiddle := getAuthMiddleware(cfg.HankoAPIURL)
+	authMiddle := getAuthMiddleware(sessionService)
 
 	for _, page := range []struct {
 		path         string
@@ -99,8 +100,8 @@ func AddRoute(
 	return nil
 }
 
-func getAuthMiddleware(hankoAPIURL string) func(http.Handler) http.Handler {
-	if hankoAPIURL == "" {
+func getAuthMiddleware(sessionService auth.SessionService) func(http.Handler) http.Handler {
+	if sessionService == nil {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
@@ -108,8 +109,7 @@ func getAuthMiddleware(hankoAPIURL string) func(http.Handler) http.Handler {
 		}
 	}
 
-	service := auth.NewHankoSessionService(hankoAPIURL, nil)
-	return auth.AuthMiddleware(service)
+	return auth.AuthMiddleware(sessionService)
 }
 
 func templateFiles(content fs.FS) ([]string, error) {
