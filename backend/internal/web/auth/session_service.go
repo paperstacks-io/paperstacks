@@ -40,8 +40,15 @@ func (s *HankoSessionService) ResolveSession(ctx context.Context, token string) 
 	cachedSession, ok := s.cache[token]
 	s.mu.RUnlock()
 
-	if ok && cachedSession.ExpirationTime.After(time.Now()) {
-		return cachedSession, nil
+	now := time.Now()
+	if ok {
+		if cachedSession.ExpirationTime.After(now) {
+			return cachedSession, nil
+		}
+
+		s.mu.Lock()
+		delete(s.cache, token)
+		s.mu.Unlock()
 	}
 
 	session, err := s.fetchSession(ctx, token)
