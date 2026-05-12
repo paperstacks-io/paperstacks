@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"net/url"
 )
 
 func SessionMiddleware(service SessionService) func(http.Handler) http.Handler {
@@ -39,7 +40,8 @@ func RequireAuthMiddleware() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, ok := SessionFromContext(r.Context())
 			if !ok || session == nil || !session.IsValid {
-				http.Redirect(w, r, "/app/auth", http.StatusSeeOther)
+				next := url.QueryEscape("/app" + r.URL.RequestURI())
+				http.Redirect(w, r, "/app/auth?next="+next, http.StatusSeeOther)
 				return
 			}
 

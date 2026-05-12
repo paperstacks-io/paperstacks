@@ -9,8 +9,11 @@
       <hanko-auth id="authComponent"></hanko-auth>
       <script type="module">
         const authComponent = document.getElementById("authComponent")
+        const next = new URLSearchParams(window.location.search).get("next")
+        const redirectTo = next && next.startsWith("/app/") ? next : "/app"
+
         authComponent.addEventListener("onSessionCreated", () => {
-          document.location.href = "/app"
+          document.location.href = redirectTo
         })
       </script>
       {{ end }}

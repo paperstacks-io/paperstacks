@@ -79,6 +79,18 @@
       {{if .Session.IsValid }}
       <p class="text-sm text-center">{{.Session.Email}}</p>
       <button class="btn btn-sm btn-neutral" hx-post="/app/auth/logout">Logout</button>
+      {{else}}
+      <button
+        href="/app/auth"
+        hx-get="/app/auth"
+        hx-target="#{{$.AppTargetID}}"
+        hx-select="#{{$.AppTargetID}}"
+        hx-swap="outerHTML"
+        hx-push-url="true"
+        class="btn btn-sm btn-neutral"
+      >
+        Login
+      </button>
       {{end}}
       <div class="divider"></div>
       <p class="text-sm text-secondary">{{ .AppVersion}} {{ .AppGitHash }}</p>
