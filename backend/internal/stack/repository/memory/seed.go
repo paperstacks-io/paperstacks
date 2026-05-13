@@ -8,7 +8,7 @@ import (
 func seedData() []domain.Stack {
 	return []domain.Stack{
 		{
-			UUID: "00000000-0000-0000-0000-000000000001",
+			UUID: "Test-UUID-00",
 			Name: "Example Stack",
 			Owner: userDomain.User{
 				ExternalID: "0",
