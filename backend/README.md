@@ -2,6 +2,10 @@
 
 Backend for the Paperstacks application, written in Go.
 
+## Architecture Overview
+
+![architecture overview](../docs/architecture-backend.svg)
+
 ## Prerequisites
 
 - Go 1.26 or later

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type StackService struct {
