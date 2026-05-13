@@ -9,10 +9,14 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
-type StackService struct{}
+type StackService struct {
+	repo domain.Repository
+}
 
-func NewStackService() *StackService {
-	return &StackService{}
+func NewStackService(repo domain.Repository) *StackService {
+	return &StackService{
+		repo: repo,
+	}
 }
 
 func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
