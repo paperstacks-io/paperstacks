@@ -1,12 +1,18 @@
 package memory
 
 import (
-	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 func seedData() []domain.Stack {
-	stacks := make([]domain.Stack, 0)
-	stacks = append(stacks, *domain.NewStack("Example Stack", userDomain.User{ExternalID: "0"}))
-	return stacks
+	return []domain.Stack{
+		{
+			UUID: "00000000-0000-0000-0000-000000000001",
+			Name: "Example Stack",
+			Owner: userDomain.User{
+				ExternalID: "0",
+			},
+		},
+	}
 }

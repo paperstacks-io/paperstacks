@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	userDomain "github.com/paperstacks.io/paperstacks/internal/auth/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type Repository struct {
@@ -32,13 +32,44 @@ func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
 }
 
 func (r *Repository) Update(ctx context.Context, modified domain.Stack) (domain.Stack, error) {
-	return domain.Stack{}, nil
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, item := range r.data {
+		if item.Name == modified.Name && item.Owner.ExternalID == modified.Owner.ExternalID {
+			r.data[i] = modified
+			return modified, nil
+		}
+	}
+
+	return domain.Stack{}, domain.ErrStackNotFound
 }
 
 func (r *Repository) Delete(ctx context.Context, uuid string) error {
-	return nil
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, item := range r.data {
+		if item.UUID == uuid {
+			r.data = append(r.data[:i], r.data[i+1:]...)
+			return nil
+		}
+	}
+
+	return domain.ErrStackNotFound
 }
 
 func (r *Repository) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	return nil, nil
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	stacks := make([]domain.Stack, 0)
+
+	for _, item := range r.data {
+		if item.Owner.ExternalID == user.ExternalID {
+			stacks = append(stacks, item)
+		}
+	}
+
+	return stacks, nil
 }

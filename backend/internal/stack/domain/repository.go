@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 
-	domainUser "github.com/paperstacks.io/paperstacks/internal/auth/domain"
+	domainUser "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 var (
 	ErrStackAlreadyExists = errors.New("stack already exists")
+	ErrStackNotFound      = errors.New("stack not found")
 )
 
 type Repository interface {
