@@ -48,7 +48,7 @@ func TestRepositoryCreateAndDelete(t *testing.T) {
 	repo := NewRepository()
 
 	err := repo.Create(context.Background(), domain.Stack{
-		UUID: "Test-UUID-01",
+		UUID: "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1",
 		Name: "Delete Stack",
 		Owner: userDomain.User{
 			ExternalID: "0",
@@ -58,7 +58,7 @@ func TestRepositoryCreateAndDelete(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	err = repo.Delete(context.Background(), "Test-UUID-01")
+	err = repo.Delete(context.Background(), "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1")
 	if err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}
