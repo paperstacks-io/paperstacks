@@ -25,6 +25,12 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 		return userDomain.ErrInvalidOwner
 	}
 
+	if stack.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
+		now := time.Now()
+		stack.CreatedAt = now
+		stack.UpdatedAt = now
+	}
+
 	err := uuid.Validate(stack.UUID)
 	if err != nil {
 		stack.UUID = uuid.NewString()

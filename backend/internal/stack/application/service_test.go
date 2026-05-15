@@ -34,12 +34,8 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 		t.Fatalf("Create() did not generate a UUID for the stack")
 	}
 
-	if stack.CreatedAt.IsZero() {
+	if stack.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
 		t.Fatalf("Create() did not set CreatedAt timestamp")
-	}
-
-	if stack.UpdatedAt.IsZero() {
-		t.Fatalf("Create() did not set UpdatedAt timestamp")
 	}
 
 	if stack.CreatedAt != stack.UpdatedAt {
