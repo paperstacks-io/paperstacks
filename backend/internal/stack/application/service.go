@@ -21,8 +21,8 @@ func NewStackService(repo domain.Repository) *StackService {
 }
 
 func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
-	if stack.Owner.ExternalID == "" {
-		return userDomain.ErrInvalidOwner
+	if err := stack.Validate(); err != nil {
+		return err
 	}
 
 	if stack.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
@@ -40,8 +40,8 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 }
 
 func (s *StackService) Update(ctx context.Context, modified domain.Stack) (domain.Stack, error) {
-	if modified.Owner.ExternalID == "" {
-		return domain.Stack{}, userDomain.ErrInvalidOwner
+	if err := modified.Validate(); err != nil {
+		return domain.Stack{}, err
 	}
 
 	modified.UpdatedAt = time.Now()
@@ -60,8 +60,8 @@ func (s *StackService) Delete(ctx context.Context, uuid string) error {
 //
 // It returns an error if the stacks could not be loaded.
 func (s *StackService) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	if user.ExternalID == "" {
-		return []domain.Stack{}, userDomain.ErrInvalidOwner
+	if strings.TrimSpace(user.ExternalID) == "" {
+		return nil, userDomain.ErrInvalidUser
 	}
 
 	return s.repo.List(ctx, user)

@@ -86,6 +86,7 @@ func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
+
 	err := service.Delete(context.Background(), "unknown-stack")
 	if err == nil {
 		t.Fatalf("Delete() did not return an error for unknown stack")
@@ -97,38 +98,42 @@ func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 
 	service := NewStackService(memory.NewRepository())
 	user := userDomain.User{ExternalID: "0"}
-
 	stack := domain.NewStack("Duplicate Stack", user)
+
 	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() first stack error = %v", err)
 	}
 
 	duplicate := domain.NewStack(" Duplicate Stack ", user)
+
 	err = service.Create(context.Background(), *duplicate)
 	if err == nil {
 		t.Fatalf("Create() expected error for duplicate stack name, got nil")
 	}
 }
 
-func TestServiceListReturnsInvalidUserError(t *testing.T) {
+func TestServiceListReturnsInvalidOwnerError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
+
 	_, err := service.List(context.Background(), userDomain.User{ExternalID: ""})
-	if err != userDomain.ErrInvalidOwner {
-		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidOwner)
+	if err != userDomain.ErrInvalidUser {
+		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidUser)
 	}
 }
 
-func TestServiceCreateReturnsInvalidOwnerError(t *testing.T) {
+func TestServiceCreateReturnsInvalidUserError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
+
 	stack := domain.NewStack("Invalid Owner Stack", userDomain.User{ExternalID: ""})
+
 	err := service.Create(context.Background(), *stack)
-	if err != userDomain.ErrInvalidOwner {
-		t.Fatalf("Create() error = %v, want %v", err, userDomain.ErrInvalidOwner)
+	if err != domain.ErrInvalidStack {
+		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidStack)
 	}
 }
 
@@ -136,9 +141,11 @@ func TestServiceUpdateReturnsInvalidOwnerError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
+
 	stack := domain.NewStack("Invalid Owner Stack", userDomain.User{ExternalID: ""})
+
 	_, err := service.Update(context.Background(), *stack)
-	if err != userDomain.ErrInvalidOwner {
-		t.Fatalf("Update() error = %v, want %v", err, userDomain.ErrInvalidOwner)
+	if err != domain.ErrInvalidStack {
+		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidStack)
 	}
 }

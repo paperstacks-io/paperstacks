@@ -4,7 +4,7 @@ package domain
 import "errors"
 
 var (
-	ErrInvalidOwner = errors.New("invalid owner")
+	ErrInvalidUser = errors.New("invalid User")
 )
 
 // User represents an authenticated person in the system.
