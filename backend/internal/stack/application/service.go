@@ -20,6 +20,10 @@ func NewStackService(repo domain.Repository) *StackService {
 	}
 }
 
+// Create validates and stores a new stack.
+// It initializes missing timestamps and generates a UUID if necessary.
+//
+// It returns an error if the stack is invalid or could not be stored.
 func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 	if err := stack.Validate(); err != nil {
 		return err
@@ -39,6 +43,10 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 	return s.repo.Create(ctx, stack)
 }
 
+// Update validates and updates an existing stack.
+// It refreshes the UpdatedAt timestamp before storing the changes.
+//
+// It returns an error if the stack is invalid or could not be stored.
 func (s *StackService) Update(ctx context.Context, modified domain.Stack) (domain.Stack, error) {
 	if err := modified.Validate(); err != nil {
 		return domain.Stack{}, err
