@@ -40,7 +40,7 @@ func (s *StackService) Update(ctx context.Context, modified domain.Stack) (domai
 
 	modified.UpdatedAt = time.Now()
 
-	return s.Update(ctx, modified)
+	return s.repo.Update(ctx, modified)
 }
 
 // Delete removes the specified stack.

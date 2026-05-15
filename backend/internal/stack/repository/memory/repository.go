@@ -36,7 +36,7 @@ func (r *Repository) Update(ctx context.Context, modified domain.Stack) (domain.
 	defer r.mu.Unlock()
 
 	for i, item := range r.data {
-		if item.Name == modified.Name && item.Owner.ExternalID == modified.Owner.ExternalID {
+		if item.UUID == modified.UUID && item.Owner.ExternalID == modified.Owner.ExternalID {
 			r.data[i] = modified
 			return modified, nil
 		}
