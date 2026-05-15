@@ -113,7 +113,7 @@ func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	}
 }
 
-func TestServiceListReturnsInvalidOwnerError(t *testing.T) {
+func TestServiceListReturnsInvalidUserError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
@@ -124,7 +124,7 @@ func TestServiceListReturnsInvalidOwnerError(t *testing.T) {
 	}
 }
 
-func TestServiceCreateReturnsInvalidUserError(t *testing.T) {
+func TestServiceCreateReturnsInvalidStackError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
@@ -135,16 +135,8 @@ func TestServiceCreateReturnsInvalidUserError(t *testing.T) {
 	if err != domain.ErrInvalidStack {
 		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidStack)
 	}
-}
 
-func TestServiceUpdateReturnsInvalidOwnerError(t *testing.T) {
-	t.Parallel()
-
-	service := NewStackService(memory.NewRepository())
-
-	stack := domain.NewStack("Invalid Owner Stack", userDomain.User{ExternalID: ""})
-
-	_, err := service.Update(context.Background(), *stack)
+	_, err = service.Update(context.Background(), *stack)
 	if err != domain.ErrInvalidStack {
 		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidStack)
 	}
