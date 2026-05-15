@@ -1,6 +1,12 @@
 // Package domain defines the core domain models used authentication and authorization.
 package domain
 
+import "errors"
+
+var (
+	ErrInvalidOwner = errors.New("invalid owner")
+)
+
 // User represents an authenticated person in the system.
 type User struct {
 	// ExternalID is the user id given by the auth provider
