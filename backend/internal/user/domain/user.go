@@ -1,7 +1,10 @@
 // Package domain defines the core domain models used authentication and authorization.
 package domain
 
-import "errors"
+import (
+	"errors"
+	"net/mail"
+)
 
 var (
 	ErrInvalidUser = errors.New("invalid User")
@@ -13,4 +16,17 @@ type User struct {
 	ExternalID string
 	// Email is the user's email address as provided by the authentication system.
 	Email string
+}
+
+func Validate(user User) error {
+	if user.ExternalID == "" {
+		return ErrInvalidUser
+	}
+
+	_, err := mail.ParseAddress(user.Email)
+	if err != nil {
+		return ErrInvalidUser
+	}
+
+	return nil
 }

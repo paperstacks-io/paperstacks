@@ -59,9 +59,5 @@ func (s Stack) Validate() error {
 		return ErrInvalidStack
 	}
 
-	if s.Owner.ExternalID == "" {
-		return ErrInvalidStack
-	}
-
 	return nil
 }

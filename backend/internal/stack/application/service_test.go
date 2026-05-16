@@ -14,13 +14,13 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
-	stack := domain.NewStack(" Normalized Stack ", userDomain.User{ExternalID: "0"})
+	stack := domain.NewStack(" Normalized Stack ", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	stacks, _ := service.List(context.Background(), userDomain.User{ExternalID: "0"})
+	stacks, _ := service.List(context.Background(), userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	idx := slices.IndexFunc(stacks, func(s domain.Stack) bool {
 		return s.Name == "Normalized Stack"
 	})
@@ -51,13 +51,13 @@ func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
-	stack := domain.NewStack("Update Test Stack", userDomain.User{ExternalID: "0"})
+	stack := domain.NewStack("Update Test Stack", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	stacks, _ := service.List(context.Background(), userDomain.User{ExternalID: "0"})
+	stacks, _ := service.List(context.Background(), userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	idx := slices.IndexFunc(stacks, func(s domain.Stack) bool {
 		return s.Name == "Update Test Stack"
 	})
@@ -118,18 +118,18 @@ func TestServiceListReturnsInvalidUserError(t *testing.T) {
 
 	service := NewStackService(memory.NewRepository())
 
-	_, err := service.List(context.Background(), userDomain.User{ExternalID: ""})
+	_, err := service.List(context.Background(), userDomain.User{ExternalID: "", Email: ""})
 	if err != userDomain.ErrInvalidUser {
 		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidUser)
 	}
 }
 
-func TestServiceCreateReturnsInvalidStackError(t *testing.T) {
+func TestServiceReturnsInvalidStackError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
 
-	stack := domain.NewStack("Invalid Owner Stack", userDomain.User{ExternalID: ""})
+	stack := domain.NewStack("", userDomain.User{})
 
 	err := service.Create(context.Background(), *stack)
 	if err != domain.ErrInvalidStack {

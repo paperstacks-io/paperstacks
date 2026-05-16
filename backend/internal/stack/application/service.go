@@ -68,8 +68,8 @@ func (s *StackService) Delete(ctx context.Context, uuid string) error {
 //
 // It returns an error if the stacks could not be loaded.
 func (s *StackService) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	if strings.TrimSpace(user.ExternalID) == "" {
-		return nil, userDomain.ErrInvalidUser
+	if err := userDomain.Validate(user); err != nil {
+		return nil, err
 	}
 
 	return s.repo.List(ctx, user)
