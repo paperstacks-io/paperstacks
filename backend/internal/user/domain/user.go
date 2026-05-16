@@ -18,12 +18,12 @@ type User struct {
 	Email string
 }
 
-func Validate(user User) error {
-	if user.ExternalID == "" {
+func (u *User) Validate() error {
+	if u.ExternalID == "" {
 		return ErrInvalidUser
 	}
 
-	_, err := mail.ParseAddress(user.Email)
+	_, err := mail.ParseAddress(u.Email)
 	if err != nil {
 		return ErrInvalidUser
 	}
