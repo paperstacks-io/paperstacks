@@ -118,7 +118,12 @@ func TestServiceListReturnsInvalidUserError(t *testing.T) {
 
 	service := NewStackService(memory.NewRepository())
 
-	_, err := service.List(context.Background(), userDomain.User{ExternalID: "", Email: ""})
+	_, err := service.List(context.Background(), userDomain.User{ExternalID: ""})
+	if err != userDomain.ErrInvalidUser {
+		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidUser)
+	}
+
+	_, err = service.List(context.Background(), userDomain.User{Email: ""})
 	if err != userDomain.ErrInvalidUser {
 		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidUser)
 	}
