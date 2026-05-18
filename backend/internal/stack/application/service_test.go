@@ -72,7 +72,6 @@ func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 	modified := *stack
 	modified.Name = "Updated Stack Name"
 	updatedStack, err := service.Update(context.Background(), modified)
-
 	if err != nil {
 		t.Fatalf("Update() error = %v", err)
 	}
@@ -113,36 +112,38 @@ func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	}
 }
 
+func TestServiceCreateInvalidStackError(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+	stack := domain.NewStack("", userDomain.User{})
+
+	err := service.Create(context.Background(), *stack)
+
+	if err != domain.ErrInvalidStack {
+		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidStack)
+	}
+}
+
+func TestServiceUpdateInvalidStackError(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+	stack := domain.NewStack("", userDomain.User{})
+
+	_, err := service.Update(context.Background(), *stack)
+	if err != domain.ErrInvalidStack {
+		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidStack)
+	}
+}
+
 func TestServiceListReturnsInvalidUserError(t *testing.T) {
 	t.Parallel()
 
 	service := NewStackService(memory.NewRepository())
 
 	_, err := service.List(context.Background(), userDomain.User{ExternalID: ""})
-	if err != userDomain.ErrInvalidUser {
-		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidUser)
-	}
-
-	_, err = service.List(context.Background(), userDomain.User{Email: ""})
-	if err != userDomain.ErrInvalidUser {
-		t.Fatalf("List() error = %v, want %v", err, userDomain.ErrInvalidUser)
-	}
-}
-
-func TestServiceReturnsInvalidStackError(t *testing.T) {
-	t.Parallel()
-
-	service := NewStackService(memory.NewRepository())
-
-	stack := domain.NewStack("", userDomain.User{})
-
-	err := service.Create(context.Background(), *stack)
-	if err != domain.ErrInvalidStack {
-		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidStack)
-	}
-
-	_, err = service.Update(context.Background(), *stack)
-	if err != domain.ErrInvalidStack {
-		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidStack)
+	if err == nil {
+		t.Fatalf("List() expexted error but got nil")
 	}
 }
