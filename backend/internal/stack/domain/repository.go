@@ -10,6 +10,7 @@ import (
 var (
 	ErrStackAlreadyExists = errors.New("stack already exists")
 	ErrStackNotFound      = errors.New("stack not found")
+	ErrInvalidStack       = errors.New("invalid stack")
 )
 
 type Repository interface {

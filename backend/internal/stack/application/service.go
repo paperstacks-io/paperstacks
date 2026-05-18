@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,23 +21,47 @@ func NewStackService(repo domain.Repository) *StackService {
 	}
 }
 
+// Create validates and stores a new stack.
+// It initializes missing timestamps and generates a UUID if necessary.
+//
+// It returns an error if the stack is invalid or could not be stored.
 func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
+	if err := stack.Validate(); err != nil {
+		return err
+	}
+
+	if stack.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
+		now := time.Now()
+		stack.CreatedAt = now
+		stack.UpdatedAt = now
+	}
+
 	err := uuid.Validate(stack.UUID)
 	if err != nil {
 		stack.UUID = uuid.NewString()
 	}
-	panic("Not implemented")
+
+	return s.repo.Create(ctx, stack)
 }
 
+// Update validates and updates an existing stack.
+// It refreshes the UpdatedAt timestamp before storing the changes.
+//
+// It returns an error if the stack is invalid or could not be stored.
 func (s *StackService) Update(ctx context.Context, modified domain.Stack) (domain.Stack, error) {
+	if err := modified.Validate(); err != nil {
+		return domain.Stack{}, err
+	}
+
 	modified.UpdatedAt = time.Now()
-	panic("Not implemented")
+
+	return s.repo.Update(ctx, modified)
 }
 
 // Delete removes the specified stack.
 // It returns an error if the stack does not exist
 func (s *StackService) Delete(ctx context.Context, uuid string) error {
-	panic("Not implemented")
+	return s.repo.Delete(ctx, strings.TrimSpace(uuid))
 }
 
 // List returns all stacks of a given user.
@@ -43,5 +69,9 @@ func (s *StackService) Delete(ctx context.Context, uuid string) error {
 //
 // It returns an error if the stacks could not be loaded.
 func (s *StackService) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	panic("Not implemented")
+	if user.ExternalID == "" {
+		return nil, errors.New("invalid user externalID")
+	}
+
+	return s.repo.List(ctx, user)
 }
