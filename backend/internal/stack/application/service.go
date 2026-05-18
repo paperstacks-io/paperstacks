@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -68,8 +69,8 @@ func (s *StackService) Delete(ctx context.Context, uuid string) error {
 //
 // It returns an error if the stacks could not be loaded.
 func (s *StackService) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	if err := user.Validate(); err != nil {
-		return nil, err
+	if user.ExternalID == "" {
+		return nil, errors.New("invalid user externalID")
 	}
 
 	return s.repo.List(ctx, user)
