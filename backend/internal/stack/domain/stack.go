@@ -48,3 +48,16 @@ func NewStack(name string, owner userDomain.User) *Stack {
 		UpdatedAt: now,
 	}
 }
+
+func (s Stack) Validate() error {
+	_, err := uuid.Parse(s.UUID)
+	if err != nil {
+		return ErrInvalidStack
+	}
+
+	if s.Name == "" {
+		return ErrInvalidStack
+	}
+
+	return nil
+}
