@@ -1,3 +1,3 @@
-package domain
+package application
 
 type MeResponse = meResponse

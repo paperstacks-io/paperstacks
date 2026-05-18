@@ -1,4 +1,4 @@
-package domain_test
+package application_test
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/paperstacks.io/paperstacks/internal/user/domain"
+	"github.com/paperstacks.io/paperstacks/internal/user/application"
 )
 
 func TestAndi(t *testing.T) {
-	service := domain.NewUserService(nil, "https://040d94f7-bedd-43d4-b0cf-36c38688acdd.hanko.io", nil)
+	service := application.NewUserService(nil, "https://040d94f7-bedd-43d4-b0cf-36c38688acdd.hanko.io", nil)
 
 	token := "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEzODdkZDY5LTYzNDYtNDM0MS1iZWNjLWYzZGMzMTdmMWVmNyIsInR5cCI6IkpXVCJ9.eyJhbXIiOlsicHdkIl0sImF1ZCI6WyJsb2NhbGhvc3QiXSwiZW1haWwiOnsiYWRkcmVzcyI6ImFuZHJlYXMuYmF1ZXJAdGgtbnVlcm5iZXJnLmRlIiwiaXNfcHJpbWFyeSI6dHJ1ZSwiaXNfdmVyaWZpZWQiOnRydWV9LCJleHAiOjE3NzkyNzE1NTMsImlhdCI6MTc3ODY2Njc1MywiaXNzIjoiaHR0cHM6Ly8wNDBkOTRmNy1iZWRkLTQzZDQtYjBjZi0zNmMzODY4OGFjZGQuaGFua28uaW8iLCJzZXNzaW9uX2lkIjoiYTVmOTA2NmYtMDVmNS00M2Y2LTgxYjgtMjc4NWFkZjc5NTU1Iiwic3ViIjoiNjc5ZGEzMGMtYWI0NC00ZmM5LTkxZTktMzdlZWRiMjEwZjljIn0.CNcDbdnjpaDWgjODfSr6UCldmT2CBRUhqOjnIafphEM2SKt1Qnimos6VxV8Yr1O4V38RQRoQNb1QWjxFMqsYoI5BakqEoXBREQvcNY_IvwZzGtYBYU6_lZm_6Sq4DN3yt7Pn_-m-gRJ3_Zoj2tnpEHYn2vBt0v69J8HPmtv0H72uR0s2pqClTLxVlBHWj99uROxtF26FqwwfmOAg7On5n16GtYADPpJerxpHFAJDO202v6vuRKQTPHes-Xv1Sz7-fODI624xI-JxMDLiSJrOJd2jjeDbwx-_yYx0YEeLEwbuiXXH8KZknXrinEh1qiAEPJUeKHogNmDWytZqmqtp68PPH6sog0COPckvBQOzN0YfZ4v-PtMUb-PL0bT_emHiwMn8JTNowCWb08PrTD9UZrylSiGzAsLZhBA3owBW2QqpPRcR1UMLlj0c9LFCYZKiChgQbbr4-565dod04TcU8G2065PCmfEMYICEZlpl1rS_GrvwNCMgrwPZI9wtR4mtLIIFkQwZKQX1EUJSgtAVhOrGPketaOfgb6lFqW8Ydkus5nQGdq-whuNiah0Ax5U4WU1LC8uukHuYQkMIDd-a5rlm5TOjPtNLkCj2LvN0PP3fuJ2tXYooCofJNhNetVvQXP13KSwcebHnA0JdrDT6cDjpd-OFCDEHQCIUsGYellk"
 	user, err := service.CreateFromToken(context.Background(), token)
@@ -100,7 +100,7 @@ func TestMeResponseToUser(t *testing.T) {
 }
 	`
 
-	var res domain.MeResponse
+	var res application.MeResponse
 	json.Unmarshal([]byte(jsonRes), &res)
 	user := res.ToUser()
 
