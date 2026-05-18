@@ -2,124 +2,96 @@ package memory
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
+var _ domain.Repository = (*Repository)(nil)
+
 type Repository struct {
-	mu                sync.RWMutex
-	byExternalID      map[string]domain.User
-	emailToExternalID map[string]string
+	mu   sync.RWMutex
+	data []domain.User
 }
 
 func NewRepository() *Repository {
-	return &Repository{
-		byExternalID:      make(map[string]domain.User),
-		emailToExternalID: make(map[string]string),
-	}
+	return &Repository{}
 }
 
 func (r *Repository) GetByExternalID(_ context.Context, externalID string) (domain.User, error) {
-	externalID = strings.TrimSpace(externalID)
-
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	user, ok := r.byExternalID[externalID]
-	if !ok {
-		return domain.User{}, domain.ErrUserNotFound
+	for _, item := range r.data {
+		if item.ExternalID == externalID {
+			return item, nil
+		}
 	}
 
-	return user, nil
+	return domain.User{}, domain.ErrUserNotFound
 }
 
 func (r *Repository) GetByEmail(_ context.Context, email string) (domain.User, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
-
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	externalID, ok := r.emailToExternalID[email]
-	if !ok {
-		return domain.User{}, domain.ErrUserNotFound
+	for _, item := range r.data {
+		if item.Email == email {
+			return item, nil
+		}
 	}
 
-	return r.byExternalID[externalID], nil
+	return domain.User{}, domain.ErrUserNotFound
 }
 
 func (r *Repository) List(_ context.Context) ([]domain.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	out := make([]domain.User, 0, len(r.byExternalID))
-	for _, user := range r.byExternalID {
-		out = append(out, user)
-	}
+	out := make([]domain.User, 0, len(r.data))
+	out = append(out, r.data...)
 
 	return out, nil
 }
 
-func (r *Repository) Save(_ context.Context, user domain.User) (domain.User, error) {
-	user = user.Normalize()
-
+func (r *Repository) SaveIfNotExist(_ context.Context, user domain.User) (domain.User, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, ok := r.byExternalID[user.ExternalID]; ok {
-		return domain.User{}, domain.ErrUserAlreadyExists
+	for _, item := range r.data {
+		if item.ExternalID == user.ExternalID {
+			return item, nil
+		}
 	}
 
-	if _, ok := r.emailToExternalID[user.Email]; ok {
-		return domain.User{}, domain.ErrUserAlreadyExists
-	}
-
-	r.byExternalID[user.ExternalID] = user
-	r.emailToExternalID[user.Email] = user.ExternalID
-
+	r.data = append(r.data, user)
 	return user, nil
 }
 
 func (r *Repository) Update(_ context.Context, externalID string, user domain.User) error {
-	externalID = strings.TrimSpace(externalID)
-	user = user.Normalize()
-	if user.ExternalID != externalID {
-		return domain.ErrExternalIDMismatch
-	}
-
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	existing, ok := r.byExternalID[externalID]
-	if !ok {
-		return domain.ErrUserNotFound
+	for i, item := range r.data {
+		if item.ExternalID == externalID {
+			r.data[i] = user
+			return nil
+		}
 	}
 
-	if ownerExternalID, ok := r.emailToExternalID[user.Email]; ok && ownerExternalID != externalID {
-		return domain.ErrUserAlreadyExists
-	}
-
-	delete(r.emailToExternalID, existing.Email)
-	r.byExternalID[externalID] = user
-	r.emailToExternalID[user.Email] = externalID
-
-	return nil
+	return domain.ErrUserNotFound
 }
 
 func (r *Repository) Delete(_ context.Context, externalID string) error {
-	externalID = strings.TrimSpace(externalID)
-
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	user, ok := r.byExternalID[externalID]
-	if !ok {
-		return domain.ErrUserNotFound
+	for i, item := range r.data {
+		if item.ExternalID == externalID {
+			r.data = append(r.data[:i], r.data[i+1:]...)
+			return nil
+		}
 	}
 
-	delete(r.byExternalID, externalID)
-	delete(r.emailToExternalID, user.Email)
-
-	return nil
+	return domain.ErrUserNotFound
 }

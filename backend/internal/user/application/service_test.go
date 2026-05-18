@@ -2,113 +2,192 @@ package application_test
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/user/application"
+	"github.com/paperstacks.io/paperstacks/internal/user/domain"
+	"github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
-func TestAndi(t *testing.T) {
-	service := application.NewUserService(nil, "https://040d94f7-bedd-43d4-b0cf-36c38688acdd.hanko.io", nil)
-
-	token := "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEzODdkZDY5LTYzNDYtNDM0MS1iZWNjLWYzZGMzMTdmMWVmNyIsInR5cCI6IkpXVCJ9.eyJhbXIiOlsicHdkIl0sImF1ZCI6WyJsb2NhbGhvc3QiXSwiZW1haWwiOnsiYWRkcmVzcyI6ImFuZHJlYXMuYmF1ZXJAdGgtbnVlcm5iZXJnLmRlIiwiaXNfcHJpbWFyeSI6dHJ1ZSwiaXNfdmVyaWZpZWQiOnRydWV9LCJleHAiOjE3NzkyNzE1NTMsImlhdCI6MTc3ODY2Njc1MywiaXNzIjoiaHR0cHM6Ly8wNDBkOTRmNy1iZWRkLTQzZDQtYjBjZi0zNmMzODY4OGFjZGQuaGFua28uaW8iLCJzZXNzaW9uX2lkIjoiYTVmOTA2NmYtMDVmNS00M2Y2LTgxYjgtMjc4NWFkZjc5NTU1Iiwic3ViIjoiNjc5ZGEzMGMtYWI0NC00ZmM5LTkxZTktMzdlZWRiMjEwZjljIn0.CNcDbdnjpaDWgjODfSr6UCldmT2CBRUhqOjnIafphEM2SKt1Qnimos6VxV8Yr1O4V38RQRoQNb1QWjxFMqsYoI5BakqEoXBREQvcNY_IvwZzGtYBYU6_lZm_6Sq4DN3yt7Pn_-m-gRJ3_Zoj2tnpEHYn2vBt0v69J8HPmtv0H72uR0s2pqClTLxVlBHWj99uROxtF26FqwwfmOAg7On5n16GtYADPpJerxpHFAJDO202v6vuRKQTPHes-Xv1Sz7-fODI624xI-JxMDLiSJrOJd2jjeDbwx-_yYx0YEeLEwbuiXXH8KZknXrinEh1qiAEPJUeKHogNmDWytZqmqtp68PPH6sog0COPckvBQOzN0YfZ4v-PtMUb-PL0bT_emHiwMn8JTNowCWb08PrTD9UZrylSiGzAsLZhBA3owBW2QqpPRcR1UMLlj0c9LFCYZKiChgQbbr4-565dod04TcU8G2065PCmfEMYICEZlpl1rS_GrvwNCMgrwPZI9wtR4mtLIIFkQwZKQX1EUJSgtAVhOrGPketaOfgb6lFqW8Ydkus5nQGdq-whuNiah0Ax5U4WU1LC8uukHuYQkMIDd-a5rlm5TOjPtNLkCj2LvN0PP3fuJ2tXYooCofJNhNetVvQXP13KSwcebHnA0JdrDT6cDjpd-OFCDEHQCIUsGYellk"
-	user, err := service.CreateFromToken(context.Background(), token)
-	if err != nil {
-		t.Fatalf("error = %v", err)
-	}
-
-	fmt.Println("user.externalID:" + user.ExternalID)
-	fmt.Println("user.Email:" + user.Email)
-	t.Fail()
-}
-
-func TestMeResponseToUser(t *testing.T) {
+func TestUserServiceCreateIfNotExistNormalizesUser(t *testing.T) {
 	t.Parallel()
 
-	jsonRes := `
-	{
-  "id": "c339547d-e17d-4ba7-8a1d-b3d5a4d17c1c",
-  "user_id": "c339547d-e17d-4ba7-8a1d-b3d5a4d17c1c",
-  "emails": [
-    {
-      "id": "5333cc5b-c7c4-48cf-8248-9c184ac72b65",
-      "address": "john.doe@example.com",
-      "is_verified": true,
-      "is_primary": false
-    }
-  ],
-  "created_at": "2023-11-07T05:31:56Z",
-  "updated_at": "2023-11-07T05:31:56Z",
-  "passkeys": [
-    {
-      "id": "5333cc5b-c7c4-48cf-8248-9c184ac72b65",
-      "name": "iCloud",
-      "public_key": "pQECYyagASFYIBblARCP_at3cmprjzQN1lJ...",
-      "attestation_type": "packed",
-      "aaguid": "01020304-0506-0708-0102-030405060708",
-      "last_used_at": "2026-02-24T21:40:36.26936Z",
-      "created_at": "2026-02-24T21:40:36.26936Z",
-      "transports": [
-        "internal"
-      ],
-      "backup_eligible": true,
-      "backup_state": true,
-      "mfa_only": false
-    }
-  ],
-  "security_keys": [
-    {
-      "id": "f826013e-e7e3-4366-a6d8-9359effc8cdd",
-      "name": "Yubikey Bio",
-      "public_key": "aNMEEyadASFYIBblARCP_at3cmp4gg3zQN1lJ...",
-      "attestation_type": "packed",
-      "aaguid": "90636e1f-ef82-43bf-bdcf-5255f139d12f",
-      "last_used_at": "2026-02-24T21:40:36.26936Z",
-      "created_at": "2026-02-24T21:40:36.26936Z",
-      "transports": [
-        "usb"
-      ],
-      "backup_eligible": true,
-      "backup_state": false,
-      "mfa_only": true
-    }
-  ],
-  "metadata": {
-    "public_metadata": {
-      "role": "admin"
-    },
-    "unsafe_metadata": {
-      "birthday": "2025-05-12"
-    }
-  },
-  "name": "<string>",
-  "given_name": "<string>",
-  "family_name": "<string>",
-  "picture": "<string>",
-  "mfa_config": {
-    "auth_app_set_up": true,
-    "totp_enabled": true,
-    "security_key_enabled": true
-  },
-  "username": {
-    "id": "c339547d-e17d-4ba7-8a1d-b3d5a4d17c1c",
-    "created_at": "2023-11-07T05:31:56Z",
-    "updated_at": "2023-11-07T05:31:56Z",
-    "username": "john_doe"
-  }
+	service := application.NewUserService(memory.NewRepository())
+
+	user, err := service.CreateIfNotExist(context.Background(), " external-1 ", " ONE@EXAMPLE.COM ")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+	if user.ExternalID != "external-1" {
+		t.Fatalf("CreateIfNotExist() externalID = %q, want %q", user.ExternalID, "external-1")
+	}
+	if user.Email != "one@example.com" {
+		t.Fatalf("CreateIfNotExist() email = %q, want %q", user.Email, "one@example.com")
+	}
+	if user.CreatedAt.IsZero() {
+		t.Fatalf("CreateIfNotExist() CreatedAt is zero, want set")
+	}
+	if user.UpdatedAt.IsZero() {
+		t.Fatalf("CreateIfNotExist() UpdatedAt is zero, want set")
+	}
 }
-	`
 
-	var res application.MeResponse
-	json.Unmarshal([]byte(jsonRes), &res)
-	user := res.ToUser()
+func TestUserServiceCreateIfNotExistReturnsInvalidUser(t *testing.T) {
+	t.Parallel()
 
-	if user.Email != "john.doe@example.com" {
-		t.Fatalf("user email = %q, want %q", user.Email, "john.doe@example.com")
+	service := application.NewUserService(memory.NewRepository())
+
+	_, err := service.CreateIfNotExist(context.Background(), "external-1", "invalid-email")
+	if err != domain.ErrInvalidUser {
+		t.Fatalf("CreateIfNotExist() error = %v, want %v", err, domain.ErrInvalidUser)
+	}
+}
+
+func TestUserServiceCreateIfNotExistReturnsExistingUser(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+
+	existing, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
 
-	if user.ExternalID != "c339547d-e17d-4ba7-8a1d-b3d5a4d17c1c" {
-		t.Fatalf("user externalID = %q, want %q", user.ExternalID, "c339547d-e17d-4ba7-8a1d-b3d5a4d17c1c")
+	res, err := service.CreateIfNotExist(context.Background(), "external-1", "changed@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+	if res != existing {
+		t.Fatalf("CreateIfNotExist() = %#v, want existing %#v", res, existing)
+	}
+}
+
+func TestUserServiceGetByExternalIDTrimsInput(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	created, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+
+	user, err := service.GetByExternalID(context.Background(), " external-1 ")
+	if err != nil {
+		t.Fatalf("GetByExternalID() error = %v, want nil", err)
+	}
+	if user != created {
+		t.Fatalf("GetByExternalID() = %#v, want %#v", user, created)
+	}
+}
+
+func TestUserServiceGetByEmailNormalizesInput(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	created, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+
+	user, err := service.GetByEmail(context.Background(), " ONE@EXAMPLE.COM ")
+	if err != nil {
+		t.Fatalf("GetByEmail() error = %v, want nil", err)
+	}
+	if user != created {
+		t.Fatalf("GetByEmail() = %#v, want %#v", user, created)
+	}
+}
+
+func TestUserServiceListReturnsUsers(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	if _, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com"); err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+	if _, err := service.CreateIfNotExist(context.Background(), "external-2", "two@example.com"); err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+
+	users, err := service.List(context.Background())
+	if err != nil {
+		t.Fatalf("List() error = %v, want nil", err)
+	}
+	if len(users) != 2 {
+		t.Fatalf("List() returned %d users, want 2", len(users))
+	}
+}
+
+func TestUserServiceUpdate(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	created, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+
+	updated := created
+	updated.Email = "updated@example.com"
+	updated.UpdatedAt = time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+
+	err = service.Update(context.Background(), " external-1 ", updated)
+	if err != nil {
+		t.Fatalf("Update() error = %v, want nil", err)
+	}
+
+	stored, err := service.GetByExternalID(context.Background(), "external-1")
+	if err != nil {
+		t.Fatalf("GetByExternalID() error = %v, want nil", err)
+	}
+	if stored.Email != "updated@example.com" {
+		t.Fatalf("stored email = %q, want %q", stored.Email, "updated@example.com")
+	}
+	if !stored.UpdatedAt.After(updated.UpdatedAt) {
+		t.Fatalf("stored UpdatedAt = %v, want after %v", stored.UpdatedAt, updated.UpdatedAt)
+	}
+}
+
+func TestUserServiceUpdateReturnsExternalIDMismatch(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	user := domain.NewUser("external-2", "two@example.com")
+
+	err := service.Update(context.Background(), "external-1", user)
+	if err != domain.ErrExternalIDMismatch {
+		t.Fatalf("Update() error = %v, want %v", err, domain.ErrExternalIDMismatch)
+	}
+}
+
+func TestUserServiceUpdateReturnsInvalidUser(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	user := domain.User{ExternalID: "external-1", Email: "invalid-email"}
+
+	err := service.Update(context.Background(), "external-1", user)
+	if err != domain.ErrInvalidUser {
+		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidUser)
+	}
+}
+
+func TestUserServiceDeleteTrimsInput(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository())
+	if _, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com"); err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+
+	err := service.Delete(context.Background(), " external-1 ")
+	if err != nil {
+		t.Fatalf("Delete() error = %v, want nil", err)
+	}
+
+	_, err = service.GetByExternalID(context.Background(), "external-1")
+	if err != domain.ErrUserNotFound {
+		t.Fatalf("GetByExternalID() error = %v, want %v", err, domain.ErrUserNotFound)
 	}
 }
