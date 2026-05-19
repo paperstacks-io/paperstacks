@@ -64,6 +64,13 @@ func (s *StackService) Delete(ctx context.Context, uuid string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(uuid))
 }
 
+// GetByUUID returns the stack with the specified UUID.
+//
+// It returns an error if the stack does not exist.
+func (s *StackService) GetByUUID(ctx context.Context, uuid string) (domain.Stack, error) {
+	return s.repo.GetByUUID(ctx, strings.TrimSpace(uuid))
+}
+
 // List returns all stacks of a given user.
 // This includes public and private stacks.
 //

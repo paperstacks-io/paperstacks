@@ -15,9 +15,10 @@ var (
 
 type Repository interface {
 	// queries
+	GetByUUID(ctx context.Context, uuid string) (Stack, error)
 	List(ctx context.Context, user domainUser.User) ([]Stack, error)
 
-	//commands
+	// commands
 	Create(ctx context.Context, stack Stack) error
 	Update(ctx context.Context, modified Stack) (Stack, error)
 	Delete(ctx context.Context, uuid string) error
