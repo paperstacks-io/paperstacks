@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 )
 
 type SessionService interface {
@@ -21,17 +23,20 @@ type HankoSessionService struct {
 
 	mu    sync.RWMutex
 	cache map[string]*Session
+
+	userService userApp.UserService
 }
 
-func NewHankoSessionService(apiURL string, httpClient *http.Client) *HankoSessionService {
+func NewHankoSessionService(apiURL string, userService userApp.UserService, httpClient *http.Client) *HankoSessionService {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 
 	return &HankoSessionService{
-		apiURL:     apiURL,
-		httpClient: httpClient,
-		cache:      make(map[string]*Session),
+		apiURL:      apiURL,
+		httpClient:  httpClient,
+		cache:       make(map[string]*Session),
+		userService: userService,
 	}
 }
 
@@ -59,6 +64,10 @@ func (s *HankoSessionService) ResolveSession(ctx context.Context, token string) 
 	s.mu.Lock()
 	s.cache[token] = session
 	s.mu.Unlock()
+	_, err = s.userService.CreateIfNotExist(ctx, session.UserID, session.Email)
+	if err != nil {
+		return session, err
+	}
 
 	return session, nil
 }
