@@ -59,6 +59,19 @@ func (r *Repository) Delete(ctx context.Context, uuid string) error {
 	return domain.ErrStackNotFound
 }
 
+func (r *Repository) GetByUUID(ctx context.Context, uuid string) (domain.Stack, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, item := range r.data {
+		if item.UUID == uuid {
+			return item, nil
+		}
+	}
+
+	return domain.Stack{}, domain.ErrStackNotFound
+}
+
 func (r *Repository) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

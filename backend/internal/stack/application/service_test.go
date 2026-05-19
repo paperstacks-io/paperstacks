@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"slices"
 	"testing"
 
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -20,30 +19,36 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	stacks, _ := service.List(context.Background(), userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
-	idx := slices.IndexFunc(stacks, func(s domain.Stack) bool {
-		return s.Name == "Normalized Stack"
-	})
+	created, err := service.GetByUUID(context.Background(), stack.UUID)
+	if err != nil {
+		t.Fatalf("Create() stack not retrieve via GetByUUID()")
+	}
 
-	if idx == -1 {
+	if created.Name != "Normalized Stack" {
 		t.Fatalf("Create() did not store the normalized stack name")
 	}
 
-	stack = &stacks[idx]
-	if stack.UUID == "" {
-		t.Fatalf("Create() did not generate a UUID for the stack")
-	}
-
-	if stack.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
+	if created.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
 		t.Fatalf("Create() did not set CreatedAt timestamp")
 	}
 
-	if stack.CreatedAt != stack.UpdatedAt {
+	if created.CreatedAt != stack.UpdatedAt {
 		t.Fatalf("Create() should not set UpdatedAt timestamp")
 	}
 
-	if stack.Owner.ExternalID != "0" {
+	if created.Owner.ExternalID != "0" {
 		t.Fatalf("Create() did not associate the stack with the correct user")
+	}
+}
+
+func TestGetByUUIDError(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+
+	_, err := service.GetByUUID(context.Background(), "unkown")
+	if err != domain.ErrStackNotFound {
+		t.Fatalf("GetByUUID() did not return an error for unknown UUID")
 	}
 }
 
@@ -52,31 +57,20 @@ func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 
 	service := NewStackService(memory.NewRepository())
 	stack := domain.NewStack("Update Test Stack", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
+	originalUpdatedAt := stack.UpdatedAt
 	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	stacks, _ := service.List(context.Background(), userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
-	idx := slices.IndexFunc(stacks, func(s domain.Stack) bool {
-		return s.Name == "Update Test Stack"
-	})
-
-	if idx == -1 {
-		t.Fatalf("Create() did not store the stack for update test")
-	}
-
-	stack = &stacks[idx]
-	originalUpdatedAt := stack.UpdatedAt
-
 	modified := *stack
 	modified.Name = "Updated Stack Name"
-	updatedStack, err := service.Update(context.Background(), modified)
+	updated, err := service.Update(context.Background(), modified)
 	if err != nil {
 		t.Fatalf("Update() error = %v", err)
 	}
 
-	if updatedStack.UpdatedAt.Equal(originalUpdatedAt) {
+	if updated.UpdatedAt.Equal(originalUpdatedAt) {
 		t.Fatalf("Update() did not modify UpdatedAt timestamp")
 	}
 }
@@ -89,6 +83,21 @@ func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
 	err := service.Delete(context.Background(), "unknown-stack")
 	if err == nil {
 		t.Fatalf("Delete() did not return an error for unknown stack")
+	}
+}
+
+func TestServiceGetByUUIDTrimsUUID(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+
+	stack, err := service.GetByUUID(context.Background(), " 9e1a819a-24ab-47b6-be29-92b49325e4c2 ")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if stack.UUID != "9e1a819a-24ab-47b6-be29-92b49325e4c2" {
+		t.Fatalf("GetByUUID() UUID = %s, want %s", stack.UUID, "9e1a819a-24ab-47b6-be29-92b49325e4c2")
 	}
 }
 
