@@ -30,6 +30,7 @@ func navItems(activePath string) []navItem {
 	items := []navItem{
 		{Label: "Home", Path: prefix + "/"},
 		{Label: "Papers", Path: prefix + "/papers"},
+		{Label: "Stacks", Path: prefix + "/stacks"},
 		{Label: "Search", Path: prefix + "/search"},
 		{Label: "Settings", Path: prefix + "/settings"},
 	}
@@ -77,6 +78,7 @@ func AddRoute(
 		requiresAuth bool
 	}{
 		{path: "/papers", template: "paper", requiresAuth: false},
+		{path: "/stacks", template: "stack", requiresAuth: true},
 		{path: "/search", template: "search", requiresAuth: false},
 		{path: "/settings", template: "settings", requiresAuth: true},
 		{path: "/auth", template: "auth", requiresAuth: false},
