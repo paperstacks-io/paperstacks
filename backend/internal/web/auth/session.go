@@ -6,8 +6,9 @@ import (
 )
 
 type Session struct {
-	Email          string
 	Token          string
+	UserID         string
+	Email          string
 	ExpirationTime time.Time
 	IsValid        bool
 }
@@ -36,6 +37,7 @@ func (r sessionResponse) Session(token string) *Session {
 	return &Session{
 		Token:          token,
 		Email:          r.Claims.Email.Address,
+		UserID:         r.UserID,
 		ExpirationTime: r.ExpirationTime,
 		IsValid:        r.IsValid,
 	}
