@@ -3,8 +3,6 @@ package domain
 import (
 	"context"
 	"errors"
-
-	domainUser "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 var (
@@ -16,7 +14,7 @@ var (
 type Repository interface {
 	// queries
 	GetByUUID(ctx context.Context, uuid string) (Stack, error)
-	List(ctx context.Context, user domainUser.User) ([]Stack, error)
+	List(ctx context.Context, userExternalID string) ([]Stack, error)
 
 	// commands
 	Create(ctx context.Context, stack Stack) error
