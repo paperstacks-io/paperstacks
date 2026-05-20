@@ -151,7 +151,7 @@ func TestServiceListReturnsInvalidUserError(t *testing.T) {
 
 	service := NewStackService(memory.NewRepository())
 
-	_, err := service.List(context.Background(), userDomain.User{ExternalID: ""})
+	_, err := service.List(context.Background(), "")
 	if err == nil {
 		t.Fatalf("List() expexted error but got nil")
 	}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type StackService struct {
@@ -75,10 +74,10 @@ func (s *StackService) GetByUUID(ctx context.Context, uuid string) (domain.Stack
 // This includes public and private stacks.
 //
 // It returns an error if the stacks could not be loaded.
-func (s *StackService) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	if user.ExternalID == "" {
+func (s *StackService) List(ctx context.Context, userExternalID string) ([]domain.Stack, error) {
+	if userExternalID == "" {
 		return nil, errors.New("invalid user externalID")
 	}
 
-	return s.repo.List(ctx, user)
+	return s.repo.List(ctx, userExternalID)
 }

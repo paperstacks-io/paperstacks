@@ -95,7 +95,7 @@ func TestRepositoryListReturnsAllUserStacks(t *testing.T) {
 
 	repo := NewRepository()
 
-	stacks, err := repo.List(context.Background(), userDomain.User{ExternalID: "0"})
+	stacks, err := repo.List(context.Background(), "0")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
