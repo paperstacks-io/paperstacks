@@ -1,3 +1,4 @@
+// Package application provides stack application services.
 package application
 
 import (
