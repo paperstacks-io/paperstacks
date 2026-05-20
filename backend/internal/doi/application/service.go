@@ -1,3 +1,4 @@
+// Package application provides DOI application services.
 package application
 
 import (

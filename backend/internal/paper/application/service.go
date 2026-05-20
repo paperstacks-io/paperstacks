@@ -1,3 +1,4 @@
+// Package application provides paper application services.
 package application
 
 import (
