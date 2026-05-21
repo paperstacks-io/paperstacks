@@ -18,7 +18,7 @@ type Repository interface {
 	List(ctx context.Context, user domainUser.User) ([]Stack, error)
 
 	//commands
-	Create(ctx context.Context, stack Stack) error
+	Create(ctx context.Context, stack Stack) (Stack, error)
 	Update(ctx context.Context, modified Stack) (Stack, error)
 	Delete(ctx context.Context, uuid string) error
 }

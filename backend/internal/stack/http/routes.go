@@ -28,4 +28,13 @@ func AddStackRoute(
 			)),
 		),
 	)
+	mux.Handle("POST /stacks",
+		auth.SessionMiddleware(sessionService)(
+			defaultMiddle(handleCreateUserStack(
+				logger,
+				stackService,
+				userService,
+			)),
+		),
+	)
 }

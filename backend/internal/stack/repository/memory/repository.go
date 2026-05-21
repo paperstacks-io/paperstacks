@@ -17,18 +17,18 @@ func NewRepository() *Repository {
 	return &Repository{data: seedData()}
 }
 
-func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
+func (r *Repository) Create(ctx context.Context, stack domain.Stack) (domain.Stack, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	for _, item := range r.data {
 		if item.Name == stack.Name && item.Owner.ExternalID == stack.Owner.ExternalID {
-			return domain.ErrStackAlreadyExists
+			return domain.Stack{}, domain.ErrStackAlreadyExists
 		}
 	}
 
 	r.data = append(r.data, stack)
-	return nil
+	return stack, nil
 }
 
 func (r *Repository) Update(ctx context.Context, modified domain.Stack) (domain.Stack, error) {
