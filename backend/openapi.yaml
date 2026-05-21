@@ -9,7 +9,7 @@ servers:
 tags:
   - name: Health
     description: Health check endpoints.
-  - name : Users
+  - name: Users
     description: User management endpoints.
   - name: Papers
     description: Paper catalog endpoints.

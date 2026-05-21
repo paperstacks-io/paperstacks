@@ -87,6 +87,6 @@ npm run watch:css
 
 ## HTTP API
 
-`openapi.yaml` contains a API documentation that can be viewed with 
+`openapi.yaml` contains a API documentation that can be viewed with
 [Swagger Editor](https://editor.swagger.io/?url=https://raw.githubusercontent.com/paperstacks-io/paperstacks/main/backend/openapi.yaml)
 or [Redoc](https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/paperstacks-io/paperstacks/main/backend/openapi.yaml).
