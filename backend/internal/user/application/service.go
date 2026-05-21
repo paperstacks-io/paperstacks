@@ -3,6 +3,9 @@ package application
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -10,7 +13,9 @@ import (
 )
 
 type UserService struct {
-	repo domain.Repository
+	repo       domain.Repository
+	httpClient http.Client
+	authAPIURL string
 }
 
 // NewUserService creates a user service backed by repo.
@@ -65,4 +70,32 @@ func (s *UserService) Update(ctx context.Context, externalID string, user domain
 // Delete removes a user by external authentication ID.
 func (s *UserService) Delete(ctx context.Context, externalID string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(externalID))
+}
+
+func (s *UserService) fetchUser(ctx context.Context, token string) (domain.User, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.authAPIURL+"/me", nil)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("create session request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	res, err := s.httpClient.Do(req)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("send session request: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return domain.User{}, fmt.Errorf("validate session: unexpected status %d", res.StatusCode)
+	}
+
+	var response meResponse
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return domain.User{}, fmt.Errorf("decode session response: %w", err)
+	}
+
+	user := response.ToUser()
+	return user, nil
 }
