@@ -19,9 +19,15 @@ type UserService struct {
 }
 
 // NewUserService creates a user service backed by repo.
-func NewUserService(repo domain.Repository) *UserService {
+func NewUserService(repo domain.Repository, authAPIURL string, httpClient *http.Client) *UserService {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	return &UserService{
-		repo: repo,
+		repo:       repo,
+		authAPIURL: strings.TrimRight(strings.TrimSpace(authAPIURL), "/"),
+		httpClient: *httpClient,
 	}
 }
 
@@ -72,7 +78,26 @@ func (s *UserService) Delete(ctx context.Context, externalID string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(externalID))
 }
 
-func (s *UserService) fetchUser(ctx context.Context, token string) (domain.User, error) {
+// GetByAuthToken resolves an auth token into a local user model.
+func (s *UserService) GetByAuthToken(ctx context.Context, token string) (domain.User, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return domain.User{}, domain.ErrInvalidAuthToken
+	}
+
+	user, err := s.fetchUserFromAuthProvider(ctx, token)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return s.CreateIfNotExist(ctx, user.ExternalID, user.Email)
+}
+
+func (s *UserService) fetchUserFromAuthProvider(ctx context.Context, token string) (domain.User, error) {
+	if s.authAPIURL == "" {
+		return domain.User{}, fmt.Errorf("validate session: %w", domain.ErrInvalidAuthToken)
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.authAPIURL+"/me", nil)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("create session request: %w", err)
@@ -88,7 +113,7 @@ func (s *UserService) fetchUser(ctx context.Context, token string) (domain.User,
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return domain.User{}, fmt.Errorf("validate session: unexpected status %d", res.StatusCode)
+		return domain.User{}, fmt.Errorf("validate session: unexpected status %d: %w", res.StatusCode, domain.ErrInvalidAuthToken)
 	}
 
 	var response meResponse
@@ -98,4 +123,50 @@ func (s *UserService) fetchUser(ctx context.Context, token string) (domain.User,
 
 	user := response.ToUser()
 	return user, nil
+}
+
+type meResponse struct {
+	UserID string `json:"user_id"`
+
+	Emails []struct {
+		ID         string `json:"id"`
+		Address    string `json:"address"`
+		IsVerified bool   `json:"is_verified"`
+		IsPrimary  bool   `json:"is_primary"`
+	} `json:"emails"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	Metadata struct {
+		PublicMetadata map[string]interface{} `json:"public_metadata"`
+		UnsafeMetadata map[string]interface{} `json:"unsafe_metadata"`
+	} `json:"metadata"`
+
+	Name       string `json:"name"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+	Picture    string `json:"picture"`
+
+	Username struct {
+		ID        string    `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Username  string    `json:"username"`
+	} `json:"username"`
+}
+
+func (res *meResponse) ToUser() domain.User {
+	primaryEmail := ""
+
+	for _, email := range res.Emails {
+		primaryEmail = email.Address
+		if email.IsPrimary {
+			break
+		}
+	}
+	return domain.User{
+		ExternalID: res.UserID,
+		Email:      primaryEmail,
+	}
 }
