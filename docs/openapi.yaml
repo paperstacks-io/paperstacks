@@ -1,0 +1,232 @@
+openapi: 3.1.0
+info:
+  title: Paperstacks Backend API
+  version: development
+  description: HTTP API endpoints served by the Paperstacks Go backend, excluding web UI routes under internal/web.
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+tags:
+  - name: Health
+    description: Health check endpoints.
+  - name : Users
+    description: User management endpoints.
+  - name: Papers
+    description: Paper catalog endpoints.
+  - name: Stacks
+    description: Stack management endpoints.
+paths:
+  /healthz:
+    get:
+      tags:
+        - Health
+      summary: Check service health
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user info
+      security:
+        - basicAuth: []
+
+  /users/me/papers:
+    get:
+      tags:
+        - Users
+      summary: Get papers for current user
+      security:
+        - basicAuth: []
+
+  /users/me/stacks:
+    get:
+      tags:
+        - Users
+      summary: Get stacks for current user
+      security:
+        - basicAuth: []
+
+  /users/{userID}:
+    parameters:
+      - name: userID
+        in: path
+        required: true
+        schema:
+          type: string
+        description: User ID
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      security:
+        - basicAuth: []
+
+  /users/{userID}/papers:
+    parameters:
+      - name: userID
+        in: path
+        required: true
+        schema:
+          type: string
+        description: User ID
+    get:
+      tags:
+        - Users
+      summary: Get papers for a user
+      security:
+        - basicAuth: []
+
+  /users/{userID}/stacks:
+    parameters:
+      - name: userID
+        in: path
+        required: true
+        schema:
+          type: string
+        description: User ID
+    get:
+      tags:
+        - Users
+      summary: Get stacks for a user
+      security:
+        - basicAuth: []
+
+  /papers:
+    get:
+      tags:
+        - Papers
+      summary: Search papers
+    post:
+      tags:
+        - Papers
+      summary: Create a paper
+      security:
+        - basicAuth: []
+
+  /papers/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Paper UUID
+    get:
+      tags:
+        - Papers
+      summary: Get a paper by UUID
+    patch:
+      tags:
+        - Papers
+      summary: Update a paper (partial)
+      security:
+        - basicAuth: []
+    delete:
+      tags:
+        - Papers
+      summary: Delete a paper
+      security:
+        - basicAuth: []
+
+  /papers/doi/{doi}:
+    parameters:
+      - name: doi
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Paper DOI
+    get:
+      tags:
+        - Papers
+      summary: Get a saved paper by DOI
+
+  /stacks:
+    get:
+      tags:
+        - Stacks
+      summary: List stacks
+    post:
+      tags:
+        - Stacks
+      summary: Create a stack
+      security:
+        - basicAuth: []
+
+  /stacks/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Stack UUID
+    get:
+      tags:
+        - Stacks
+      summary: Get a stack by UUID
+    patch:
+      tags:
+        - Stacks
+      summary: Update a stack (partial)
+      security:
+        - basicAuth: []
+    delete:
+      tags:
+        - Stacks
+      summary: Delete a stack
+      security:
+        - basicAuth: []
+
+  /stacks/{uuid}/papers:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Stack UUID
+    get:
+      tags:
+        - Stacks
+      summary: List papers in a stack
+    post:
+      tags:
+        - Stacks
+      summary: Add a paper to a stack
+      security:
+        - basicAuth: []
+
+  /stacks/{uuid}/papers/{paperUuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Stack UUID
+      - name: paperUuid
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Paper UUID
+    delete:
+      tags:
+        - Stacks
+      summary: Remove a paper from a stack
+      security:
+        - basicAuth: []
+
+  /stacks/{uuid}/activity:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Stack UUID
+    get:
+      tags:
+        - Stacks
+      summary: Get activity for a stack
