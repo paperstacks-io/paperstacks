@@ -32,7 +32,7 @@ func handleListUserStacks(
 			return
 		}
 
-		stacks, err := service.List(ctx, user)
+		stacks, err := service.List(ctx, user.ExternalID)
 		if err != nil {
 			logger.Error("list user stacks", "user_id", user.ExternalID, "error", err)
 			http.Error(w, "failed to list stacks", http.StatusInternalServerError)

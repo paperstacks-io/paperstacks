@@ -1,3 +1,4 @@
+// Package application provides user application services.
 package application
 
 import (

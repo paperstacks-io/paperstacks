@@ -1,3 +1,4 @@
+// Package application provides stack application services.
 package application
 
 import (
@@ -8,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type StackService struct {
@@ -64,14 +64,21 @@ func (s *StackService) Delete(ctx context.Context, uuid string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(uuid))
 }
 
+// GetByUUID returns the stack with the specified UUID.
+//
+// It returns an error if the stack does not exist.
+func (s *StackService) GetByUUID(ctx context.Context, uuid string) (domain.Stack, error) {
+	return s.repo.GetByUUID(ctx, strings.TrimSpace(uuid))
+}
+
 // List returns all stacks of a given user.
 // This includes public and private stacks.
 //
 // It returns an error if the stacks could not be loaded.
-func (s *StackService) List(ctx context.Context, user userDomain.User) ([]domain.Stack, error) {
-	if user.ExternalID == "" {
+func (s *StackService) List(ctx context.Context, userExternalID string) ([]domain.Stack, error) {
+	if userExternalID == "" {
 		return nil, errors.New("invalid user externalID")
 	}
 
-	return s.repo.List(ctx, user)
+	return s.repo.List(ctx, userExternalID)
 }

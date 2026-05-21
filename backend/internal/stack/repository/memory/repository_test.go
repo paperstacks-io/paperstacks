@@ -64,12 +64,38 @@ func TestRepositoryCreateAndDelete(t *testing.T) {
 	}
 }
 
+func TestRepositoryGetByUUIDReturnsStack(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	stack, err := repo.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if stack.UUID != "9e1a819a-24ab-47b6-be29-92b49325e4c2" {
+		t.Fatalf("GetByUUID() UUID = %s, want %s", stack.UUID, "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	}
+}
+
+func TestRepositoryGetByUUIDReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	_, err := repo.GetByUUID(context.Background(), "unknown-stack")
+	if err != domain.ErrStackNotFound {
+		t.Fatalf("GetByUUID() error = %v, want %v", err, domain.ErrStackNotFound)
+	}
+}
+
 func TestRepositoryListReturnsAllUserStacks(t *testing.T) {
 	t.Parallel()
 
 	repo := NewRepository()
 
-	stacks, err := repo.List(context.Background(), userDomain.User{ExternalID: "0"})
+	stacks, err := repo.List(context.Background(), "0")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
