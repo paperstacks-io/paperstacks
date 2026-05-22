@@ -85,3 +85,18 @@ func (r *Repository) List(ctx context.Context, userExternalID string) ([]domain.
 
 	return stacks, nil
 }
+
+func (r *Repository) ListPublic(ctx context.Context, userExternalID string) ([]domain.Stack, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	stacks := make([]domain.Stack, 0)
+
+	for _, item := range r.data {
+		if item.Owner.ExternalID == userExternalID && item.IsPublic {
+			stacks = append(stacks, item)
+		}
+	}
+
+	return stacks, nil
+}

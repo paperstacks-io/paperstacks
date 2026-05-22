@@ -23,6 +23,8 @@ import (
 	phttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
+	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
@@ -38,6 +40,7 @@ func run(
 	paperService := paperApp.NewPaperService(paperMem.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
+	stackService := stackApp.NewStackService(stackMem.NewRepository())
 	sessionService := auth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
 
 	rootMux := http.NewServeMux()
@@ -55,7 +58,7 @@ func run(
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)
-	userHttp.AddUserRoute(apiMux, logger, userService)
+	userHttp.AddUserRoute(apiMux, logger, userService, stackService)
 	web.AddRoute(webMux, cfg, logger, paperService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
