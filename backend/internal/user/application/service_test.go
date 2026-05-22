@@ -213,7 +213,7 @@ func TestUserServiceGetByAuthTokenFetchesAndPersistsUser(t *testing.T) {
 
 	service := application.NewUserService(memory.NewRepository(), authServer.URL, authServer.Client())
 
-	user, err := service.GetByAuthToken(context.Background(), " session-token ")
+	user, err := service.ResolveByAuthToken(context.Background(), " session-token ")
 	if err != nil {
 		t.Fatalf("GetByAuthToken() error = %v, want nil", err)
 	}
@@ -238,7 +238,7 @@ func TestUserServiceGetByAuthTokenReturnsInvalidAuthToken(t *testing.T) {
 
 	service := application.NewUserService(memory.NewRepository(), "", nil)
 
-	_, err := service.GetByAuthToken(context.Background(), " ")
+	_, err := service.ResolveByAuthToken(context.Background(), " ")
 	if !errors.Is(err, domain.ErrInvalidAuthToken) {
 		t.Fatalf("GetByAuthToken() error = %v, want %v", err, domain.ErrInvalidAuthToken)
 	}

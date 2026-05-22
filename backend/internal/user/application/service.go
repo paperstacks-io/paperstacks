@@ -76,8 +76,10 @@ func (s *UserService) Delete(ctx context.Context, externalID string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(externalID))
 }
 
-// GetByAuthToken resolves an auth token into a local user model.
-func (s *UserService) GetByAuthToken(ctx context.Context, token string) (domain.User, error) {
+// ResolveByAuthToken resolves an auth token to a local user.
+// It validates the token with the auth provider and creates the user locally
+// if one does not already exist.
+func (s *UserService) ResolveByAuthToken(ctx context.Context, token string) (domain.User, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return domain.User{}, domain.ErrInvalidAuthToken

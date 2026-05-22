@@ -48,7 +48,7 @@ func handleGetCurrentUser(logger *slog.Logger, service *application.UserService)
 			return
 		}
 
-		user, err := service.GetByAuthToken(r.Context(), token)
+		user, err := service.ResolveByAuthToken(r.Context(), token)
 		if err != nil {
 			if errors.Is(err, domain.ErrInvalidAuthToken) {
 				nethttp.Error(w, domain.ErrInvalidAuthToken.Error(), nethttp.StatusUnauthorized)
