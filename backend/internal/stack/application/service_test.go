@@ -156,3 +156,14 @@ func TestServiceListReturnsInvalidUserError(t *testing.T) {
 		t.Fatalf("List() expexted error but got nil")
 	}
 }
+
+func TestServiceListPublicReturnsInvalidUserError(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+
+	_, err := service.ListPublic(context.Background(), "")
+	if err == nil {
+		t.Fatalf("ListPublic() expected error but got nil")
+	}
+}

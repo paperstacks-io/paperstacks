@@ -18,6 +18,11 @@ import (
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
+	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
+	userApplication "github.com/paperstacks.io/paperstacks/internal/user/application"
+	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
+	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
 const (
@@ -39,7 +44,10 @@ func startApplication() bool {
 
 	testRepo = memory.NewRepository()
 	paperService := application.NewPaperService(testRepo)
+	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
+	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
 	paperHttp.AddPaperRoute(api, logger, paperService)
+	userHttp.AddUserRoute(api, logger, userService, stackService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
 	httpServer := &http.Server{

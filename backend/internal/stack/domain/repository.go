@@ -15,6 +15,7 @@ type Repository interface {
 	// queries
 	GetByUUID(ctx context.Context, uuid string) (Stack, error)
 	List(ctx context.Context, userExternalID string) ([]Stack, error)
+	ListPublic(ctx context.Context, userExternalID string) ([]Stack, error)
 
 	// commands
 	Create(ctx context.Context, stack Stack) error
