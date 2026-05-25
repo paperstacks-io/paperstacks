@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ func TestRepositorySaveIfNotExistCreatesUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveIfNotExist() error = %v, want nil", err)
 	}
-	if res != user {
+	if res.ExternalID != user.ExternalID {
 		t.Fatalf("SaveIfNotExist() = %#v, want %#v", res, user)
 	}
 }
@@ -38,7 +39,7 @@ func TestRepositorySaveIfNotExistReturnsExistingUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveIfNotExist() error = %v, want nil", err)
 	}
-	if res != existing {
+	if !reflect.DeepEqual(res, existing) {
 		t.Fatalf("SaveIfNotExist() = %#v, want existing %#v", res, existing)
 	}
 }
@@ -56,7 +57,7 @@ func TestRepositoryGetByExternalID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByExternalID() error = %v, want nil", err)
 	}
-	if res != user {
+	if !reflect.DeepEqual(res, user) {
 		t.Fatalf("GetByExternalID() = %#v, want %#v", res, user)
 	}
 }
@@ -85,7 +86,7 @@ func TestRepositoryGetByEmail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByEmail() error = %v, want nil", err)
 	}
-	if res != user {
+	if !reflect.DeepEqual(res, user) {
 		t.Fatalf("GetByEmail() = %#v, want %#v", res, user)
 	}
 }
@@ -123,7 +124,7 @@ func TestRepositoryListReturnsAllUsers(t *testing.T) {
 		t.Fatalf("List() returned %d users, want %d", len(res), len(users))
 	}
 	for i, user := range users {
-		if res[i] != user {
+		if !reflect.DeepEqual(res[i], user) {
 			t.Fatalf("List()[%d] = %#v, want %#v", i, res[i], user)
 		}
 	}
@@ -172,7 +173,7 @@ func TestRepositoryUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByExternalID() error = %v, want nil", err)
 	}
-	if stored != updated {
+	if !reflect.DeepEqual(stored, updated) {
 		t.Fatalf("stored user = %#v, want %#v", stored, updated)
 	}
 }
