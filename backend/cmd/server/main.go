@@ -62,6 +62,7 @@ func run(
 		logger,
 		stackService,
 		userService,
+		paperService,
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)
