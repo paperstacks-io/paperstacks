@@ -13,7 +13,7 @@ func TestRepositoryCreateReturnsAlreadyExists(t *testing.T) {
 
 	repo := NewRepository()
 
-	_, err := repo.Create(context.Background(), domain.Stack{
+	err := repo.Create(context.Background(), domain.Stack{
 		Name: "Example Stack",
 		Owner: userDomain.User{
 			ExternalID: "0",
@@ -47,7 +47,7 @@ func TestRepositoryCreateAndDelete(t *testing.T) {
 
 	repo := NewRepository()
 
-	_, err := repo.Create(context.Background(), domain.Stack{
+	err := repo.Create(context.Background(), domain.Stack{
 		UUID: "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1",
 		Name: "Delete Stack",
 		Owner: userDomain.User{

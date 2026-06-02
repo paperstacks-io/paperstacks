@@ -14,7 +14,7 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 
 	service := NewStackService(memory.NewRepository())
 	stack := domain.NewStack(" Normalized Stack ", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
-	_, err := service.Create(context.Background(), *stack)
+	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -58,7 +58,7 @@ func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 	service := NewStackService(memory.NewRepository())
 	stack := domain.NewStack("Update Test Stack", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	originalUpdatedAt := stack.UpdatedAt
-	_, err := service.Create(context.Background(), *stack)
+	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -108,14 +108,14 @@ func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	user := userDomain.User{ExternalID: "0"}
 	stack := domain.NewStack("Duplicate Stack", user)
 
-	_, err := service.Create(context.Background(), *stack)
+	err := service.Create(context.Background(), *stack)
 	if err != nil {
 		t.Fatalf("Create() first stack error = %v", err)
 	}
 
 	duplicate := domain.NewStack(" Duplicate Stack ", user)
 
-	_, err = service.Create(context.Background(), *duplicate)
+	err = service.Create(context.Background(), *duplicate)
 	if err == nil {
 		t.Fatalf("Create() expected error for duplicate stack name, got nil")
 	}
@@ -127,7 +127,7 @@ func TestServiceCreateInvalidStackError(t *testing.T) {
 	service := NewStackService(memory.NewRepository())
 	stack := domain.NewStack("", userDomain.User{})
 
-	_, err := service.Create(context.Background(), *stack)
+	err := service.Create(context.Background(), *stack)
 
 	if err != domain.ErrInvalidStack {
 		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidStack)

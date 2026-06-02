@@ -25,9 +25,9 @@ func NewStackService(repo domain.Repository) *StackService {
 // It initializes missing timestamps and generates a UUID if necessary.
 //
 // It returns an error if the stack is invalid or could not be stored.
-func (s *StackService) Create(ctx context.Context, stack domain.Stack) (domain.Stack, error) {
+func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 	if err := stack.Validate(); err != nil {
-		return domain.Stack{}, err
+		return err
 	}
 
 	if stack.CreatedAt.IsZero() || stack.UpdatedAt.IsZero() {
