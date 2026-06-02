@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -14,6 +15,7 @@ func AddStackRoute(
 	logger *slog.Logger,
 	stackService *application.StackService,
 	userService *userApp.UserService,
+	paperService *paperApp.PaperService,
 ) {
 	defaultMiddle := middleware.NewDefault(logger)
 
@@ -36,5 +38,22 @@ func AddStackRoute(
 		logger,
 		stackService,
 		userService,
+	)))
+	mux.Handle(http.MethodGet+" /stacks/{uuid}/papers", defaultMiddle(handleListPapersInStack(
+		logger,
+		stackService,
+		userService,
+	)))
+	mux.Handle(http.MethodPost+" /stacks/{uuid}/papers", defaultMiddle(handleAddPaperInStack(
+		logger,
+		stackService,
+		userService,
+		paperService,
+	)))
+	mux.Handle(http.MethodDelete+" /stacks/{uuid}/papers/{paperUuid}", defaultMiddle(handleDeletePaperInStack(
+		logger,
+		stackService,
+		userService,
+		paperService,
 	)))
 }

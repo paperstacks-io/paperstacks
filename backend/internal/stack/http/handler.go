@@ -1,12 +1,15 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -57,13 +60,8 @@ func handleCreateStack(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		token, ok := bearerToken(r.Header.Get("Authorization"))
-		if !ok {
-			http.Error(w, "missing bearer token", http.StatusUnauthorized)
-			return
-		}
 
-		user, err := userService.ResolveByAuthToken(ctx, token)
+		user, err := currentUser(ctx, r, userService)
 		if err != nil {
 			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
 				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
@@ -127,15 +125,15 @@ func handleGetStack(
 		}
 
 		if !stack.IsPublic {
-			token, ok := bearerToken(r.Header.Get("Authorization"))
-			if !ok {
-				http.Error(w, "missing bearer token", http.StatusUnauthorized)
-				return
-			}
-
-			user, err := userService.ResolveByAuthToken(ctx, token)
+			user, err := currentUser(ctx, r, userService)
 			if err != nil {
-				http.Error(w, "invalid auth token", http.StatusUnauthorized)
+				if errors.Is(err, userDomain.ErrInvalidAuthToken) {
+					http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
+					return
+				}
+
+				logger.Error("read current user", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -162,13 +160,7 @@ func handleDeleteStack(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		token, ok := bearerToken(r.Header.Get("Authorization"))
-		if !ok {
-			http.Error(w, "missing bearer token", http.StatusUnauthorized)
-			return
-		}
-
-		user, err := userService.ResolveByAuthToken(ctx, token)
+		user, err := currentUser(ctx, r, userService)
 		if err != nil {
 			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
 				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
@@ -202,6 +194,225 @@ func handleDeleteStack(
 
 		w.WriteHeader(http.StatusNoContent)
 	})
+}
+
+func handleListPapersInStack(
+	logger *slog.Logger,
+	stackService *application.StackService,
+	userService *userApp.UserService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		stackUUID := r.PathValue("uuid")
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if !stack.IsPublic {
+			user, err := currentUser(ctx, r, userService)
+			if err != nil {
+				if errors.Is(err, userDomain.ErrInvalidAuthToken) {
+					http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
+					return
+				}
+
+				logger.Error("read current user", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if stack.Owner.ExternalID != user.ExternalID {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+		}
+
+		resp := NewPaperResponses(stack.Papers)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode paper response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func handleAddPaperInStack(
+	logger *slog.Logger,
+	stackService *application.StackService,
+	userService *userApp.UserService,
+	paperService *paperApp.PaperService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		user, err := currentUser(ctx, r, userService)
+		if err != nil {
+			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
+				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			logger.Error("read current user", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if stack.Owner.ExternalID != user.ExternalID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
+		req, err := server.Decode[PaperRequest](r)
+		if err != nil {
+			logger.Error("decode paper request", "error", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		paper := req.toDomain()
+		p, err := paperService.GetByDOI(ctx, paper.DOI)
+		if err != nil {
+			logger.Error("get paper", "doi", paper.DOI, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		stack.Papers = append(stack.Papers, p)
+
+		updated, err := stackService.Update(ctx, stack)
+		if err != nil {
+			logger.Error("update stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := NewStackResponse(updated)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode stack response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func handleDeletePaperInStack(
+	logger *slog.Logger,
+	stackService *application.StackService,
+	userService *userApp.UserService,
+	paperService *paperApp.PaperService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		user, err := currentUser(ctx, r, userService)
+		if err != nil {
+			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
+				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			logger.Error("read current user", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		paperUUID := r.PathValue("paperUuid")
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if stack.Owner.ExternalID != user.ExternalID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			logger.Error("get paper", "uuid", paperUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		papers := make([]paperDomain.Paper, 0, len(stack.Papers))
+
+		found := false
+		for _, p := range stack.Papers {
+			if p.UUID == paper.UUID {
+				found = true
+				continue
+			}
+
+			papers = append(papers, p)
+		}
+
+		if !found {
+			http.Error(w, "paper not found in stack", http.StatusNotFound)
+			return
+		}
+
+		stack.Papers = papers
+
+		updated, err := stackService.Update(ctx, stack)
+		if err != nil {
+			logger.Error("update stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := NewStackResponse(updated)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode stack response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func currentUser(
+	ctx context.Context,
+	r *http.Request,
+	userService *userApp.UserService,
+) (userDomain.User, error) {
+	token, ok := bearerToken(r.Header.Get("Authorization"))
+	if !ok {
+		return userDomain.User{}, userDomain.ErrInvalidAuthToken
+	}
+
+	return userService.ResolveByAuthToken(ctx, token)
 }
 
 func bearerToken(header string) (string, bool) {

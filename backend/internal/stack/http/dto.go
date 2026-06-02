@@ -224,6 +224,16 @@ func NewPaperResponse(p paperDomain.Paper) PaperResponse {
 	}
 }
 
+func NewPaperResponses(papers []paperDomain.Paper) []PaperResponse {
+	resp := make([]PaperResponse, len(papers))
+
+	for i, paper := range papers {
+		resp[i] = NewPaperResponse(paper)
+	}
+
+	return resp
+}
+
 func (a AuthorRequest) toDomain() paperDomain.Author {
 	return paperDomain.Author{
 		NameFirst:   a.NameFirst,
