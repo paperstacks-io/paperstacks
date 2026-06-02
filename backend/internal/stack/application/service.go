@@ -82,3 +82,14 @@ func (s *StackService) List(ctx context.Context, userExternalID string) ([]domai
 
 	return s.repo.List(ctx, userExternalID)
 }
+
+// ListPublic returns public stacks of a given user.
+//
+// It returns an error if the stacks could not be loaded.
+func (s *StackService) ListPublic(ctx context.Context, userExternalID string) ([]domain.Stack, error) {
+	if userExternalID == "" {
+		return nil, errors.New("invalid user externalID")
+	}
+
+	return s.repo.ListPublic(ctx, userExternalID)
+}
