@@ -78,7 +78,7 @@ func AddRoute(
 		requiresAuth bool
 	}{
 		{path: "/papers", template: "paper", requiresAuth: false},
-		{path: "/stacks", template: "stack", requiresAuth: true},
+		{path: "/stacks", template: "stack", requiresAuth: false},
 		{path: "/search", template: "search", requiresAuth: false},
 		{path: "/settings", template: "settings", requiresAuth: true},
 		{path: "/auth", template: "auth", requiresAuth: false},

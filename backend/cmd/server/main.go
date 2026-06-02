@@ -24,6 +24,7 @@ import (
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
@@ -55,6 +56,12 @@ func run(
 		apiMux,
 		logger,
 		paperService,
+	)
+	stackHttp.AddStackRoute(
+		apiMux,
+		logger,
+		stackService,
+		userService,
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)
