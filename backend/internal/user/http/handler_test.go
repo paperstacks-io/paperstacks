@@ -111,6 +111,112 @@ func TestGetCurrentUser(t *testing.T) {
 	}
 }
 
+func TestListCurrentUserStacksRequiresBearerToken(t *testing.T) {
+	t.Parallel()
+
+	service := application.NewUserService(memory.NewRepository(), "", nil)
+	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	req := httptest.NewRequest(nethttp.MethodGet, "/users/me/stacks", nil)
+	res := httptest.NewRecorder()
+
+	mux.ServeHTTP(res, req)
+
+	if res.Code != nethttp.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", res.Code, nethttp.StatusUnauthorized)
+	}
+}
+
+func TestListCurrentUserStacksReturnsAllOwnedStacks(t *testing.T) {
+	t.Parallel()
+
+	authServer := httptest.NewServer(nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer session-token" {
+			t.Fatalf("Authorization = %q, want bearer token", got)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"user_id":"external-1","emails":[{"address":"one@example.com","is_primary":true}]}`))
+	}))
+	t.Cleanup(authServer.Close)
+
+	userRepo := memory.NewRepository()
+	userService := application.NewUserService(userRepo, authServer.URL, authServer.Client())
+	user, err := userService.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
+	}
+
+	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
+	publicStack := stackDomain.NewStack("Public Stack", user)
+	publicStack.IsPublic = true
+	if err := stackService.Create(context.Background(), *publicStack); err != nil {
+		t.Fatalf("Create() public stack error = %v", err)
+	}
+	privateStack := stackDomain.NewStack("Private Stack", user)
+	if err := stackService.Create(context.Background(), *privateStack); err != nil {
+		t.Fatalf("Create() private stack error = %v", err)
+	}
+	otherUserStack := stackDomain.NewStack("Other User Stack", userDomain.User{ExternalID: "external-2"})
+	otherUserStack.IsPublic = true
+	if err := stackService.Create(context.Background(), *otherUserStack); err != nil {
+		t.Fatalf("Create() other user stack error = %v", err)
+	}
+
+	mux := newUserMux(userService, stackService)
+	req := httptest.NewRequest(nethttp.MethodGet, "/users/me/stacks", nil)
+	req.Header.Set("Authorization", "Bearer session-token")
+	res := httptest.NewRecorder()
+
+	mux.ServeHTTP(res, req)
+
+	if res.Code != nethttp.StatusOK {
+		t.Fatalf("status = %d, want %d", res.Code, nethttp.StatusOK)
+	}
+
+	var response []userHttp.StackResponse
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(response) != 2 {
+		t.Fatalf("len(response) = %d, want %d", len(response), 2)
+	}
+
+	wantUUIDs := map[string]bool{
+		publicStack.UUID:  true,
+		privateStack.UUID: true,
+	}
+	for _, stack := range response {
+		if !wantUUIDs[stack.UUID] {
+			t.Fatalf("unexpected stack UUID %q", stack.UUID)
+		}
+		delete(wantUUIDs, stack.UUID)
+	}
+	if len(wantUUIDs) != 0 {
+		t.Fatalf("missing stack UUIDs: %v", wantUUIDs)
+	}
+}
+
+func TestListCurrentUserStacksReturnsUnauthorizedForInvalidToken(t *testing.T) {
+	t.Parallel()
+
+	authServer := httptest.NewServer(nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		nethttp.Error(w, "invalid session", nethttp.StatusUnauthorized)
+	}))
+	t.Cleanup(authServer.Close)
+
+	service := application.NewUserService(memory.NewRepository(), authServer.URL, authServer.Client())
+	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	req := httptest.NewRequest(nethttp.MethodGet, "/users/me/stacks", nil)
+	req.Header.Set("Authorization", "Bearer invalid-token")
+	res := httptest.NewRecorder()
+
+	mux.ServeHTTP(res, req)
+
+	if res.Code != nethttp.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", res.Code, nethttp.StatusUnauthorized)
+	}
+}
+
 func TestListUserStacksReturnsPublicStacks(t *testing.T) {
 	t.Parallel()
 
