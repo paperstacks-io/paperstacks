@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
@@ -368,17 +369,13 @@ func handleDeletePaperInStack(
 
 		papers := make([]paperDomain.Paper, 0, len(stack.Papers))
 
-		found := false
-		for _, p := range stack.Papers {
-			if p.UUID == paper.UUID {
-				found = true
-				continue
-			}
+		before := len(stack.Papers)
 
-			papers = append(papers, p)
-		}
+		stack.Papers = slices.DeleteFunc(stack.Papers, func(p paperDomain.Paper) bool {
+			return p.UUID == paper.UUID
+		})
 
-		if !found {
+		if len(stack.Papers) == before {
 			http.Error(w, "paper not found in stack", http.StatusNotFound)
 			return
 		}
