@@ -101,6 +101,109 @@ func handleCreateStack(
 	})
 }
 
+func handleGetStack(
+	logger *slog.Logger,
+	service *application.StackService,
+	userService *userApp.UserService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id := r.PathValue("uuid")
+		if id == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		stack, err := service.GetByUUID(ctx, id)
+		if err != nil {
+			if errors.Is(err, domain.ErrStackNotFound) {
+				http.Error(w, domain.ErrStackNotFound.Error(), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack", "uuid", id, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !stack.IsPublic {
+			token, ok := bearerToken(r.Header.Get("Authorization"))
+			if !ok {
+				http.Error(w, "missing bearer token", http.StatusUnauthorized)
+				return
+			}
+
+			user, err := userService.ResolveByAuthToken(ctx, token)
+			if err != nil {
+				http.Error(w, "invalid auth token", http.StatusUnauthorized)
+				return
+			}
+
+			if stack.Owner.ExternalID != user.ExternalID {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+		}
+
+		resp := NewStackResponse(stack)
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode stack response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func handleDeleteStack(
+	logger *slog.Logger,
+	service *application.StackService,
+	userService *userApp.UserService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		token, ok := bearerToken(r.Header.Get("Authorization"))
+		if !ok {
+			http.Error(w, "missing bearer token", http.StatusUnauthorized)
+			return
+		}
+
+		user, err := userService.ResolveByAuthToken(ctx, token)
+		if err != nil {
+			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
+				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			logger.Error("read current user", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+
+		stack, err := service.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if stack.Owner.ExternalID != user.ExternalID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
+		if err := service.Delete(ctx, stackUUID); err != nil {
+			logger.Error("delete stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
 func bearerToken(header string) (string, bool) {
 	token, ok := strings.CutPrefix(strings.TrimSpace(header), "Bearer ")
 	if !ok {

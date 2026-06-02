@@ -27,4 +27,14 @@ func AddStackRoute(
 		stackService,
 		userService,
 	)))
+	mux.Handle(http.MethodGet+" /stacks/{uuid}", defaultMiddle(handleGetStack(
+		logger,
+		stackService,
+		userService,
+	)))
+	mux.Handle(http.MethodDelete+" /stacks/{uuid}", defaultMiddle(handleDeleteStack(
+		logger,
+		stackService,
+		userService,
+	)))
 }
