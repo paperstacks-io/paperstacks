@@ -155,7 +155,7 @@ paths:
       security:
         - basicAuth: []
 
-  /stacks/{uuid}/papers/{paperUuid}:
+  /stacks/{uuid}/papers:
     parameters:
       - name: uuid
         in: path
