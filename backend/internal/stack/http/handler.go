@@ -5,12 +5,10 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -199,7 +197,7 @@ func handleDeleteStack(
 
 func handleListPapersInStack(
 	logger *slog.Logger,
-	stackService *application.StackService,
+	service *application.StackService,
 	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +205,7 @@ func handleListPapersInStack(
 
 		stackUUID := r.PathValue("uuid")
 
-		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		stack, err := service.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("get stack", "uuid", stackUUID, "error", err)
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -245,79 +243,7 @@ func handleListPapersInStack(
 
 func handleAddPaperInStack(
 	logger *slog.Logger,
-	stackService *application.StackService,
-	userService *userApp.UserService,
-	paperService *paperApp.PaperService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		user, err := currentUser(ctx, r, userService)
-		if err != nil {
-			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		stackUUID := r.PathValue("uuid")
-		if stackUUID == "" {
-			http.Error(w, "missing stack uuid", http.StatusBadRequest)
-			return
-		}
-
-		stack, err := stackService.GetByUUID(ctx, stackUUID)
-		if err != nil {
-			logger.Error("get stack", "uuid", stackUUID, "error", err)
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		if stack.Owner.ExternalID != user.ExternalID {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		req, err := server.Decode[PaperRequest](r)
-		if err != nil {
-			logger.Error("decode paper request", "error", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		paper := req.toDomain()
-		p, err := paperService.GetByDOI(ctx, paper.DOI)
-		if err != nil {
-			logger.Error("get paper", "doi", paper.DOI, "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		stack.Papers = append(stack.Papers, p)
-
-		updated, err := stackService.Update(ctx, stack)
-		if err != nil {
-			logger.Error("update stack", "uuid", stackUUID, "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		resp := NewStackResponse(updated)
-
-		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-			logger.Error("encode stack response", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	})
-}
-
-func handleDeletePaperInStack(
-	logger *slog.Logger,
-	stackService *application.StackService,
+	service *application.StackService,
 	userService *userApp.UserService,
 	paperService *paperApp.PaperService,
 ) http.Handler {
@@ -348,7 +274,7 @@ func handleDeletePaperInStack(
 			return
 		}
 
-		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		stack, err := service.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("get stack", "uuid", stackUUID, "error", err)
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -367,22 +293,80 @@ func handleDeletePaperInStack(
 			return
 		}
 
-		papers := make([]paperDomain.Paper, 0, len(stack.Papers))
-
-		before := len(stack.Papers)
-
-		stack.Papers = slices.DeleteFunc(stack.Papers, func(p paperDomain.Paper) bool {
-			return p.UUID == paper.UUID
-		})
-
-		if len(stack.Papers) == before {
-			http.Error(w, "paper not found in stack", http.StatusNotFound)
+		if err := service.AddPaper(ctx, stackUUID, paper); err != nil {
+			logger.Error("add paper to stack", "stackUUID", stackUUID, "paperUUID", paperUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		stack.Papers = papers
+		updated, err := service.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get updated stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-		updated, err := stackService.Update(ctx, stack)
+		resp := NewStackResponse(updated)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode stack response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func handleDeletePaperInStack(
+	logger *slog.Logger,
+	service *application.StackService,
+	userService *userApp.UserService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		user, err := currentUser(ctx, r, userService)
+		if err != nil {
+			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
+				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			logger.Error("read current user", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		paperUUID := r.PathValue("paperUuid")
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		stack, err := service.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack", "uuid", stackUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		if stack.Owner.ExternalID != user.ExternalID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
+		if err := service.RemovePaper(ctx, stackUUID, paperUUID); err != nil {
+			logger.Error("remove paper from stack", "stackUUID", stackUUID, "paperUUID", paperUUID, "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		updated, err := service.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("update stack", "uuid", stackUUID, "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

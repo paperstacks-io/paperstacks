@@ -44,7 +44,7 @@ func AddStackRoute(
 		stackService,
 		userService,
 	)))
-	mux.Handle(http.MethodPost+" /stacks/{uuid}/papers", defaultMiddle(handleAddPaperInStack(
+	mux.Handle(http.MethodPost+" /stacks/{uuid}/papers/{paperUuid}", defaultMiddle(handleAddPaperInStack(
 		logger,
 		stackService,
 		userService,
@@ -54,6 +54,5 @@ func AddStackRoute(
 		logger,
 		stackService,
 		userService,
-		paperService,
 	)))
 }
