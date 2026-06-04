@@ -18,28 +18,15 @@ import (
 func handleListAllPublicStacks(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		users, err := userService.List(ctx)
+		stacks, err := service.ListAllPublic(ctx)
 		if err != nil {
-			logger.Error("Failed to list users", "error", err)
-			http.Error(w, "Failed to list users", http.StatusInternalServerError)
+			logger.Error("list all public stacks", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		}
-
-		stacks := make([]domain.Stack, 0)
-		for _, user := range users {
-			userStacks, err := service.ListPublic(ctx, user.ExternalID)
-			if err != nil {
-				logger.Error("Failed to list public stacks for user", "userExternalID", user.ExternalID, "error", err)
-				http.Error(w, "Failed to list public stacks for user", http.StatusInternalServerError)
-				return
-			}
-
-			stacks = append(stacks, userStacks...)
 		}
 
 		resp := NewStackResponses(stacks)

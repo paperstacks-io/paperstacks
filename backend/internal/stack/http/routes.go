@@ -22,7 +22,6 @@ func AddStackRoute(
 	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleListAllPublicStacks(
 		logger,
 		stackService,
-		userService,
 	)))
 	mux.Handle(http.MethodPost+" /stacks", defaultMiddle(handleCreateStack(
 		logger,

@@ -210,3 +210,54 @@ func TestRepositoryRemovePaperReturnsNotFound(t *testing.T) {
 		t.Fatalf("RemovePaper() error = %v, want %v", err, domain.ErrStackNotFound)
 	}
 }
+
+func TestRepositoryListAllPublicReturnsOnlyPublicStacks(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+	publicStack := domain.Stack{
+		UUID:     "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1",
+		Name:     "Public Stack",
+		Owner:    userDomain.User{ExternalID: "67f25f3f-7aad-4ba8-92e4-ea681479566d"},
+		IsPublic: true,
+	}
+	privateStack := domain.Stack{
+		UUID:     "873be0a7-3568-40c5-b2a2-63b3b8fa41d1",
+		Name:     "Private Stack",
+		Owner:    userDomain.User{ExternalID: "67f25f3f-7aad-4ba8-92e4-ea681479566d"},
+		IsPublic: false,
+	}
+	otherUserStack := domain.Stack{
+		UUID:     "cc92837a-d280-42cb-a689-ea58a46cdb4b",
+		Name:     "Public Stack",
+		Owner:    userDomain.User{ExternalID: "3737191c-4ea8-49f2-8ba6-5c8c67cba6d2"},
+		IsPublic: true,
+	}
+
+	if err := repo.Create(context.Background(), publicStack); err != nil {
+		t.Fatalf("Create() public stack error = %v", err)
+	}
+
+	if err := repo.Create(context.Background(), privateStack); err != nil {
+		t.Fatalf("Create() private stack error = %v", err)
+	}
+
+	if err := repo.Create(context.Background(), otherUserStack); err != nil {
+		t.Fatalf("Create() other user stack error = %v", err)
+	}
+
+	stacks, err := repo.ListAllPublic(context.Background())
+	if err != nil {
+		t.Fatalf("ListAllPublic() error = %v", err)
+	}
+
+	if len(stacks) != 2 {
+		t.Fatalf("ListAllPublic() returned %d stacks, want %d", len(stacks), 2)
+	}
+
+	for _, stack := range stacks {
+		if !stack.IsPublic {
+			t.Fatalf("ListAllPublic() returned non-public stack with UUID %s", stack.UUID)
+		}
+	}
+}

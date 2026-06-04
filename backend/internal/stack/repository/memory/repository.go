@@ -137,3 +137,18 @@ func (r *Repository) RemovePaper(ctx context.Context, stackUUID string, paperUUI
 	}
 	return domain.ErrStackNotFound
 }
+
+func (r *Repository) ListAllPublic(ctx context.Context) ([]domain.Stack, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	stacks := make([]domain.Stack, 0)
+
+	for _, item := range r.data {
+		if item.IsPublic {
+			stacks = append(stacks, item)
+		}
+	}
+
+	return stacks, nil
+}
