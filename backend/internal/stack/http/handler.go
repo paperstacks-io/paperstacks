@@ -30,7 +30,6 @@ func handleListAllPublicStacks(
 		}
 
 		resp := NewStackResponses(stacks)
-
 		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 			logger.Error("encode stack response", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -219,7 +218,6 @@ func handleListPapersInStack(
 		}
 
 		resp := NewPaperResponses(stack.Papers)
-
 		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 			logger.Error("encode paper response", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -294,7 +292,6 @@ func handleAddPaperInStack(
 		}
 
 		resp := NewStackResponse(updated)
-
 		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 			logger.Error("encode stack response", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -361,7 +358,6 @@ func handleDeletePaperInStack(
 		}
 
 		resp := NewStackResponse(updated)
-
 		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 			logger.Error("encode stack response", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
