@@ -112,8 +112,6 @@ func (s *StackService) RemovePaper(ctx context.Context, stackUUID string, paperU
 }
 
 // ListAllPublic returns all public stacks.
-//
-// It returns an error if the stacks could not be loaded.
 func (s *StackService) ListAllPublic(ctx context.Context) ([]domain.Stack, error) {
 	return s.repo.ListAllPublic(ctx)
 }
