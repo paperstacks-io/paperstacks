@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
@@ -165,5 +166,64 @@ func TestServiceListPublicReturnsInvalidUserError(t *testing.T) {
 	_, err := service.ListPublic(context.Background(), "")
 	if err == nil {
 		t.Fatalf("ListPublic() expected error but got nil")
+	}
+}
+
+func TestServiceAddPaperAddsPaperToStack(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+
+	paper := paperDomain.Paper{
+		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
+	}
+
+	err := service.AddPaper(context.Background(), " 9e1a819a-24ab-47b6-be29-92b49325e4c2 ", paper)
+	if err != nil {
+		t.Fatalf("AddPaper() error = %v", err)
+	}
+
+	stack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if len(stack.Papers) != 1 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 1)
+	}
+
+	if stack.Papers[0].UUID != paper.UUID {
+		t.Fatalf("Paper UUID = %s, want %s", stack.Papers[0].UUID, paper.UUID)
+	}
+}
+
+func TestServiceRemovePaperRemovesPaperFromStack(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(memory.NewRepository())
+
+	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", paperDomain.Paper{
+		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
+	})
+	if err != nil {
+		t.Fatalf("AddPaper() error = %v", err)
+	}
+
+	err = service.RemovePaper(
+		context.Background(),
+		" 9e1a819a-24ab-47b6-be29-92b49325e4c2 ",
+		" 36583bb4-8cdc-554e-bcf5-f67b60d0b290 ",
+	)
+	if err != nil {
+		t.Fatalf("RemovePaper() error = %v", err)
+	}
+
+	stack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if len(stack.Papers) != 0 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 0)
 	}
 }
