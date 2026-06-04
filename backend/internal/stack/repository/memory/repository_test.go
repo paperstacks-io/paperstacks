@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
@@ -154,5 +155,58 @@ func TestRepositoryListPublicReturnsOnlyPublicUserStacks(t *testing.T) {
 	}
 	if stacks[0].UUID != publicStack.UUID {
 		t.Fatalf("ListPublic() UUID = %s, want %s", stacks[0].UUID, publicStack.UUID)
+	}
+}
+
+func TestRepositoryAddPaperDoesNotAddDuplicatePaper(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	err := repo.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", paperDomain.Paper{
+		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
+	})
+	if err != nil {
+		t.Fatalf("AddPaper() first add error = %v", err)
+	}
+
+	err = repo.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", paperDomain.Paper{
+		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
+	})
+	if err != nil {
+		t.Fatalf("AddPaper() second add error = %v", err)
+	}
+
+	stack, err := repo.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if len(stack.Papers) != 1 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 1)
+	}
+}
+
+func TestRepositoryAddPaperReturnsStackNotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	err := repo.AddPaper(context.Background(), "unknown-stack", paperDomain.Paper{
+		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
+	})
+	if err != domain.ErrStackNotFound {
+		t.Fatalf("AddPaper() error = %v, want %v", err, domain.ErrStackNotFound)
+	}
+}
+
+func TestRepositoryRemovePaperReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	err := repo.RemovePaper(context.Background(), "unknown-stack", "paper-1")
+	if err != domain.ErrStackNotFound {
+		t.Fatalf("RemovePaper() error = %v, want %v", err, domain.ErrStackNotFound)
 	}
 }

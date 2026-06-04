@@ -3,6 +3,8 @@ package domain
 import (
 	"context"
 	"errors"
+
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 var (
@@ -21,4 +23,6 @@ type Repository interface {
 	Create(ctx context.Context, stack Stack) error
 	Update(ctx context.Context, modified Stack) (Stack, error)
 	Delete(ctx context.Context, uuid string) error
+	AddPaper(ctx context.Context, stackUUID string, paper paperDomain.Paper) error
+	RemovePaper(ctx context.Context, stackUUID string, paperUUID string) error
 }
