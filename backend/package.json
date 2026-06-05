@@ -10,12 +10,12 @@
     "fmt:check": "oxfmt --check"
   },
   "dependencies": {
-    "@tailwindcss/cli": "^4.2.2",
-    "htmx.org": "^2.0.8"
+    "@tailwindcss/cli": "^4.3.0",
+    "htmx.org": "^2.0.10"
   },
   "devDependencies": {
-    "daisyui": "^5.5.19",
-    "oxfmt": "^0.45.0",
-    "tailwindcss": "^4.2.4"
+    "daisyui": "^5.5.20",
+    "oxfmt": "^0.53.0",
+    "tailwindcss": "^4.3.0"
   }
 }
