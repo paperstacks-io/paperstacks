@@ -167,12 +167,6 @@ paths:
       tags:
         - Stacks
       summary: List papers in a stack
-    post:
-      tags:
-        - Stacks
-      summary: Add a paper to a stack
-      security:
-        - basicAuth: []
 
   /stacks/{uuid}/papers/{paperUuid}:
     parameters:
@@ -188,6 +182,12 @@ paths:
         schema:
           type: string
         description: Paper UUID
+    post:
+      tags:
+        - Stacks
+      summary: Add a paper to a stack
+      security:
+        - basicAuth: []
     delete:
       tags:
         - Stacks
