@@ -28,5 +28,6 @@ Long term maintainability is a core priority. Domain-driven design is encouraged
 - `internal/web`: Web UI frontend using HTMX and http/template.
 - `internal/server`: HTTP server to serve API.
 - `internal/paper`: All packages relevant to the domain Paper.
+- `internal/stack`: All packages relevant to the domain Stack.
 - `internal/doi`: All packages relevant to the domain DOI.
 - `internal/integration`: Integration tests that run against the HTTP API.
