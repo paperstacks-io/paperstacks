@@ -45,7 +45,7 @@ func startApplication() bool {
 	testRepo = memory.NewRepository()
 	paperService := application.NewPaperService(testRepo)
 	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
+	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
 	paperHttp.AddPaperRoute(api, logger, paperService)
 	userHttp.AddUserRoute(api, logger, userService, stackService)
 	root.Handle("/api/", http.StripPrefix("/api", api))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
@@ -94,6 +95,57 @@ func (r *Repository) ListPublic(ctx context.Context, userExternalID string) ([]d
 
 	for _, item := range r.data {
 		if item.Owner.ExternalID == userExternalID && item.IsPublic {
+			stacks = append(stacks, item)
+		}
+	}
+
+	return stacks, nil
+}
+
+func (r *Repository) AddPaper(ctx context.Context, stackUUID string, paper paperDomain.Paper) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, s := range r.data {
+		if s.UUID == stackUUID {
+			for _, p := range s.Papers {
+				if p.UUID == paper.UUID {
+					return nil
+				}
+			}
+			r.data[i].Papers = append(r.data[i].Papers, paper)
+			return nil
+		}
+	}
+	return domain.ErrStackNotFound
+}
+
+func (r *Repository) RemovePaper(ctx context.Context, stackUUID string, paperUUID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, item := range r.data {
+		if item.UUID == stackUUID {
+			for j, p := range item.Papers {
+				if p.UUID == paperUUID {
+					r.data[i].Papers = append(r.data[i].Papers[:j], r.data[i].Papers[j+1:]...)
+					return nil
+				}
+			}
+			return nil
+		}
+	}
+	return domain.ErrStackNotFound
+}
+
+func (r *Repository) ListAllPublic(ctx context.Context) ([]domain.Stack, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	stacks := make([]domain.Stack, 0)
+
+	for _, item := range r.data {
+		if item.IsPublic {
 			stacks = append(stacks, item)
 		}
 	}
