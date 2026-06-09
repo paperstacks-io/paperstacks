@@ -12,13 +12,19 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
-type StackService struct {
-	repo domain.Repository
+type PaperGetter interface {
+	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
 
-func NewStackService(repo domain.Repository) *StackService {
+type StackService struct {
+	repo        domain.Repository
+	paperGetter PaperGetter
+}
+
+func NewStackService(repo domain.Repository, paperGetter PaperGetter) *StackService {
 	return &StackService{
-		repo: repo,
+		repo:        repo,
+		paperGetter: paperGetter,
 	}
 }
 
@@ -99,8 +105,13 @@ func (s *StackService) ListPublic(ctx context.Context, userExternalID string) ([
 //
 // If the paper is already assigned to the stack, no changes are made.
 // It return an error if the stack does not exist
-func (s *StackService) AddPaper(ctx context.Context, stackUUID string, paper paperDomain.Paper) error {
-	return s.repo.AddPaper(ctx, strings.TrimSpace(stackUUID), paper)
+func (s *StackService) AddPaper(ctx context.Context, stackUUID string, paperUUID string) error {
+	paper, err := s.paperGetter.GetByUUID(ctx, paperUUID)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.AddPaper(ctx, stackUUID, paper)
 }
 
 // RemovePaper removes a paper from the specified stack.

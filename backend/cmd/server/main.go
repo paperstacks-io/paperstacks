@@ -41,7 +41,7 @@ func run(
 	paperService := paperApp.NewPaperService(paperMem.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
-	stackService := stackApp.NewStackService(stackMem.NewRepository())
+	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
 	sessionService := auth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
 
 	rootMux := http.NewServeMux()
@@ -62,7 +62,6 @@ func run(
 		logger,
 		stackService,
 		userService,
-		paperService,
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)

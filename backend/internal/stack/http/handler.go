@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
-	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -230,7 +230,6 @@ func handleAddPaperInStack(
 	logger *slog.Logger,
 	service *application.StackService,
 	userService *userApp.UserService,
-	paperService *paperApp.PaperService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -271,15 +270,12 @@ func handleAddPaperInStack(
 			return
 		}
 
-		paper, err := paperService.GetByUUID(ctx, paperUUID)
-		if err != nil {
-			logger.Error("get paper", "uuid", paperUUID, "error", err)
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		if err := service.AddPaper(ctx, stackUUID, paper); err != nil {
+		if err := service.AddPaper(ctx, stackUUID, paperUUID); err != nil {
 			logger.Error("add paper to stack", "stackUUID", stackUUID, "paperUUID", paperUUID, "error", err)
+			if errors.Is(err, paperDomain.ErrPaperNotFound) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

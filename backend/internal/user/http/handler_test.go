@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -17,6 +18,16 @@ import (
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	"github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
+
+type fakePaperGetter struct{}
+
+func (fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error) {
+	return paperDomain.Paper{}, paperDomain.ErrPaperNotFound
+}
+
+func newStackService() *stackApplication.StackService {
+	return stackApplication.NewStackService(stackMemory.NewRepository(), fakePaperGetter{})
+}
 
 func TestGetUserByID(t *testing.T) {
 	t.Parallel()
@@ -28,7 +39,7 @@ func TestGetUserByID(t *testing.T) {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
 
-	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	mux := newUserMux(service, newStackService())
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/external-1", nil)
 	res := httptest.NewRecorder()
 
@@ -51,7 +62,7 @@ func TestGetUserByIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
 	service := application.NewUserService(memory.NewRepository(), "", nil)
-	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	mux := newUserMux(service, newStackService())
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/missing", nil)
 	res := httptest.NewRecorder()
 
@@ -66,7 +77,7 @@ func TestGetCurrentUserRequiresBearerToken(t *testing.T) {
 	t.Parallel()
 
 	service := application.NewUserService(memory.NewRepository(), "", nil)
-	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	mux := newUserMux(service, newStackService())
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/me", nil)
 	res := httptest.NewRecorder()
 
@@ -91,7 +102,7 @@ func TestGetCurrentUser(t *testing.T) {
 	t.Cleanup(authServer.Close)
 
 	service := application.NewUserService(memory.NewRepository(), authServer.URL, authServer.Client())
-	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	mux := newUserMux(service, newStackService())
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/me", nil)
 	req.Header.Set("Authorization", "Bearer session-token")
 	res := httptest.NewRecorder()
@@ -115,7 +126,7 @@ func TestListCurrentUserStacksRequiresBearerToken(t *testing.T) {
 	t.Parallel()
 
 	service := application.NewUserService(memory.NewRepository(), "", nil)
-	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	mux := newUserMux(service, newStackService())
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/me/stacks", nil)
 	res := httptest.NewRecorder()
 
@@ -146,7 +157,7 @@ func TestListCurrentUserStacksReturnsAllOwnedStacks(t *testing.T) {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
 
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
+	stackService := newStackService()
 	publicStack := stackDomain.NewStack("Public Stack", user)
 	publicStack.IsPublic = true
 	if err := stackService.Create(context.Background(), *publicStack); err != nil {
@@ -205,7 +216,7 @@ func TestListCurrentUserStacksReturnsUnauthorizedForInvalidToken(t *testing.T) {
 	t.Cleanup(authServer.Close)
 
 	service := application.NewUserService(memory.NewRepository(), authServer.URL, authServer.Client())
-	mux := newUserMux(service, stackApplication.NewStackService(stackMemory.NewRepository()))
+	mux := newUserMux(service, newStackService())
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/me/stacks", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token")
 	res := httptest.NewRecorder()
@@ -227,7 +238,7 @@ func TestListUserStacksReturnsPublicStacks(t *testing.T) {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
 
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
+	stackService := newStackService()
 	publicStack := stackDomain.NewStack("Public Stack", user)
 	publicStack.IsPublic = true
 	if err := stackService.Create(context.Background(), *publicStack); err != nil {
@@ -269,7 +280,7 @@ func TestListUserStacksReturnsNotFoundForMissingUser(t *testing.T) {
 	t.Parallel()
 
 	userService := application.NewUserService(memory.NewRepository(), "", nil)
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
+	stackService := newStackService()
 	mux := newUserMux(userService, stackService)
 	req := httptest.NewRequest(nethttp.MethodGet, "/users/missing/stacks", nil)
 	res := httptest.NewRecorder()
