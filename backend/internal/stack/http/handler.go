@@ -280,19 +280,7 @@ func handleAddPaperInStack(
 			return
 		}
 
-		updated, err := service.GetByUUID(ctx, stackUUID)
-		if err != nil {
-			logger.Error("get updated stack", "uuid", stackUUID, "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		resp := NewStackResponse(updated)
-		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-			logger.Error("encode stack response", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
@@ -346,19 +334,7 @@ func handleDeletePaperInStack(
 			return
 		}
 
-		updated, err := service.GetByUUID(ctx, stackUUID)
-		if err != nil {
-			logger.Error("update stack", "uuid", stackUUID, "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		resp := NewStackResponse(updated)
-		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-			logger.Error("encode stack response", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
