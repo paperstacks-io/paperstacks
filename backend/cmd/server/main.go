@@ -15,6 +15,7 @@ import (
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
@@ -30,7 +31,6 @@ import (
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/web"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 func run(
@@ -42,7 +42,7 @@ func run(
 	doiService := doiApp.NewDOIService(nil)
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
-	sessionService := auth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
+	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
@@ -61,7 +61,7 @@ func run(
 		apiMux,
 		logger,
 		stackService,
-		userService,
+		sessionService,
 	)
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService)

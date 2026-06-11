@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 type pageData struct {
@@ -24,7 +24,7 @@ type pageData struct {
 	AppTargetID   string
 	PageContentID string
 	HankoAPIURL   string
-	Session       auth.Session
+	Session       commonauth.Session
 }
 
 type papersListData struct {
@@ -43,9 +43,9 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		session, ok := auth.SessionFromContext(r.Context())
+		session, ok := commonauth.SessionFromContext(r.Context())
 		if !ok {
-			session = &auth.Session{}
+			session = &commonauth.Session{}
 		}
 
 		data := pageData{
@@ -119,12 +119,12 @@ func handlePapersSearch(
 
 func handleLogout(
 	logger *slog.Logger,
-	sessionService auth.SessionService,
+	sessionService commonauth.SessionService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, ok := auth.SessionFromContext(r.Context())
+		session, ok := commonauth.SessionFromContext(r.Context())
 		if !ok {
-			session = &auth.Session{}
+			session = &commonauth.Session{}
 		}
 
 		err := sessionService.LogoutSession(r.Context(), session.Token)

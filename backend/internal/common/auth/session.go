@@ -43,6 +43,11 @@ func (r sessionResponse) Session(token string) *Session {
 	}
 }
 
+type SessionService interface {
+	ResolveSession(ctx context.Context, token string) (*Session, error)
+	LogoutSession(ctx context.Context, token string) error
+}
+
 type sessionContextKey struct{}
 
 func ContextWithSession(ctx context.Context, session *Session) context.Context {

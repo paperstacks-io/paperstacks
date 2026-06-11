@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"slices"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
+	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 //go:embed assets/* all:templates
@@ -46,7 +47,7 @@ func AddRoute(
 	cfg config.Config,
 	logger *slog.Logger,
 	paperService *application.PaperService,
-	sessionService auth.SessionService,
+	sessionService commonauth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -66,8 +67,8 @@ func AddRoute(
 	}
 
 	defaultMiddle := middleware.NewDefault(logger)
-	sessionMiddle := auth.SessionMiddleware(sessionService)
-	requireAuthMiddle := auth.RequireAuthMiddleware()
+	sessionMiddle := commonauth.SessionMiddleware(sessionService)
+	requireAuthMiddle := webauth.RequireAuthWebMiddleware()
 
 	mux.Handle(http.MethodGet+" /{$}", sessionMiddle(defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL))))
 
