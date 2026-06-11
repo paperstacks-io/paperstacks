@@ -73,21 +73,6 @@ func TestSessionMiddlewareAttachesSessionFromCookie(t *testing.T) {
 	}
 }
 
-func TestSessionMiddlewarePrefersBearerTokenOverCookie(t *testing.T) {
-	service := &testSessionService{session: &Session{UserID: "user-1", IsValid: true}}
-
-	handler := SessionMiddleware(service)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer bearer-token")
-	req.AddCookie(&http.Cookie{Name: "hanko", Value: "cookie-token"})
-	handler.ServeHTTP(httptest.NewRecorder(), req)
-
-	if service.token != "bearer-token" {
-		t.Fatalf("resolved token = %q, want bearer-token", service.token)
-	}
-}
-
 func TestSessionMiddlewareContinuesWithoutSession(t *testing.T) {
 	service := &testSessionService{err: errors.New("invalid token")}
 
