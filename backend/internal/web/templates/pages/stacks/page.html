@@ -1,0 +1,24 @@
+{{ define "stack" }}
+
+<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
+  <div class="card bg-base-100 shadow-sm w-full">
+    <div class="card-body w-full">
+      <h2 class="card-title">
+        List of stacks
+        <span class="htmx-indicator loading loading-spinner loading-sm"></span>
+      </h2>
+
+      <div
+        hx-get="/app/stacks/search"
+        hx-trigger="load"
+        hx-target="#stack-results"
+        hx-swap="innerHTML"
+        hx-indicator=".htmx-indicator"
+      ></div>
+
+      <div id="stack-results"></div>
+    </div>
+  </div>
+</div>
+
+{{ end }}

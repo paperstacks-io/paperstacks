@@ -10,8 +10,10 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
 type pageData struct {
@@ -28,14 +30,14 @@ type pageData struct {
 }
 
 type papersListData struct {
-	Items         []domain.Paper
+	Items         []paperDomain.Paper
 	Total         int
 	Page          int
 	PageSize      int
 	HasNext       bool
 	PrevPage      int
 	NextPage      int
-	SearchOptions domain.SearchOptions
+	SearchOptions paperDomain.SearchOptions
 	Pagination    []PaginationItem
 }
 
@@ -73,7 +75,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 func handlePapersSearch(
 	logger *slog.Logger,
 	tmpl *template.Template,
-	paperService *application.PaperService,
+	paperService *paperApp.PaperService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -86,7 +88,7 @@ func handlePapersSearch(
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
 		page, _ := strconv.Atoi(pageStr)
-		opts := domain.SearchOptions{
+		opts := paperDomain.SearchOptions{
 			Query:  search,
 			SortBy: sortBy,
 			Desc:   desc,
@@ -113,6 +115,38 @@ func handlePapersSearch(
 		templateName := "papers/partials/papers-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+	})
+}
+
+func handleStacksSearch(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.Info("handleStacksSearch called", "method", r.Method, "path", r.URL.Path)
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		logger.Info("authorization header", "value", r.Header.Get("Authorization"))
+
+		result, err := stackService.ListAllPublic(r.Context())
+		if err != nil {
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := struct {
+			Items []stackDomain.Stack
+		}{
+			Items: result,
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/stacks-list", data); err != nil {
+			logger.Error("render stacks list", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
 	})
 }
