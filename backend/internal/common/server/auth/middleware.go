@@ -9,6 +9,10 @@ func SessionMiddleware(service SessionService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := sessionToken(r)
+			if token == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
 
 			session, err := service.ResolveSession(r.Context(), token)
 			if err != nil || session == nil || !session.IsValid {

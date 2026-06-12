@@ -12,9 +12,11 @@ type testSessionService struct {
 	session *Session
 	err     error
 	token   string
+	calls   int
 }
 
 func (s *testSessionService) ResolveSession(_ context.Context, token string) (*Session, error) {
+	s.calls++
 	s.token = token
 	return s.session, s.err
 }
@@ -85,6 +87,23 @@ func TestSessionMiddlewareContinuesWithoutSession(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token")
 	handler.ServeHTTP(httptest.NewRecorder(), req)
+}
+
+func TestSessionMiddlewareSkipsSessionResolutionWithoutToken(t *testing.T) {
+	service := &testSessionService{}
+
+	handler := SessionMiddleware(service)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := SessionFromContext(r.Context()); ok {
+			t.Fatal("session should not be attached")
+		}
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if service.calls != 0 {
+		t.Fatalf("session service calls = %d, want 0", service.calls)
+	}
 }
 
 func TestRequireAuthAPIMiddlewareRejectsMissingSession(t *testing.T) {

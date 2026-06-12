@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -15,8 +16,9 @@ func AddUserRoute(
 	logger *slog.Logger,
 	userService *application.UserService,
 	stackService *stackApplication.StackService,
+	sessionService commonauth.SessionService,
 ) {
-	defaultMiddle := middleware.NewDefault(logger)
+	defaultMiddle := middleware.NewDefault(logger, sessionService)
 
 	mux.Handle(http.MethodGet+" /users/me", defaultMiddle(handleGetCurrentUser(logger, userService)))
 	mux.Handle(http.MethodGet+" /users/me/stacks", defaultMiddle(handleListCurrentUserStacks(logger, userService, stackService)))

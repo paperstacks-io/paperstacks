@@ -51,11 +51,13 @@ func run(
 		rootMux,
 		ctx,
 		logger,
+		sessionService,
 	)
 	phttp.AddPaperRoute(
 		apiMux,
 		logger,
 		paperService,
+		sessionService,
 	)
 	stackHttp.AddStackRoute(
 		apiMux,
@@ -64,8 +66,8 @@ func run(
 		sessionService,
 	)
 
-	doiHttp.AddDOIRoute(apiMux, logger, doiService)
-	userHttp.AddUserRoute(apiMux, logger, userService, stackService)
+	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
+	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	web.AddRoute(webMux, cfg, logger, paperService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
