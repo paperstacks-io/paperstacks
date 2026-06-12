@@ -15,9 +15,9 @@ import (
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
-	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )

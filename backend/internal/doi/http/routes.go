@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/doi/application"
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 )
 
 func AddDOIRoute(

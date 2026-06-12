@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"slices"
 
-	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 

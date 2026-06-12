@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 )
 

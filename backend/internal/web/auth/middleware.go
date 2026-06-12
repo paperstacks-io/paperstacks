@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	commonauth "github.com/paperstacks.io/paperstacks/internal/common/auth"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 )
 
 func RequireAuthWebMiddleware() func(http.Handler) http.Handler {

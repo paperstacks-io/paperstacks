@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/user/application"
 )
