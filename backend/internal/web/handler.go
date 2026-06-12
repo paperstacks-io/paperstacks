@@ -125,10 +125,7 @@ func handleStacksSearch(
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Info("handleStacksSearch called", "method", r.Method, "path", r.URL.Path)
-
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		logger.Info("authorization header", "value", r.Header.Get("Authorization"))
 
 		result, err := stackService.ListAllPublic(r.Context())
 		if err != nil {
