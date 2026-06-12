@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 )
 
 func AddPaperRoute(

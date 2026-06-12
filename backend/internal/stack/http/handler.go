@@ -1,17 +1,15 @@
 package http
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
-	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
@@ -41,20 +39,13 @@ func handleListAllPublicStacks(
 func handleCreateStack(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		user, err := currentUser(ctx, r, userService)
-		if err != nil {
-			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -66,6 +57,7 @@ func handleCreateStack(
 		}
 
 		stack := req.toDomain()
+		user := userDomain.NewUser(session.UserID, session.Email)
 		created := domain.NewStack(stack.Name, user)
 		created.IsPublic = stack.IsPublic
 
@@ -87,7 +79,6 @@ func handleCreateStack(
 func handleGetStack(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -110,19 +101,13 @@ func handleGetStack(
 		}
 
 		if !stack.IsPublic {
-			user, err := currentUser(ctx, r, userService)
-			if err != nil {
-				if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-					http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-					return
-				}
-
-				logger.Error("read current user", "error", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			session, ok := commonauth.SessionFromContext(ctx)
+			if !ok || session == nil || !session.IsValid {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			if stack.Owner.ExternalID != user.ExternalID {
+			if stack.Owner.ExternalID != session.UserID {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
@@ -140,20 +125,13 @@ func handleGetStack(
 func handleDeleteStack(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		user, err := currentUser(ctx, r, userService)
-		if err != nil {
-			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -166,7 +144,7 @@ func handleDeleteStack(
 			return
 		}
 
-		if stack.Owner.ExternalID != user.ExternalID {
+		if stack.Owner.ExternalID != session.UserID {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
@@ -184,7 +162,6 @@ func handleDeleteStack(
 func handleListPapersInStack(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -199,19 +176,13 @@ func handleListPapersInStack(
 		}
 
 		if !stack.IsPublic {
-			user, err := currentUser(ctx, r, userService)
-			if err != nil {
-				if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-					http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-					return
-				}
-
-				logger.Error("read current user", "error", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			session, ok := commonauth.SessionFromContext(ctx)
+			if !ok || session == nil || !session.IsValid {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			if stack.Owner.ExternalID != user.ExternalID {
+			if stack.Owner.ExternalID != session.UserID {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
@@ -229,20 +200,13 @@ func handleListPapersInStack(
 func handleAddPaperInStack(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		user, err := currentUser(ctx, r, userService)
-		if err != nil {
-			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -265,7 +229,7 @@ func handleAddPaperInStack(
 			return
 		}
 
-		if stack.Owner.ExternalID != user.ExternalID {
+		if stack.Owner.ExternalID != session.UserID {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
@@ -287,20 +251,13 @@ func handleAddPaperInStack(
 func handleDeletePaperInStack(
 	logger *slog.Logger,
 	service *application.StackService,
-	userService *userApp.UserService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		user, err := currentUser(ctx, r, userService)
-		if err != nil {
-			if errors.Is(err, userDomain.ErrInvalidAuthToken) {
-				http.Error(w, userDomain.ErrInvalidAuthToken.Error(), http.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -323,7 +280,7 @@ func handleDeletePaperInStack(
 			return
 		}
 
-		if stack.Owner.ExternalID != user.ExternalID {
+		if stack.Owner.ExternalID != session.UserID {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
@@ -336,27 +293,4 @@ func handleDeletePaperInStack(
 
 		w.WriteHeader(http.StatusNoContent)
 	})
-}
-
-func currentUser(
-	ctx context.Context,
-	r *http.Request,
-	userService *userApp.UserService,
-) (userDomain.User, error) {
-	token, ok := bearerToken(r.Header.Get("Authorization"))
-	if !ok {
-		return userDomain.User{}, userDomain.ErrInvalidAuthToken
-	}
-
-	return userService.ResolveByAuthToken(ctx, token)
-}
-
-func bearerToken(header string) (string, bool) {
-	token, ok := strings.CutPrefix(strings.TrimSpace(header), "Bearer ")
-	if !ok {
-		return "", false
-	}
-
-	token = strings.TrimSpace(token)
-	return token, token != ""
 }
