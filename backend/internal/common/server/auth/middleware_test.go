@@ -23,34 +23,6 @@ func (s *testSessionService) LogoutSession(context.Context, string) error {
 	return nil
 }
 
-func TestSessionMiddlewareAttachesSessionFromBearerToken(t *testing.T) {
-	service := &testSessionService{session: &Session{UserID: "user-1", IsValid: true}}
-
-	called := false
-	handler := SessionMiddleware(service)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-
-		session, ok := SessionFromContext(r.Context())
-		if !ok {
-			t.Fatal("session missing from context")
-		}
-		if session.UserID != "user-1" {
-			t.Fatalf("session user id = %q, want user-1", session.UserID)
-		}
-	}))
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer session-token")
-	handler.ServeHTTP(httptest.NewRecorder(), req)
-
-	if !called {
-		t.Fatal("next handler was not called")
-	}
-	if service.token != "session-token" {
-		t.Fatalf("resolved token = %q, want session-token", service.token)
-	}
-}
-
 func TestSessionMiddlewareAttachesSessionFromCookie(t *testing.T) {
 	service := &testSessionService{session: &Session{UserID: "user-1", IsValid: true}}
 

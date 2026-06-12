@@ -66,11 +66,10 @@ func AddRoute(
 		return fmt.Errorf("load web assets: %w", err)
 	}
 
-	defaultMiddle := middleware.NewDefault(logger)
-	sessionMiddle := commonauth.SessionMiddleware(sessionService)
+	defaultMiddle := middleware.NewDefault(logger, sessionService)
 	requireAuthMiddle := webauth.RequireAuthWebMiddleware()
 
-	mux.Handle(http.MethodGet+" /{$}", sessionMiddle(defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL))))
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
 
 	for _, page := range []struct {
 		path         string
@@ -87,17 +86,17 @@ func AddRoute(
 			return err
 		}
 
-		pageHandler := defaultMiddle(handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL))
+		pageHandler := handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL)
 
 		if page.requiresAuth {
 			pageHandler = requireAuthMiddle(pageHandler)
 		}
-		pageHandler = sessionMiddle(pageHandler)
+		pageHandler = defaultMiddle(pageHandler)
 
 		mux.Handle(http.MethodGet+" "+page.path, pageHandler)
 	}
 
-	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(sessionMiddle(handleLogout(logger, sessionService))))
+	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
 
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))

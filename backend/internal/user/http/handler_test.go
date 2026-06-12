@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -295,6 +296,16 @@ func TestListUserStacksReturnsNotFoundForMissingUser(t *testing.T) {
 func newUserMux(service *application.UserService, stackService *stackApplication.StackService) *nethttp.ServeMux {
 	mux := nethttp.NewServeMux()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	userHttp.AddUserRoute(mux, logger, service, stackService)
+	userHttp.AddUserRoute(mux, logger, service, stackService, testSessionService{})
 	return mux
+}
+
+type testSessionService struct{}
+
+func (testSessionService) ResolveSession(context.Context, string) (*commonauth.Session, error) {
+	return nil, nil
+}
+
+func (testSessionService) LogoutSession(context.Context, string) error {
+	return nil
 }
