@@ -124,6 +124,7 @@ func handlePapersSearch(
 			SearchOptions: opts,
 			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
+
 		templateName := "papers/partials/papers-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -167,8 +168,8 @@ func handleStacksSearch(
 			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
 
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/stacks-list", data); err != nil {
-			logger.Error("render stacks list", "error", err.Error())
+		templateName := "stacks/partials/stacks-list"
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}

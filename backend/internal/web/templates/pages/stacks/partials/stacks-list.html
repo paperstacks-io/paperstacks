@@ -37,5 +37,41 @@
   </li>
   {{ end }}
 </ul>
+<form class="mt-6">
+  <input type="hidden" name="search" value="{{ .SearchOptions.Query }}" />
+  <div class="flex join justify-center">
+    <button
+      class="join-item btn  {{ if lt .Page 2 }} btn-disabled {{end}}"
+      hx-post="/app/stacks/search"
+      hx-include="closest form"
+      hx-vals='{"page": {{ .PrevPage }}}'
+      hx-target="#stack-results"
+    >
+      «
+    </button>
+    {{ range .Pagination }}
+    <button
+      type="button"
+      class="join-item btn {{if .IsActive}}btn-active{{ end }} {{if .IsSeperator}}btn-disabled{{ end }} "
+      hx-post="/app/stacks/search"
+      hx-include="closest form"
+      hx-vals='{"page": {{ .TargetPage }}}'
+      hx-target="#stack-results"
+    >
+      {{ if .IsSeperator }} ... {{ else }} {{ .TargetPage }} {{ end }}
+    </button>
+
+    {{ end }}
+    <button
+      class="join-item btn {{if not .HasNext }} btn-disabled {{end}}"
+      hx-post="/app/stacks/search"
+      hx-include="closest form"
+      hx-vals='{"page": {{ .NextPage }}}'
+      hx-target="#stack-results"
+    >
+      »
+    </button>
+  </div>
+</form>
 
 {{ end }} {{ end }}
