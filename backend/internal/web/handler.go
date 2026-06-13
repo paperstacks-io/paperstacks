@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"html/template"
-	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -39,6 +38,18 @@ type papersListData struct {
 	PrevPage      int
 	NextPage      int
 	SearchOptions paperDomain.SearchOptions
+	Pagination    []PaginationItem
+}
+
+type stacksListData struct {
+	Items         []stackDomain.Stack
+	Total         int
+	Page          int
+	PageSize      int
+	HasNext       bool
+	PrevPage      int
+	NextPage      int
+	SearchOptions stackDomain.SearchOptions
 	Pagination    []PaginationItem
 }
 
@@ -129,19 +140,31 @@ func handleStacksSearch(
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		search := normalizeFormParam(r.FormValue("search"))
-		log.Println("Search", search)
+		pageStr := normalizeFormParam(r.FormValue("page"))
 
-		result, err := stackService.ListAllPublic(r.Context())
+		page, _ := strconv.Atoi(pageStr)
+		opts := stackDomain.SearchOptions{
+			Query: search,
+			Page:  page,
+		}
+
+		result, err := stackService.Search(r.Context(), opts)
 		if err != nil {
 			logger.Error("read stacks", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		data := struct {
-			Items []stackDomain.Stack
-		}{
-			Items: result,
+		data := stacksListData{
+			Items:         result.Items,
+			Total:         result.Total,
+			Page:          result.Page,
+			PageSize:      result.PageSize,
+			HasNext:       result.HasNext,
+			PrevPage:      result.Page - 1,
+			NextPage:      result.Page + 1,
+			SearchOptions: opts,
+			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
 
 		if err := tmpl.ExecuteTemplate(w, "stacks/partials/stacks-list", data); err != nil {

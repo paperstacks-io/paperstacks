@@ -11,6 +11,7 @@ var (
 	ErrStackAlreadyExists = errors.New("stack already exists")
 	ErrStackNotFound      = errors.New("stack not found")
 	ErrInvalidStack       = errors.New("invalid stack")
+	ErrInvalidSearch      = errors.New("invalid search options")
 )
 
 type Repository interface {
@@ -18,7 +19,7 @@ type Repository interface {
 	GetByUUID(ctx context.Context, uuid string) (Stack, error)
 	List(ctx context.Context, userExternalID string) ([]Stack, error)
 	ListPublic(ctx context.Context, userExternalID string) ([]Stack, error)
-	ListAllPublic(ctx context.Context) ([]Stack, error)
+	Search(ctx context.Context, options SearchOptions) (SearchResult, error)
 
 	// commands
 	Create(ctx context.Context, stack Stack) error
@@ -26,4 +27,18 @@ type Repository interface {
 	Delete(ctx context.Context, uuid string) error
 	AddPaper(ctx context.Context, stackUUID string, paper paperDomain.Paper) error
 	RemovePaper(ctx context.Context, stackUUID string, paperUUID string) error
+}
+
+type SearchOptions struct {
+	Query    string
+	Page     int
+	PageSize int
+}
+
+type SearchResult struct {
+	Items    []Stack
+	Total    int
+	Page     int
+	PageSize int
+	HasNext  bool
 }

@@ -18,7 +18,7 @@ func AddStackRoute(
 	defaultMiddle := middleware.NewDefault(logger, sessionService)
 	requireAuthMiddle := commonauth.RequireAuthAPIMiddleware()
 
-	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleListAllPublicStacks(
+	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleSearchStacks(
 		logger,
 		stackService,
 	)))
