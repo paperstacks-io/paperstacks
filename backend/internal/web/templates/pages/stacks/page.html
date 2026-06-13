@@ -42,7 +42,10 @@
             <button
               type="button"
               class="btn btn-square btn-primary text-black"
-              onclick="alert('Add stack not implemented yet!')"
+              onclick="
+                create_stack_modal.showModal()
+                document.getElementById('create_stack_form').reset()
+              "
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -58,6 +61,48 @@
                 <path d="M5 12h14"></path>
               </svg>
             </button>
+
+            <dialog id="create_stack_modal" class="modal">
+              <div class="modal-box">
+                <div class="card bg-base-100">
+                  <div class="card-body">
+                    <h2 class="card-title">Create Stack</h2>
+                    <form id="create_stack_form" method="dialog">
+                      <label class="input input-bordered flex items-center gap-2 w-full">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="size-5 opacity-70"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+                          <path d="m2 17 10 5 10-5" />
+                          <path d="m2 12 10 5 10-5" />
+                        </svg>
+                        <input type="text" name="name" class="grow" placeholder="My Stack" required />
+                      </label>
+                    </form>
+
+                    <div class="modal-action">
+                      <form method="dialog">
+                        <button class="btn btn-primary text-black">Create</button>
+                      </form>
+                      <form method="dialog">
+                        <button class="btn">Close</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+              </form>
+            </dialog>
             {{ else }}
             <button
               type="button"
