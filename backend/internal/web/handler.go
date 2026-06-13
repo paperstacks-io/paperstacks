@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"html/template"
+	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -126,6 +127,9 @@ func handleStacksSearch(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		search := normalizeFormParam(r.FormValue("search"))
+		log.Println("Search", search)
 
 		result, err := stackService.ListAllPublic(r.Context())
 		if err != nil {

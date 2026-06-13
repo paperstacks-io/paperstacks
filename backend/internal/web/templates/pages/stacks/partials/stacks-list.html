@@ -1,6 +1,9 @@
 {{ define "stacks/partials/stacks-list" }} {{ if eq (len .Items) 0 }}
+
 <p class="text-sm opacity-60">No stacks found</p>
+
 {{ else }}
+
 <p>{{ len .Items }} stacks found</p>
 
 <ul class="list">
@@ -8,6 +11,7 @@
   <li class="list-row flex">
     <div class="grow">
       <a class="link link-info font-bold"> {{ .Name }} </a>
+
       <div class="flex flex-row">
         <div class="text-xs uppercase font-semibold opacity-60 grow">
           {{ len .Papers }} papers {{ if .IsPublic }} · Public {{ else }} · Private {{ end }}
@@ -20,7 +24,7 @@
     </div>
 
     <div class="flex-none">
-      <button class="btn btn-square btn-ghost" onClick="alert('Not implemented yet!')">
+      <button class="btn btn-square btn-ghost" onclick="alert('Not implemented yet!')">
         <svg class="size-[1.2em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor">
             <path

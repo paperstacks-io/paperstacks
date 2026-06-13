@@ -8,13 +8,97 @@
         <span class="htmx-indicator loading loading-spinner loading-sm"></span>
       </h2>
 
-      <div
-        hx-get="/app/stacks/search"
-        hx-trigger="load"
-        hx-target="#stack-results"
-        hx-swap="innerHTML"
-        hx-indicator=".htmx-indicator"
-      ></div>
+      <form hx-target="#stack-results" hx-indicator=".htmx-indicator">
+        <div class="card w-full">
+          <div class="flex flex-row gap-4">
+            <label class="input input-bordered flex items-center gap-2 w-full">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 opacity-50"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                />
+              </svg>
+
+              <input
+                type="search"
+                name="search"
+                placeholder="Search Stacks..."
+                hx-post="/app/stacks/search"
+                hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+                hx-target="#stack-results"
+              />
+            </label>
+
+            {{ if .Session.IsValid }}
+            <button
+              type="button"
+              class="btn btn-square btn-primary text-black"
+              onclick="alert('Add stack not implemented yet!')"
+              aria-label="Add stack"
+              title="Add stack"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+              </svg>
+            </button>
+            {{ else }}
+            <button
+              type="button"
+              class="btn btn-square bg-base-300 text-base-content hover:bg-base-200"
+              onclick="login_modal.showModal()"
+              aria-label="Login required"
+              title="Login required"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+              </svg>
+            </button>
+
+            <dialog id="login_modal" class="modal">
+              <div class="modal-box w-auto max-w-none p-0">
+                <div class="card bg-base-100 shadow-sm">
+                  <div class="card-body">
+                    <hanko-auth id="authComponent"></hanko-auth>
+                  </div>
+                </div>
+              </div>
+
+              <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+              </form>
+            </dialog>
+            {{ end }}
+          </div>
+        </div>
+      </form>
 
       <div id="stack-results"></div>
     </div>
