@@ -83,10 +83,21 @@
                           <path d="m2 17 10 5 10-5" />
                           <path d="m2 12 10 5 10-5" />
                         </svg>
+
                         <input type="text" name="name" class="grow" placeholder="My Stack" required />
                       </label>
-                    </form>
 
+                      <div
+                        class="mt-4 flex items-center justify-between rounded-box border border-base-300 bg-base-100 p-4"
+                      >
+                        <div>
+                          <p class="font-medium">Public Stack</p>
+                          <p class="text-sm opacity-70">Others can view this stack</p>
+                        </div>
+
+                        <input type="checkbox" name="is_public" value="true" class="toggle toggle-success" />
+                      </div>
+                    </form>
                     <div class="modal-action">
                       <form method="dialog">
                         <button class="btn btn-primary text-black">Create</button>
