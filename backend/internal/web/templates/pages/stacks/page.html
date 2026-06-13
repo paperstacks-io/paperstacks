@@ -42,8 +42,6 @@
               type="button"
               class="btn btn-square btn-primary text-black"
               onclick="alert('Add stack not implemented yet!')"
-              aria-label="Add stack"
-              title="Add stack"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -64,8 +62,6 @@
               type="button"
               class="btn btn-square bg-base-300 text-base-content hover:bg-base-200"
               onclick="login_modal.showModal()"
-              aria-label="Login required"
-              title="Login required"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -86,7 +82,7 @@
               <div class="modal-box w-auto max-w-none p-0">
                 <div class="card bg-base-100 shadow-sm">
                   <div class="card-body">
-                    <hanko-auth id="authComponent"></hanko-auth>
+                    <hanko-auth id="stackAuthComponent"></hanko-auth>
                   </div>
                 </div>
               </div>
@@ -95,6 +91,13 @@
                 <button>close</button>
               </form>
             </dialog>
+            <script type="module">
+              const stackAuthComponent = document.getElementById("stackAuthComponent")
+
+              stackAuthComponent.addEventListener("onSessionCreated", () => {
+                document.location.reload()
+              })
+            </script>
             {{ end }}
           </div>
         </div>
