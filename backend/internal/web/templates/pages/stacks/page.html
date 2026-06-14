@@ -41,7 +41,7 @@
             {{ if .Session.IsValid }}
             <button
               type="button"
-              class="btn btn-square btn-primary text-black"
+              class="btn bg-black text-white hover:bg-gray-800 border-black"
               onclick="
                 create_stack_modal.showModal()
                 document.getElementById('create_stack_form').reset()
@@ -49,19 +49,7 @@
                 document.getElementById('create_stack_submit').disabled = true
               "
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 5v14"></path>
-                <path d="M5 12h14"></path>
-              </svg>
+              <span>Create stack</span>
             </button>
 
             <dialog id="create_stack_modal" class="modal">
@@ -138,22 +126,10 @@
             {{ else }}
             <button
               type="button"
-              class="btn btn-square bg-base-300 text-base-content hover:bg-base-200"
+              class="btn bg-base-300 text-base-content hover:bg-base-200 gap-2 border border-black/30"
               onclick="login_modal.showModal()"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 5v14"></path>
-                <path d="M5 12h14"></path>
-              </svg>
+              <span>Create stack</span>
             </button>
 
             <dialog id="login_modal" class="modal">
