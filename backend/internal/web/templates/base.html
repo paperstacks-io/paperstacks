@@ -51,51 +51,53 @@
   </div>
 
   <!-- Sidebar -->
-  <div class="drawer-side flex flex-col flex-1 bg-base-300">
+  <div class="drawer-side">
     <label for="app-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
 
-    <div class="flex p-4">
-      <span class="text-sm font-semibold uppercase tracking-[0.2em] opacity-70">Paperstacks.io</span>
-    </div>
-    <ul class="menu border-b border-base-300 w-64 p-4">
-      {{range .NavItems}}
-      <li>
-        <a
-          href="{{.Path}}"
-          hx-get="{{.Path}}"
+    <aside class="flex min-h-full w-64 flex-col bg-base-300">
+      <div class="flex p-4">
+        <span class="text-sm font-semibold uppercase tracking-[0.2em] opacity-70">Paperstacks.io</span>
+      </div>
+      <ul class="menu border-b border-base-300 w-full p-4">
+        {{range .NavItems}}
+        <li>
+          <a
+            href="{{.Path}}"
+            hx-get="{{.Path}}"
+            hx-target="#{{$.AppTargetID}}"
+            hx-select="#{{$.AppTargetID}}"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            class="{{if .Active}}menu-active{{end}}"
+            >{{.Label}}</a
+          >
+        </li>
+        {{end}}
+        <div class="divider"></div>
+      </ul>
+      <div class="flex flex-1"></div>
+      <div id="sidebar-footer" class="flex flex-col p-4 w-full">
+        {{if .Session.IsValid }}
+        <p class="text-sm text-center">{{.Session.Email}}</p>
+        <button class="btn btn-sm btn-neutral" hx-post="/app/auth/logout">Logout</button>
+        {{else}}
+        <button
+          href="/app/auth"
+          hx-get="/app/auth"
           hx-target="#{{$.AppTargetID}}"
           hx-select="#{{$.AppTargetID}}"
           hx-swap="outerHTML"
           hx-push-url="true"
-          class="{{if .Active}}menu-active{{end}}"
-          >{{.Label}}</a
+          class="btn btn-sm btn-neutral"
         >
-      </li>
-      {{end}}
-      <div class="divider"></div>
-    </ul>
-    <div class="flex flex-1"></div>
-    <div id="sidebar-footer" class="flex flex-col p-4 w-full">
-      {{if .Session.IsValid }}
-      <p class="text-sm text-center">{{.Session.Email}}</p>
-      <button class="btn btn-sm btn-neutral" hx-post="/app/auth/logout">Logout</button>
-      {{else}}
-      <button
-        href="/app/auth"
-        hx-get="/app/auth"
-        hx-target="#{{$.AppTargetID}}"
-        hx-select="#{{$.AppTargetID}}"
-        hx-swap="outerHTML"
-        hx-push-url="true"
-        class="btn btn-sm btn-neutral"
-      >
-        Login
-      </button>
-      {{end}}
-      <div class="divider"></div>
-      <p class="text-sm text-secondary">{{ .AppVersion}} {{ .AppGitHash }}</p>
-      <p class="text-sm text-secondary">{{ .AppBuildTime}}</p>
-    </div>
+          Login
+        </button>
+        {{end}}
+        <div class="divider"></div>
+        <p class="text-sm text-secondary">{{ .AppVersion}} {{ .AppGitHash }}</p>
+        <p class="text-sm text-secondary">{{ .AppBuildTime}}</p>
+      </div>
+    </aside>
   </div>
 </div>
 {{end}}
