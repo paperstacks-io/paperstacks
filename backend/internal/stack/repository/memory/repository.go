@@ -180,9 +180,7 @@ func matchesQuery(stack domain.Stack, query string) bool {
 		return true
 	}
 
-	if strings.Contains(strings.ToLower(stack.Name), query) {
-		return true
-	}
+	query = strings.TrimSpace(strings.ToLower(query))
 
-	return false
+	return strings.Contains(strings.ToLower(stack.Name), query)
 }
