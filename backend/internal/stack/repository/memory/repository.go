@@ -146,7 +146,7 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 	result := make([]domain.Stack, 0, len(r.data))
 
 	for _, stack := range r.data {
-		if matchesQuery(stack, opts.Query) {
+		if stack.IsPublic && matchesQuery(stack, opts.Query) {
 			result = append(result, stack)
 		}
 	}

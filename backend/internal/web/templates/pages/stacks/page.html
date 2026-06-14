@@ -8,7 +8,7 @@
         <span class="htmx-indicator loading loading-spinner loading-sm"></span>
       </h2>
 
-      <form hx-target="#stack-results" hx-indicator=".htmx-indicator">
+      <div hx-indicator=".htmx-indicator">
         <div class="card w-full">
           <div class="flex flex-row gap-4">
             <label class="input input-bordered flex items-center gap-2 w-full">
@@ -45,6 +45,8 @@
               onclick="
                 create_stack_modal.showModal()
                 document.getElementById('create_stack_form').reset()
+                document.getElementById('create_stack_error').innerHTML = ''
+                document.getElementById('create_stack_submit').disabled = true
               "
             >
               <svg
@@ -67,7 +69,19 @@
                 <div class="card bg-base-100">
                   <div class="card-body">
                     <h2 class="card-title">Create Stack</h2>
-                    <form id="create_stack_form" method="dialog">
+                    <form
+                      id="create_stack_form"
+                      hx-post="/app/stacks/create"
+                      hx-target="#create_stack_error"
+                      hx-swap="innerHTML"
+                      hx-on::before-request="document.getElementById('create_stack_error').innerHTML = ''"
+                      hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"
+                      hx-on::after-request="
+    if (event.detail.successful) {
+      create_stack_modal.close();
+    }
+  "
+                    >
                       <label class="input input-bordered flex items-center gap-2 w-full">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -84,8 +98,14 @@
                           <path d="m2 12 10 5 10-5" />
                         </svg>
 
-                        <input type="text" name="name" class="grow" placeholder="My Stack" required />
+                        <input
+                          type="text"
+                          name="name"
+                          placeholder="My Stack"
+                          oninput="document.getElementById('create_stack_submit').disabled = this.value.trim() === ''"
+                        />
                       </label>
+                      <div id="create_stack_error" class="mt-2"></div>
 
                       <div
                         class="mt-4 flex items-center justify-between rounded-box border border-base-300 bg-base-100 p-4"
@@ -97,15 +117,15 @@
 
                         <input type="checkbox" name="is_public" value="true" class="toggle toggle-success" />
                       </div>
+
+                      <div class="modal-action">
+                        <button id="create_stack_submit" type="submit" class="btn btn-primary text-black" disabled>
+                          Create
+                        </button>
+
+                        <button type="button" class="btn" onclick="create_stack_modal.close()">Close</button>
+                      </div>
                     </form>
-                    <div class="modal-action">
-                      <form method="dialog">
-                        <button class="btn btn-primary text-black">Create</button>
-                      </form>
-                      <form method="dialog">
-                        <button class="btn">Close</button>
-                      </form>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -114,6 +134,7 @@
                 <button>close</button>
               </form>
             </dialog>
+            <div id="create_stack_success"></div>
             {{ else }}
             <button
               type="button"
@@ -158,7 +179,7 @@
             {{ end }}
           </div>
         </div>
-      </form>
+      </div>
 
       <div id="stack-results"></div>
     </div>

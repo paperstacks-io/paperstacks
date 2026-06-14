@@ -14,6 +14,7 @@ import (
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type pageData struct {
@@ -51,6 +52,11 @@ type stacksListData struct {
 	NextPage      int
 	SearchOptions stackDomain.SearchOptions
 	Pagination    []PaginationItem
+}
+
+type stackCreateViewData struct {
+	Success bool
+	Message string
 }
 
 func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
@@ -173,6 +179,73 @@ func handleStacksSearch(
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
+	})
+}
+
+func handleStacksCreate(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		const (
+			createStackErrorTarget   = "#create_stack_error"
+			createStackSuccessTarget = "#create_stack_success"
+		)
+
+		render := func(status int, target string, data stackCreateViewData) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", target)
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, "stacks/partials/stack-create", data); err != nil {
+				logger.Error("render stack create", "error", err.Error())
+			}
+		}
+
+		renderError := func(status int, message string) {
+			render(status, createStackErrorTarget, stackCreateViewData{
+				Success: false,
+				Message: message,
+			})
+		}
+
+		renderSuccess := func(message string) {
+			render(http.StatusCreated, createStackSuccessTarget, stackCreateViewData{
+				Success: true,
+				Message: message,
+			})
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+			return
+		}
+
+		name := normalizeFormParam(r.FormValue("name"))
+		if name == "" {
+			renderError(http.StatusBadRequest, "Stack name cannot be empty.")
+			return
+		}
+
+		isPublic := r.FormValue("is_public") == "true"
+
+		user := userDomain.NewUser(session.UserID, session.Email)
+
+		created := stackDomain.NewStack(name, user)
+		created.IsPublic = isPublic
+
+		if err := stackService.Create(ctx, *created); err != nil {
+			logger.Error("create stack", "error", err.Error())
+			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
+			return
+		}
+
+		renderSuccess("Stack created successfully.")
 	})
 }
 

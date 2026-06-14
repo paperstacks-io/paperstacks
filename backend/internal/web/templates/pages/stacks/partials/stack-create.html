@@ -1,0 +1,11 @@
+{{ define "stacks/partials/stack-create" }} {{ if .Success }}
+<div class="toast toast-top toast-end z-50 pointer-events-none animate-[ping_50ms_linear_2s_1_forwards]">
+  <div class="alert alert-success shadow-lg bg-success/50 text-success-content">
+    <span>{{ .Message }}</span>
+  </div>
+</div>
+{{ else }}
+<div class="alert alert-error shadow-sm bg-error/50 text-error-content">
+  <span>{{ .Message }}</span>
+</div>
+{{ end }} {{ end }}
