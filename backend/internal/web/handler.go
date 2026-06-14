@@ -226,7 +226,7 @@ func handleStacksCreate(
 			return
 		}
 
-		name := normalizeFormParam(r.FormValue("name"))
+		name := r.FormValue("name")
 		if name == "" {
 			renderError(http.StatusBadRequest, "Stack name cannot be empty.")
 			return
