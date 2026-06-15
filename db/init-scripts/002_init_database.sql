@@ -1,5 +1,6 @@
 \connect paperstacks
 
+SET ROLE app_owner;
 SET search_path TO public;
 
 CREATE TABLE public.affiliation (
