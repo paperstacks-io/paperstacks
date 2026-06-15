@@ -122,30 +122,17 @@
             </dialog>
             <div id="create_stack_success"></div>
             {{ else }}
-            <button type="button" class="btn btn-soft" onclick="login_modal.showModal()">
+            <button
+              type="button"
+              hx-get="/app/auth"
+              hx-target="#{{ $.AppTargetID }}"
+              hx-select="#{{ $.AppTargetID }}"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="btn btn-soft"
+            >
               <span>Create stack</span>
             </button>
-
-            <dialog id="login_modal" class="modal">
-              <div class="modal-box w-auto max-w-none p-0">
-                <div class="card bg-base-100 shadow-sm">
-                  <div class="card-body">
-                    <hanko-auth id="stackAuthComponent"></hanko-auth>
-                  </div>
-                </div>
-              </div>
-
-              <form method="dialog" class="modal-backdrop">
-                <button>close</button>
-              </form>
-            </dialog>
-            <script type="module">
-              const stackAuthComponent = document.getElementById("stackAuthComponent")
-
-              stackAuthComponent.addEventListener("onSessionCreated", () => {
-                document.location.reload()
-              })
-            </script>
             {{ end }}
           </div>
         </div>
