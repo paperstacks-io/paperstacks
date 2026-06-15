@@ -7,5 +7,9 @@ node_modules/
 /server
 /server.exe
 
+# Agents
+.agents
+skills-lock.json
+
 # Envs
 .env*
