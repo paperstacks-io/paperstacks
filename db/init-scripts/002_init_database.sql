@@ -24,8 +24,6 @@ FOREIGN KEY (key_affiliation)
 REFERENCES public.affiliation (key)
 ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE public.author ADD CONSTRAINT author_uq UNIQUE (key_affiliation);
-
 CREATE TYPE public."paperType" AS ENUM (
 	'journal_article',
 	'conference_paper',
