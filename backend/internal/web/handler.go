@@ -207,7 +207,6 @@ func handleStacksCreate(
 		}
 
 		renderError := func(status int, message string) {
-			http.Error(w, "unauthorized", status)
 			render(status, createStackErrorTarget, stackCreateViewData{
 				Success: false,
 				Message: message,
