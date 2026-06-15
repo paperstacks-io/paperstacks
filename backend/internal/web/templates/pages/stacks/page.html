@@ -41,7 +41,7 @@
             {{ if .Session.IsValid }}
             <button
               type="button"
-              class="btn bg-black text-white hover:bg-gray-800 border-black"
+              class="btn btn-neutral"
               onclick="
                 create_stack_modal.showModal()
                 document.getElementById('create_stack_form').reset()
@@ -107,9 +107,7 @@
                       </div>
 
                       <div class="modal-action">
-                        <button id="create_stack_submit" type="submit" class="btn btn-primary text-black" disabled>
-                          Create
-                        </button>
+                        <button id="create_stack_submit" type="submit" class="btn btn-primary" disabled>Create</button>
 
                         <button type="button" class="btn" onclick="create_stack_modal.close()">Close</button>
                       </div>
@@ -124,11 +122,7 @@
             </dialog>
             <div id="create_stack_success"></div>
             {{ else }}
-            <button
-              type="button"
-              class="btn bg-base-300 text-base-content hover:bg-base-200 gap-2 border border-black/30"
-              onclick="login_modal.showModal()"
-            >
+            <button type="button" class="btn btn-soft" onclick="login_modal.showModal()">
               <span>Create stack</span>
             </button>
 
