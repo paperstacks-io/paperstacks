@@ -66,7 +66,7 @@ CREATE TABLE public.paper (
 	"publicationStatusTimestamp" char(14),
 	abstract text,
 	keywords text[],
-	CONSTRAINT "Unique Doi" UNIQUE NULLS NOT DISTINCT (doi),
+	CONSTRAINT paper_doi_uq UNIQUE (doi),
 	CONSTRAINT paper_pk PRIMARY KEY (uuid)
 );
 
