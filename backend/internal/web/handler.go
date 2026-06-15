@@ -245,7 +245,7 @@ func handleStacksCreate(
 			return
 		}
 
-		renderSuccess("Stack created successfully.")
+		renderSuccess("Stack '" + name + "' created successfully.")
 	})
 }
 
