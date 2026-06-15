@@ -89,14 +89,14 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 CREATE TABLE public.pdf (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	"pdfUrl" text,
-	uuid_paper uuid,
+	uuid_paper uuid NOT NULL,
 	CONSTRAINT pdf_pk PRIMARY KEY (key)
 );
 
 ALTER TABLE public.pdf ADD CONSTRAINT pdf_paper_fk
 FOREIGN KEY (uuid_paper)
 REFERENCES public.paper (uuid)
-ON DELETE SET NULL ON UPDATE CASCADE;
+ON DELETE CASCADE ON UPDATE CASCADE;
 
 CREATE TABLE public.metadata (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
@@ -112,7 +112,7 @@ CREATE TABLE public.metadata (
 	license text,
 	copyright text,
 	funding text,
-	uuid_paper uuid,
+	uuid_paper uuid NOT NULL,
 	CONSTRAINT metadata_pk PRIMARY KEY (key)
 );
 
@@ -124,4 +124,4 @@ COMMENT ON COLUMN public.metadata.reference IS E'references the paper uses';
 ALTER TABLE public.metadata ADD CONSTRAINT metadata_paper_fk
 FOREIGN KEY (uuid_paper)
 REFERENCES public.paper (uuid)
-ON DELETE SET NULL ON UPDATE CASCADE;
+ON DELETE CASCADE ON UPDATE CASCADE;
