@@ -201,7 +201,7 @@ func handleStacksCreate(
 			w.Header().Set("HX-Reswap", "innerHTML")
 			w.WriteHeader(status)
 
-			if err := tmpl.ExecuteTemplate(w, "stacks/partials/stack-create", data); err != nil {
+			if err := tmpl.ExecuteTemplate(w, "stacks/partials/stack-alert", data); err != nil {
 				logger.Error("render stack create", "error", err.Error())
 			}
 		}
