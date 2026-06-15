@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type DocumentService struct {
@@ -24,15 +25,29 @@ func NewDocumentService(repo domain.Repository, storage domain.Storage) *Documen
 	}
 }
 
+type limitCountingReader struct {
+	r     io.Reader
+	limit int64
+	read  int64
+}
+
+func (c *limitCountingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.read += int64(n)
+	if c.read > c.limit {
+		return n, domain.ErrFileSizeExceeded
+	}
+	return n, err
+}
+
 func (s *DocumentService) Upload(
 	ctx context.Context,
-	fileName string,
-	contentType string,
-	size int64,
+	document domain.Document,
+	user userDomain.User,
 	r io.Reader,
 ) (domain.Document, error) {
 	const maxFileSize = 10 * 1024 * 1024
-	if size > maxFileSize {
+	if document.Size > maxFileSize {
 		return domain.Document{}, domain.ErrFileSizeExceeded
 	}
 
@@ -56,21 +71,27 @@ func (s *DocumentService) Upload(
 	}
 
 	fullReader := io.MultiReader(bytes.NewReader(buf[:n]), r)
+	limitReader := &limitCountingReader{
+		r:     fullReader,
+		limit: maxFileSize,
+	}
 
 	docUUID := uuid.NewString()
 	storageKey := docUUID + ".pdf"
 
-	storageURI, err := s.storage.Put(ctx, storageKey, fullReader)
+	storageURI, err := s.storage.Put(ctx, storageKey, limitReader)
 	if err != nil {
 		return domain.Document{}, fmt.Errorf("failed to store physical file: %w", err)
 	}
 
 	doc := domain.Document{
-		UUID:        docUUID,
-		FileName:    strings.TrimSpace(fileName),
-		ContentType: "application/pdf",
-		Size:        size,
-		StorageURI:  storageURI,
+		UUID:         docUUID,
+		UploaderUUID: user.ExternalID,
+		PaperUUID:    document.PaperUUID,
+		FileName:     strings.TrimSpace(document.FileName),
+		ContentType:  "application/pdf",
+		Size:         limitReader.read,
+		StorageURI:   storageURI,
 	}
 
 	savedDoc, err := s.repo.Save(ctx, doc)
