@@ -15,8 +15,8 @@ CREATE TABLE public.affiliation (
 
 CREATE TABLE public.author (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-	"nameMiddle" text,
-	"nameFirst" text,
+	name_middle text,
+	name_first text,
 	key_affiliation bigint,
 	CONSTRAINT author_pk PRIMARY KEY (key)
 );
@@ -30,7 +30,7 @@ ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE INDEX author_key_affiliation_idx ON public.author (key_affiliation);
 
-CREATE TYPE public."paperType" AS ENUM (
+CREATE TYPE public.paper_type AS ENUM (
 	'journal_article',
 	'conference_paper',
 	'workshop_paper',
@@ -47,7 +47,7 @@ CREATE TYPE public."paperType" AS ENUM (
 	'other'
 );
 
-CREATE TYPE public."publicationStatus" AS ENUM (
+CREATE TYPE public.publication_status AS ENUM (
 	'draft',
 	'submitted',
 	'under_review',
@@ -63,11 +63,11 @@ CREATE TABLE public.paper (
 	uuid uuid NOT NULL,
 	doi text,
 	title text,
-	"titleShort" text,
-	"publicationYear" smallint,
-	"paperType" public."paperType",
-	"publicationStatus" public."publicationStatus",
-	"publicationStatusTimestamp" timestamptz,
+	title_short text,
+	publication_year smallint,
+	paper_type public.paper_type,
+	publication_status public.publication_status,
+	publication_status_timestamp timestamptz,
 	abstract text,
 	keywords text[],
 	CONSTRAINT paper_doi_uq UNIQUE (doi),
@@ -96,7 +96,7 @@ CREATE INDEX paper_author_key_author_idx ON public.paper_author (key_author);
 
 CREATE TABLE public.pdf (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-	"pdfUrl" text,
+	pdf_url text,
 	uuid_paper uuid NOT NULL,
 	CONSTRAINT pdf_pk PRIMARY KEY (key)
 );
@@ -111,11 +111,11 @@ CREATE INDEX pdf_uuid_paper_idx ON public.pdf (uuid_paper);
 CREATE TABLE public.metadata (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	publisher text,
-	"publishedIn" text,
+	published_in text,
 	volume smallint,
 	issue smallint,
 	datasource text,
-	"datasourceTimestamp" timestamptz,
+	datasource_timestamp timestamptz,
 	reference text[],
 	isbn text[],
 	pages smallint,
