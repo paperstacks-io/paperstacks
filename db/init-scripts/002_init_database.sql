@@ -54,14 +54,14 @@ CREATE TYPE public."publicationStatus" AS ENUM (
 );
 
 CREATE TABLE public.paper (
-	uuid char(36) NOT NULL,
-	doi char(255),
-	title char(500),
-	"titleShort" char(200),
+	uuid uuid NOT NULL,
+	doi text,
+	title text,
+	"titleShort" text,
 	"publicationYear" smallint,
 	"paperType" public."paperType",
 	"publicationStatus" public."publicationStatus",
-	"publicationStatusTimestamp" char(14),
+	"publicationStatusTimestamp" timestamptz,
 	abstract text,
 	keywords text[],
 	CONSTRAINT paper_doi_uq UNIQUE (doi),
@@ -71,7 +71,7 @@ CREATE TABLE public.paper (
 COMMENT ON TABLE public.paper IS E'represents a paper with multiple possible pdfs';
 
 CREATE TABLE public.paper_author (
-	uuid_paper char(36) NOT NULL,
+	uuid_paper uuid NOT NULL,
 	key_author bigint NOT NULL,
 	CONSTRAINT paper_author_pk PRIMARY KEY (uuid_paper, key_author)
 );
@@ -89,7 +89,7 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 CREATE TABLE public.pdf (
 	key smallint NOT NULL,
 	"pdfUrl" text,
-	uuid_paper char(36),
+	uuid_paper uuid,
 	CONSTRAINT pdf_pk PRIMARY KEY (key)
 );
 
@@ -105,14 +105,14 @@ CREATE TABLE public.metadata (
 	volume smallint,
 	issue smallint,
 	datasource text,
-	"datasourceTimestamp" char(14),
+	"datasourceTimestamp" timestamptz,
 	reference text[],
-	isbn char(13)[],
+	isbn text[],
 	pages smallint,
 	license text,
 	copyright text,
 	funding text,
-	uuid_paper char(36),
+	uuid_paper uuid,
 	CONSTRAINT metadata_pk PRIMARY KEY (key)
 );
 
