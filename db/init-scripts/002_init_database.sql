@@ -87,7 +87,7 @@ REFERENCES public.author (key)
 ON DELETE RESTRICT ON UPDATE CASCADE;
 
 CREATE TABLE public.pdf (
-	key smallint NOT NULL,
+	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	"pdfUrl" text,
 	uuid_paper uuid,
 	CONSTRAINT pdf_pk PRIMARY KEY (key)
@@ -99,7 +99,7 @@ REFERENCES public.paper (uuid)
 ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE TABLE public.metadata (
-	key integer NOT NULL,
+	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	publisher text,
 	"publishedIn" text,
 	volume smallint,
