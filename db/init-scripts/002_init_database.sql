@@ -1,4 +1,8 @@
+\set ON_ERROR_STOP on
+
 \connect paperstacks
+
+BEGIN;
 
 SET ROLE app_owner;
 SET search_path TO public;
@@ -133,3 +137,5 @@ REFERENCES public.paper (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 CREATE INDEX metadata_uuid_paper_idx ON public.metadata (uuid_paper);
+
+COMMIT;
