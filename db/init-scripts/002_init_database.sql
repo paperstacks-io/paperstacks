@@ -24,6 +24,8 @@ FOREIGN KEY (key_affiliation)
 REFERENCES public.affiliation (key)
 ON DELETE SET NULL ON UPDATE CASCADE;
 
+CREATE INDEX author_key_affiliation_idx ON public.author (key_affiliation);
+
 CREATE TYPE public."paperType" AS ENUM (
 	'journal_article',
 	'conference_paper',
@@ -86,6 +88,8 @@ FOREIGN KEY (key_author)
 REFERENCES public.author (key)
 ON DELETE RESTRICT ON UPDATE CASCADE;
 
+CREATE INDEX paper_author_key_author_idx ON public.paper_author (key_author);
+
 CREATE TABLE public.pdf (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	"pdfUrl" text,
@@ -97,6 +101,8 @@ ALTER TABLE public.pdf ADD CONSTRAINT pdf_paper_fk
 FOREIGN KEY (uuid_paper)
 REFERENCES public.paper (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE INDEX pdf_uuid_paper_idx ON public.pdf (uuid_paper);
 
 CREATE TABLE public.metadata (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
@@ -125,3 +131,5 @@ ALTER TABLE public.metadata ADD CONSTRAINT metadata_paper_fk
 FOREIGN KEY (uuid_paper)
 REFERENCES public.paper (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE INDEX metadata_uuid_paper_idx ON public.metadata (uuid_paper);
