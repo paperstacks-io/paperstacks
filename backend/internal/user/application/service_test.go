@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
@@ -62,7 +61,7 @@ func TestUserServiceCreateIfNotExistReturnsExistingUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
-	if !reflect.DeepEqual(res, existing) {
+	if res != existing {
 		t.Fatalf("CreateIfNotExist() = %#v, want existing %#v", res, existing)
 	}
 }
@@ -80,7 +79,7 @@ func TestUserServiceGetByExternalIDTrimsInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByExternalID() error = %v, want nil", err)
 	}
-	if !reflect.DeepEqual(user, created) {
+	if user != created {
 		t.Fatalf("GetByExternalID() = %#v, want %#v", user, created)
 	}
 }
@@ -98,7 +97,7 @@ func TestUserServiceGetByEmailNormalizesInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByEmail() error = %v, want nil", err)
 	}
-	if !reflect.DeepEqual(user, created) {
+	if user != created {
 		t.Fatalf("GetByEmail() = %#v, want %#v", user, created)
 	}
 }
@@ -229,7 +228,7 @@ func TestUserServiceGetByAuthTokenFetchesAndPersistsUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByExternalID() error = %v, want nil", err)
 	}
-	if !reflect.DeepEqual(stored, user) {
+	if stored != user {
 		t.Fatalf("stored user = %#v, want %#v", stored, user)
 	}
 }

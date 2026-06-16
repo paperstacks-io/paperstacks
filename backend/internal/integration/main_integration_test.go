@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/tests"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
@@ -36,18 +37,28 @@ var client *http.Client
 var testRepo *memory.Repository
 var integrationTestMu sync.Mutex
 
+type noopSessionService struct{}
+
+func (noopSessionService) ResolveSession(context.Context, string) (*commonauth.Session, error) {
+	return nil, nil
+}
+
+func (noopSessionService) LogoutSession(context.Context, string) error {
+	return nil
+}
+
 func startApplication() bool {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	root := http.NewServeMux()
 	api := http.NewServeMux()
-	server.AddRoute(root, context.Background(), logger)
-
 	testRepo = memory.NewRepository()
 	paperService := application.NewPaperService(testRepo)
 	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository())
-	paperHttp.AddPaperRoute(api, logger, paperService)
-	userHttp.AddUserRoute(api, logger, userService, stackService)
+	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
+	sessionService := noopSessionService{}
+	server.AddRoute(root, context.Background(), logger, sessionService)
+	paperHttp.AddPaperRoute(api, logger, paperService, sessionService)
+	userHttp.AddUserRoute(api, logger, userService, stackService, sessionService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
 	httpServer := &http.Server{

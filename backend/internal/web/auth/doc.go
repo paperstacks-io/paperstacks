@@ -1,3 +1,2 @@
-// Package auth provides web authentication primitives for resolving,
-// validating, caching, and attaching sessions to HTTP requests.
+// Package auth provides web-specific authentication middleware.
 package auth

@@ -6,12 +6,12 @@ import (
 	"net/http"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/document/application"
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperService "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	userService "github.com/paperstacks.io/paperstacks/internal/user/application"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 func handleUploadDocument(
@@ -24,7 +24,7 @@ func handleUploadDocument(
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			session, ok := auth.SessionFromContext(ctx)
+			session, ok := commonauth.SessionFromContext(ctx)
 			if !ok || session == nil || !session.IsValid {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return

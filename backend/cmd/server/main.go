@@ -17,6 +17,10 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
+	docHttp "github.com/paperstacks.io/paperstacks/internal/document/http"
+	docMem "github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -28,11 +32,7 @@ import (
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
-	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
-	docHttp "github.com/paperstacks.io/paperstacks/internal/document/http"
-	docMem "github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/web"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 func run(
@@ -43,8 +43,8 @@ func run(
 	paperService := paperApp.NewPaperService(paperMem.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
-	stackService := stackApp.NewStackService(stackMem.NewRepository())
-	sessionService := auth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
+	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
+	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
 	documentService := docApp.NewDocumentService(docRepo, docStorage)
@@ -56,17 +56,19 @@ func run(
 		rootMux,
 		ctx,
 		logger,
+		sessionService,
 	)
 	phttp.AddPaperRoute(
 		apiMux,
 		logger,
 		paperService,
+		sessionService,
 	)
 
-	doiHttp.AddDOIRoute(apiMux, logger, doiService)
-	userHttp.AddUserRoute(apiMux, logger, userService, stackService)
+	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
+	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, userService, paperService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, sessionService)
+	web.AddRoute(webMux, cfg, logger, paperService, stackService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 

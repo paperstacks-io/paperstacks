@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -11,11 +12,6 @@ import (
 
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 )
-
-type SessionService interface {
-	ResolveSession(ctx context.Context, token string) (*Session, error)
-	LogoutSession(ctx context.Context, token string) error
-}
 
 type HankoSessionService struct {
 	apiURL     string
@@ -41,6 +37,10 @@ func NewHankoSessionService(apiURL string, userService userApp.UserService, http
 }
 
 func (s *HankoSessionService) ResolveSession(ctx context.Context, token string) (*Session, error) {
+	if token == "" {
+		return nil, errors.New("empty token")
+	}
+
 	s.mu.RLock()
 	cachedSession, ok := s.cache[token]
 	s.mu.RUnlock()

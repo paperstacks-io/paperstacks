@@ -8,16 +8,29 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
-type StackService struct {
-	repo domain.Repository
+const (
+	defaultSearchPage     = 1
+	defaultSearchPageSize = 10
+	maxSearchPageSize     = 100
+)
+
+type PaperGetter interface {
+	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
 
-func NewStackService(repo domain.Repository) *StackService {
+type StackService struct {
+	repo        domain.Repository
+	paperGetter PaperGetter
+}
+
+func NewStackService(repo domain.Repository, paperGetter PaperGetter) *StackService {
 	return &StackService{
-		repo: repo,
+		repo:        repo,
+		paperGetter: paperGetter,
 	}
 }
 
@@ -92,4 +105,41 @@ func (s *StackService) ListPublic(ctx context.Context, userExternalID string) ([
 	}
 
 	return s.repo.ListPublic(ctx, userExternalID)
+}
+
+// AddPaper adds a paper to the specified stack.
+//
+// If the paper is already assigned to the stack, no changes are made.
+// It return an error if the stack does not exist
+func (s *StackService) AddPaper(ctx context.Context, stackUUID string, paperUUID string) error {
+	paper, err := s.paperGetter.GetByUUID(ctx, paperUUID)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.AddPaper(ctx, stackUUID, paper)
+}
+
+// RemovePaper removes a paper from the specified stack.
+//
+// If the paper is not assigned to the stack, no changes are made.
+// It return an error if the stack does not exist
+func (s *StackService) RemovePaper(ctx context.Context, stackUUID string, paperUUID string) error {
+	return s.repo.RemovePaper(ctx, strings.TrimSpace(stackUUID), strings.TrimSpace(paperUUID))
+}
+
+// Search returns stacks matching the provided search options.
+// It normalizes the query and applies default pagination values before
+//
+// It returns an error if the stacks could not be searched.
+func (s *StackService) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	opts.Query = strings.ToLower(strings.TrimSpace(opts.Query))
+	opts.Page = max(defaultSearchPage, opts.Page)
+
+	if opts.PageSize <= 1 {
+		opts.PageSize = defaultSearchPageSize
+	}
+	opts.PageSize = min(maxSearchPageSize, opts.PageSize)
+
+	return s.repo.Search(ctx, opts)
 }

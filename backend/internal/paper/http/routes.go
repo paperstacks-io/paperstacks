@@ -5,16 +5,18 @@ import (
 	"log/slog"
 	"net/http"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
 )
 
 func AddPaperRoute(
 	mux *http.ServeMux,
 	logger *slog.Logger,
 	paperService *application.PaperService,
+	sessionService commonauth.SessionService,
 ) {
-	defaultMiddle := middleware.NewDefault(logger)
+	defaultMiddle := middleware.NewDefault(logger, sessionService)
 
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handleSearchPapers(logger, paperService)))
 	mux.Handle(http.MethodGet+" /papers/{uuid}", defaultMiddle(handleGetPaperByUUID(logger, paperService)))

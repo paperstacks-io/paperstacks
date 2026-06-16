@@ -4,15 +4,42 @@ import (
 	"context"
 	"testing"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
+const existingPaperUUID = "36583bb4-8cdc-554e-bcf5-f67b60d0b290"
+
+type fakePaperGetter struct {
+	papers map[string]paperDomain.Paper
+}
+
+func (f fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error) {
+	paper, ok := f.papers[uuid]
+	if !ok {
+		return paperDomain.Paper{}, paperDomain.ErrPaperNotFound
+	}
+
+	return paper, nil
+}
+
+func newTestStackService() *StackService {
+	return NewStackService(memory.NewRepository(), fakePaperGetter{
+		papers: map[string]paperDomain.Paper{
+			existingPaperUUID: {
+				UUID:  existingPaperUUID,
+				Title: "Existing Paper",
+			},
+		},
+	})
+}
+
 func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 	stack := domain.NewStack(" Normalized Stack ", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	err := service.Create(context.Background(), *stack)
 	if err != nil {
@@ -44,7 +71,7 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 func TestGetByUUIDError(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 
 	_, err := service.GetByUUID(context.Background(), "unkown")
 	if err != domain.ErrStackNotFound {
@@ -55,7 +82,7 @@ func TestGetByUUIDError(t *testing.T) {
 func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 	stack := domain.NewStack("Update Test Stack", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
 	originalUpdatedAt := stack.UpdatedAt
 	err := service.Create(context.Background(), *stack)
@@ -78,7 +105,7 @@ func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 
 	err := service.Delete(context.Background(), "unknown-stack")
 	if err == nil {
@@ -89,7 +116,7 @@ func TestServiceDeleteReturnsErrorForUnknownStack(t *testing.T) {
 func TestServiceGetByUUIDTrimsUUID(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 
 	stack, err := service.GetByUUID(context.Background(), " 9e1a819a-24ab-47b6-be29-92b49325e4c2 ")
 	if err != nil {
@@ -104,7 +131,7 @@ func TestServiceGetByUUIDTrimsUUID(t *testing.T) {
 func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 	user := userDomain.User{ExternalID: "0"}
 	stack := domain.NewStack("Duplicate Stack", user)
 
@@ -124,7 +151,7 @@ func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 func TestServiceCreateInvalidStackError(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 	stack := domain.NewStack("", userDomain.User{})
 
 	err := service.Create(context.Background(), *stack)
@@ -137,7 +164,7 @@ func TestServiceCreateInvalidStackError(t *testing.T) {
 func TestServiceUpdateInvalidStackError(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 	stack := domain.NewStack("", userDomain.User{})
 
 	_, err := service.Update(context.Background(), *stack)
@@ -149,7 +176,7 @@ func TestServiceUpdateInvalidStackError(t *testing.T) {
 func TestServiceListReturnsInvalidUserError(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 
 	_, err := service.List(context.Background(), "")
 	if err == nil {
@@ -160,10 +187,87 @@ func TestServiceListReturnsInvalidUserError(t *testing.T) {
 func TestServiceListPublicReturnsInvalidUserError(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(memory.NewRepository())
+	service := newTestStackService()
 
 	_, err := service.ListPublic(context.Background(), "")
 	if err == nil {
 		t.Fatalf("ListPublic() expected error but got nil")
+	}
+}
+
+func TestServiceAddPaperAddsPaperToStack(t *testing.T) {
+	t.Parallel()
+
+	service := newTestStackService()
+
+	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", existingPaperUUID)
+	if err != nil {
+		t.Fatalf("AddPaper() error = %v", err)
+	}
+
+	stack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if len(stack.Papers) != 1 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 1)
+	}
+
+	if stack.Papers[0].UUID != existingPaperUUID {
+		t.Fatalf("Paper UUID = %s, want %s", stack.Papers[0].UUID, existingPaperUUID)
+	}
+
+	if stack.Papers[0].Title != "Existing Paper" {
+		t.Fatalf("Paper title = %s, want %s", stack.Papers[0].Title, "Existing Paper")
+	}
+}
+
+func TestServiceAddPaperReturnsErrorForUnknownPaper(t *testing.T) {
+	t.Parallel()
+
+	service := newTestStackService()
+
+	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", "unknown-paper")
+	if err != paperDomain.ErrPaperNotFound {
+		t.Fatalf("AddPaper() error = %v, want %v", err, paperDomain.ErrPaperNotFound)
+	}
+
+	stack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if len(stack.Papers) != 0 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 0)
+	}
+}
+
+func TestServiceRemovePaperRemovesPaperFromStack(t *testing.T) {
+	t.Parallel()
+
+	service := newTestStackService()
+
+	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", existingPaperUUID)
+	if err != nil {
+		t.Fatalf("AddPaper() error = %v", err)
+	}
+
+	err = service.RemovePaper(
+		context.Background(),
+		" 9e1a819a-24ab-47b6-be29-92b49325e4c2 ",
+		" 36583bb4-8cdc-554e-bcf5-f67b60d0b290 ",
+	)
+	if err != nil {
+		t.Fatalf("RemovePaper() error = %v", err)
+	}
+
+	stack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+
+	if len(stack.Papers) != 0 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 0)
 	}
 }

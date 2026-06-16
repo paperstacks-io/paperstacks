@@ -81,6 +81,46 @@ func handleListUserStacks(
 	})
 }
 
+func handleListCurrentUserStacks(
+	logger *slog.Logger,
+	userService *application.UserService,
+	stackService *stackApplication.StackService,
+) nethttp.Handler {
+	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		token, ok := bearerToken(r.Header.Get("Authorization"))
+		if !ok {
+			nethttp.Error(w, "missing bearer token", nethttp.StatusUnauthorized)
+			return
+		}
+
+		user, err := userService.ResolveByAuthToken(r.Context(), token)
+		if err != nil {
+			if errors.Is(err, domain.ErrInvalidAuthToken) {
+				nethttp.Error(w, domain.ErrInvalidAuthToken.Error(), nethttp.StatusUnauthorized)
+				return
+			}
+
+			logger.Error("read current user", "error", err)
+			nethttp.Error(w, err.Error(), nethttp.StatusInternalServerError)
+			return
+		}
+
+		stacks, err := stackService.List(r.Context(), user.ExternalID)
+		if err != nil {
+			logger.Error("read current user stacks", "userId", user.ExternalID, "error", err)
+			nethttp.Error(w, err.Error(), nethttp.StatusInternalServerError)
+			return
+		}
+
+		resp := NewStackResponses(stacks)
+		if err := server.Encode(w, r, nethttp.StatusOK, resp); err != nil {
+			logger.Error("encode current user stacks response", "error", err)
+			nethttp.Error(w, err.Error(), nethttp.StatusInternalServerError)
+			return
+		}
+	})
+}
+
 func handleGetCurrentUser(logger *slog.Logger, service *application.UserService) nethttp.Handler {
 	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		token, ok := bearerToken(r.Header.Get("Authorization"))

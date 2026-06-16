@@ -11,9 +11,11 @@ import (
 	"slices"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
-	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/server/middleware"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 //go:embed assets/* all:templates
@@ -30,6 +32,7 @@ func navItems(activePath string) []navItem {
 	items := []navItem{
 		{Label: "Home", Path: prefix + "/"},
 		{Label: "Papers", Path: prefix + "/papers"},
+		{Label: "Stacks", Path: prefix + "/stacks"},
 		{Label: "Search", Path: prefix + "/search"},
 		{Label: "Settings", Path: prefix + "/settings"},
 	}
@@ -45,8 +48,9 @@ func AddRoute(
 	mux *http.ServeMux,
 	cfg config.Config,
 	logger *slog.Logger,
-	paperService *application.PaperService,
-	sessionService auth.SessionService,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+	sessionService commonauth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -65,11 +69,10 @@ func AddRoute(
 		return fmt.Errorf("load web assets: %w", err)
 	}
 
-	defaultMiddle := middleware.NewDefault(logger)
-	sessionMiddle := auth.SessionMiddleware(sessionService)
-	requireAuthMiddle := auth.RequireAuthMiddleware()
+	defaultMiddle := middleware.NewDefault(logger, sessionService)
+	requireAuthMiddle := webauth.RequireAuthWebMiddleware()
 
-	mux.Handle(http.MethodGet+" /{$}", sessionMiddle(defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL))))
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
 
 	for _, page := range []struct {
 		path         string
@@ -77,6 +80,7 @@ func AddRoute(
 		requiresAuth bool
 	}{
 		{path: "/papers", template: "paper", requiresAuth: false},
+		{path: "/stacks", template: "stack", requiresAuth: false},
 		{path: "/search", template: "search", requiresAuth: false},
 		{path: "/settings", template: "settings", requiresAuth: true},
 		{path: "/auth", template: "auth", requiresAuth: false},
@@ -86,20 +90,22 @@ func AddRoute(
 			return err
 		}
 
-		pageHandler := defaultMiddle(handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL))
+		pageHandler := handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL)
 
 		if page.requiresAuth {
 			pageHandler = requireAuthMiddle(pageHandler)
 		}
-		pageHandler = sessionMiddle(pageHandler)
+		pageHandler = defaultMiddle(pageHandler)
 
 		mux.Handle(http.MethodGet+" "+page.path, pageHandler)
 	}
 
-	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(sessionMiddle(handleLogout(logger, sessionService))))
+	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
 
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearch(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
 	return nil
 }

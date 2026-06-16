@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/document/application"
 	documentHttp "github.com/paperstacks.io/paperstacks/internal/document/http"
 	documentMemory "github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
@@ -20,13 +21,12 @@ import (
 	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	userApplication "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
-	"github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
 type mockSessionService struct{}
 
-func (m mockSessionService) ResolveSession(ctx context.Context, token string) (*auth.Session, error) {
-	return &auth.Session{
+func (m mockSessionService) ResolveSession(ctx context.Context, token string) (*commonauth.Session, error) {
+	return &commonauth.Session{
 		Token:   token,
 		UserID:  "user-1",
 		Email:   "user@example.com",

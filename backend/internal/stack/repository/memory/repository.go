@@ -2,8 +2,10 @@ package memory
 
 import (
 	"context"
+	"strings"
 	"sync"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
@@ -99,4 +101,86 @@ func (r *Repository) ListPublic(ctx context.Context, userExternalID string) ([]d
 	}
 
 	return stacks, nil
+}
+
+func (r *Repository) AddPaper(ctx context.Context, stackUUID string, paper paperDomain.Paper) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, s := range r.data {
+		if s.UUID == stackUUID {
+			for _, p := range s.Papers {
+				if p.UUID == paper.UUID {
+					return nil
+				}
+			}
+			r.data[i].Papers = append(r.data[i].Papers, paper)
+			return nil
+		}
+	}
+	return domain.ErrStackNotFound
+}
+
+func (r *Repository) RemovePaper(ctx context.Context, stackUUID string, paperUUID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, item := range r.data {
+		if item.UUID == stackUUID {
+			for j, p := range item.Papers {
+				if p.UUID == paperUUID {
+					r.data[i].Papers = append(r.data[i].Papers[:j], r.data[i].Papers[j+1:]...)
+					return nil
+				}
+			}
+			return nil
+		}
+	}
+	return domain.ErrStackNotFound
+}
+
+func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make([]domain.Stack, 0, len(r.data))
+
+	for _, stack := range r.data {
+		if stack.IsPublic && matchesQuery(stack, opts.Query) {
+			result = append(result, stack)
+		}
+	}
+
+	page := max(1, opts.Page)
+
+	pageSize := len(result)
+	if opts.PageSize > 0 {
+		pageSize = opts.PageSize
+	}
+	pageSize = max(1, pageSize)
+
+	total := len(result)
+	start := min((page-1)*pageSize, total)
+	end := min(start+pageSize, total)
+
+	items := make([]domain.Stack, 0, end-start)
+	items = append(items, result[start:end]...)
+
+	return domain.SearchResult{
+		Items:    items,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		HasNext:  end < total,
+	}, nil
+}
+
+func matchesQuery(stack domain.Stack, query string) bool {
+	if query == "" {
+		return true
+	}
+
+	query = strings.TrimSpace(strings.ToLower(query))
+
+	return strings.Contains(strings.ToLower(stack.Name), query)
 }
