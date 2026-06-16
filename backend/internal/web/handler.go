@@ -10,8 +10,11 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	"github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type pageData struct {
@@ -28,15 +31,32 @@ type pageData struct {
 }
 
 type papersListData struct {
-	Items         []domain.Paper
+	Items         []paperDomain.Paper
 	Total         int
 	Page          int
 	PageSize      int
 	HasNext       bool
 	PrevPage      int
 	NextPage      int
-	SearchOptions domain.SearchOptions
+	SearchOptions paperDomain.SearchOptions
 	Pagination    []PaginationItem
+}
+
+type stacksListData struct {
+	Items         []stackDomain.Stack
+	Total         int
+	Page          int
+	PageSize      int
+	HasNext       bool
+	PrevPage      int
+	NextPage      int
+	SearchOptions stackDomain.SearchOptions
+	Pagination    []PaginationItem
+}
+
+type stackCreateViewData struct {
+	Success bool
+	Message string
 }
 
 func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
@@ -73,7 +93,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 func handlePapersSearch(
 	logger *slog.Logger,
 	tmpl *template.Template,
-	paperService *application.PaperService,
+	paperService *paperApp.PaperService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -86,7 +106,7 @@ func handlePapersSearch(
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
 
 		page, _ := strconv.Atoi(pageStr)
-		opts := domain.SearchOptions{
+		opts := paperDomain.SearchOptions{
 			Query:  search,
 			SortBy: sortBy,
 			Desc:   desc,
@@ -110,10 +130,122 @@ func handlePapersSearch(
 			SearchOptions: opts,
 			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
 		}
+
 		templateName := "papers/partials/papers-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+	})
+}
+
+func handleStacksSearch(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		search := normalizeFormParam(r.FormValue("search"))
+		pageStr := normalizeFormParam(r.FormValue("page"))
+
+		page, _ := strconv.Atoi(pageStr)
+		opts := stackDomain.SearchOptions{
+			Query: search,
+			Page:  page,
+		}
+
+		result, err := stackService.Search(r.Context(), opts)
+		if err != nil {
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := stacksListData{
+			Items:         result.Items,
+			Total:         result.Total,
+			Page:          result.Page,
+			PageSize:      result.PageSize,
+			HasNext:       result.HasNext,
+			PrevPage:      result.Page - 1,
+			NextPage:      result.Page + 1,
+			SearchOptions: opts,
+			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
+		}
+
+		templateName := "stacks/partials/stacks-list"
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func handleStacksCreate(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		const (
+			createStackErrorTarget   = "#create_stack_error"
+			createStackSuccessTarget = "#create_stack_success"
+		)
+
+		render := func(status int, target string, data stackCreateViewData) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", target)
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, "stacks/partials/stack-alert", data); err != nil {
+				logger.Error("render stack create", "error", err.Error())
+			}
+		}
+
+		renderError := func(status int, message string) {
+			render(status, createStackErrorTarget, stackCreateViewData{
+				Success: false,
+				Message: message,
+			})
+		}
+
+		renderSuccess := func(message string) {
+			render(http.StatusCreated, createStackSuccessTarget, stackCreateViewData{
+				Success: true,
+				Message: message,
+			})
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+			return
+		}
+
+		name := r.FormValue("name")
+		if name == "" {
+			renderError(http.StatusBadRequest, "Stack name cannot be empty.")
+			return
+		}
+
+		isPublic := r.FormValue("is_public") == "true"
+
+		user := userDomain.NewUser(session.UserID, session.Email)
+
+		created := stackDomain.NewStack(name, user)
+		created.IsPublic = isPublic
+
+		if err := stackService.Create(ctx, *created); err != nil {
+			logger.Error("create stack", "error", err.Error())
+			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
+			return
+		}
+
+		renderSuccess("Stack '" + name + "' created successfully.")
 	})
 }
 

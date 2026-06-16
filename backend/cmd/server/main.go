@@ -68,7 +68,14 @@ func run(
 
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, sessionService)
+	web.AddRoute(
+		webMux,
+		cfg,
+		logger,
+		paperService,
+		stackService,
+		sessionService,
+	)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 

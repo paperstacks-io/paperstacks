@@ -4,6 +4,8 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
@@ -12,29 +14,6 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
-
-func handleListAllPublicStacks(
-	logger *slog.Logger,
-	service *application.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		stacks, err := service.ListAllPublic(ctx)
-		if err != nil {
-			logger.Error("list all public stacks", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		resp := NewStackResponses(stacks)
-		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
-			logger.Error("encode stack response", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	})
-}
 
 func handleCreateStack(
 	logger *slog.Logger,
@@ -293,4 +272,53 @@ func handleDeletePaperInStack(
 
 		w.WriteHeader(http.StatusNoContent)
 	})
+}
+
+func handleSearchStacks(
+	logger *slog.Logger,
+	service *application.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := normalizeQueryParam(r.URL.Query().Get("q"))
+		page, _ := strconv.Atoi(normalizeQueryParam(r.URL.Query().Get("page")))
+		pageSize, _ := strconv.Atoi(normalizeQueryParam(r.URL.Query().Get("pageSize")))
+
+		result, err := service.Search(r.Context(), domain.SearchOptions{
+			Query:    query,
+			Page:     page,
+			PageSize: pageSize,
+		})
+		if err != nil {
+			if errors.Is(err, domain.ErrInvalidSearch) {
+				http.Error(w, "invalid search options", http.StatusBadRequest)
+				return
+			}
+
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := NewStackResponses(result.Items)
+		setSearchPaginationHeaders(w, result)
+
+		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
+			logger.Error("encode stack response", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func setSearchPaginationHeaders(w http.ResponseWriter, result domain.SearchResult) {
+	w.Header().Set("X-Page", strconv.Itoa(result.Page))
+	w.Header().Set("X-Page-Size", strconv.Itoa(result.PageSize))
+
+	w.Header().Set("X-Total-Count", strconv.Itoa(result.Total))
+	w.Header().Set("X-Has-Next", strconv.FormatBool(result.HasNext))
+	w.Header().Set("Access-Control-Expose-Headers", "X-Page, X-Page-Size, X-Total-Count, X-Has-Next")
+}
+
+func normalizeQueryParam(param string) string {
+	return strings.ToLower(strings.TrimSpace(param))
 }

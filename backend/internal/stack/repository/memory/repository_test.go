@@ -211,26 +211,15 @@ func TestRepositoryRemovePaperReturnsNotFound(t *testing.T) {
 	}
 }
 
-func TestRepositoryListAllPublicReturnsOnlyPublicStacks(t *testing.T) {
+func TestRepositorySearchByName(t *testing.T) {
 	t.Parallel()
 
 	repo := NewRepository()
+
 	publicStack := domain.Stack{
-		UUID:     "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1",
-		Name:     "Public Stack",
-		Owner:    userDomain.User{ExternalID: "67f25f3f-7aad-4ba8-92e4-ea681479566d"},
-		IsPublic: true,
-	}
-	privateStack := domain.Stack{
-		UUID:     "873be0a7-3568-40c5-b2a2-63b3b8fa41d1",
-		Name:     "Private Stack",
-		Owner:    userDomain.User{ExternalID: "67f25f3f-7aad-4ba8-92e4-ea681479566d"},
-		IsPublic: false,
-	}
-	otherUserStack := domain.Stack{
-		UUID:     "cc92837a-d280-42cb-a689-ea58a46cdb4b",
-		Name:     "Public Stack",
-		Owner:    userDomain.User{ExternalID: "3737191c-4ea8-49f2-8ba6-5c8c67cba6d2"},
+		UUID:     "2070926b-0afc-4471-8e2f-37a29fed20ea",
+		Name:     "Unique Public Stack",
+		Owner:    userDomain.User{ExternalID: "owner-1"},
 		IsPublic: true,
 	}
 
@@ -238,26 +227,119 @@ func TestRepositoryListAllPublicReturnsOnlyPublicStacks(t *testing.T) {
 		t.Fatalf("Create() public stack error = %v", err)
 	}
 
-	if err := repo.Create(context.Background(), privateStack); err != nil {
-		t.Fatalf("Create() private stack error = %v", err)
-	}
-
-	if err := repo.Create(context.Background(), otherUserStack); err != nil {
-		t.Fatalf("Create() other user stack error = %v", err)
-	}
-
-	stacks, err := repo.ListAllPublic(context.Background())
+	result, err := repo.Search(context.Background(), domain.SearchOptions{
+		Query: "  Unique Public Stack  ",
+	})
 	if err != nil {
-		t.Fatalf("ListAllPublic() error = %v", err)
+		t.Fatalf("Search() error = %v, want nil", err)
 	}
 
-	if len(stacks) != 2 {
-		t.Fatalf("ListAllPublic() returned %d stacks, want %d", len(stacks), 2)
+	if result.Total != 1 {
+		t.Fatalf("Search() total = %d, want %d", result.Total, 1)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("Search() returned %d stacks, want %d", len(result.Items), 1)
+	}
+	if result.Items[0].UUID != publicStack.UUID {
+		t.Fatalf("Search() UUID = %s, want %s", result.Items[0].UUID, publicStack.UUID)
+	}
+}
+
+func TestRepositorySearchEmptyQueryReturnsAllStacks(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	stacks := []domain.Stack{
+		{
+			UUID:     "34cef86a-c369-4f61-9ac1-6c4ca09f50f3",
+			Name:     "Public Stack One",
+			Owner:    userDomain.User{ExternalID: "owner-1"},
+			IsPublic: true,
+		},
+		{
+			UUID:     "2051a4d9-23f6-4bfa-8d44-367c28760198",
+			Name:     "Public Stack Two",
+			Owner:    userDomain.User{ExternalID: "owner-2"},
+			IsPublic: true,
+		},
+		{
+			UUID:     "bd9ee496-7381-4c69-a7ba-65bc38010af4",
+			Name:     "Public Stack Three",
+			Owner:    userDomain.User{ExternalID: "owner-3"},
+			IsPublic: false,
+		},
 	}
 
 	for _, stack := range stacks {
-		if !stack.IsPublic {
-			t.Fatalf("ListAllPublic() returned non-public stack with UUID %s", stack.UUID)
+		if err := repo.Create(context.Background(), stack); err != nil {
+			t.Fatalf("Create() error = %v", err)
 		}
+	}
+
+	result, err := repo.Search(context.Background(), domain.SearchOptions{})
+
+	expected := 2
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil", err)
+	}
+	if result.Total != expected {
+		t.Fatalf("Search() total = %d, want %d", result.Total, expected)
+	}
+	if len(result.Items) != expected {
+		t.Fatalf("Search() items = %d, want %d", len(result.Items), expected)
+	}
+}
+
+func TestRepositorySearchPaginatesResults(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	stacks := []domain.Stack{
+		{
+			UUID:     "a13057e3-f6d8-4b4e-9230-fc281af13e33",
+			Name:     "pagination-unique Stack One",
+			Owner:    userDomain.User{ExternalID: "owner-1"},
+			IsPublic: true,
+		},
+		{
+			UUID:     "ce26475e-4ba2-469f-9346-9fda30161e92",
+			Name:     "pagination-unique Stack Two",
+			Owner:    userDomain.User{ExternalID: "owner-2"},
+			IsPublic: true,
+		},
+		{
+			UUID:     "122697ab-95c1-4502-aac0-d755631b8767",
+			Name:     "pagination-unique Stack Three",
+			Owner:    userDomain.User{ExternalID: "owner-3"},
+			IsPublic: true,
+		},
+	}
+
+	for _, stack := range stacks {
+		if err := repo.Create(context.Background(), stack); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+	}
+
+	result, err := repo.Search(context.Background(), domain.SearchOptions{
+		Query: "pagination-unique",
+	})
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil", err)
+	}
+
+	if result.Total != 3 {
+		t.Fatalf("Search() total = %d, want %d", result.Total, 3)
+	}
+	if result.Page != 1 {
+		t.Fatalf("Search() page = %d, want %d", result.Page, 1)
+	}
+	if result.PageSize != 3 {
+		t.Fatalf("Search() pageSize = %d, want %d", result.PageSize, 1)
+	}
+	if result.HasNext {
+		t.Fatalf("Search() hasNext = true, want flase")
 	}
 }

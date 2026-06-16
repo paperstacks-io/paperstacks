@@ -13,7 +13,8 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
-	"github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
@@ -31,6 +32,7 @@ func navItems(activePath string) []navItem {
 	items := []navItem{
 		{Label: "Home", Path: prefix + "/"},
 		{Label: "Papers", Path: prefix + "/papers"},
+		{Label: "Stacks", Path: prefix + "/stacks"},
 		{Label: "Search", Path: prefix + "/search"},
 		{Label: "Settings", Path: prefix + "/settings"},
 	}
@@ -46,7 +48,8 @@ func AddRoute(
 	mux *http.ServeMux,
 	cfg config.Config,
 	logger *slog.Logger,
-	paperService *application.PaperService,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
 	sessionService commonauth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
@@ -77,6 +80,7 @@ func AddRoute(
 		requiresAuth bool
 	}{
 		{path: "/papers", template: "paper", requiresAuth: false},
+		{path: "/stacks", template: "stack", requiresAuth: false},
 		{path: "/search", template: "search", requiresAuth: false},
 		{path: "/settings", template: "settings", requiresAuth: true},
 		{path: "/auth", template: "auth", requiresAuth: false},
@@ -100,6 +104,8 @@ func AddRoute(
 
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearch(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
 	return nil
 }

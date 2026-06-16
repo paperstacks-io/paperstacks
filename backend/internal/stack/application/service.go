@@ -12,6 +12,12 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
+const (
+	defaultSearchPage     = 1
+	defaultSearchPageSize = 10
+	maxSearchPageSize     = 100
+)
+
 type PaperGetter interface {
 	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
@@ -122,7 +128,18 @@ func (s *StackService) RemovePaper(ctx context.Context, stackUUID string, paperU
 	return s.repo.RemovePaper(ctx, strings.TrimSpace(stackUUID), strings.TrimSpace(paperUUID))
 }
 
-// ListAllPublic returns all public stacks.
-func (s *StackService) ListAllPublic(ctx context.Context) ([]domain.Stack, error) {
-	return s.repo.ListAllPublic(ctx)
+// Search returns stacks matching the provided search options.
+// It normalizes the query and applies default pagination values before
+//
+// It returns an error if the stacks could not be searched.
+func (s *StackService) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	opts.Query = strings.ToLower(strings.TrimSpace(opts.Query))
+	opts.Page = max(defaultSearchPage, opts.Page)
+
+	if opts.PageSize <= 1 {
+		opts.PageSize = defaultSearchPageSize
+	}
+	opts.PageSize = min(maxSearchPageSize, opts.PageSize)
+
+	return s.repo.Search(ctx, opts)
 }

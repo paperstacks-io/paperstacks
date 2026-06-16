@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -138,17 +139,48 @@ func (r *Repository) RemovePaper(ctx context.Context, stackUUID string, paperUUI
 	return domain.ErrStackNotFound
 }
 
-func (r *Repository) ListAllPublic(ctx context.Context) ([]domain.Stack, error) {
+func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	stacks := make([]domain.Stack, 0)
+	result := make([]domain.Stack, 0, len(r.data))
 
-	for _, item := range r.data {
-		if item.IsPublic {
-			stacks = append(stacks, item)
+	for _, stack := range r.data {
+		if stack.IsPublic && matchesQuery(stack, opts.Query) {
+			result = append(result, stack)
 		}
 	}
 
-	return stacks, nil
+	page := max(1, opts.Page)
+
+	pageSize := len(result)
+	if opts.PageSize > 0 {
+		pageSize = opts.PageSize
+	}
+	pageSize = max(1, pageSize)
+
+	total := len(result)
+	start := min((page-1)*pageSize, total)
+	end := min(start+pageSize, total)
+
+	items := make([]domain.Stack, 0, end-start)
+	items = append(items, result[start:end]...)
+
+	return domain.SearchResult{
+		Items:    items,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		HasNext:  end < total,
+	}, nil
+}
+
+func matchesQuery(stack domain.Stack, query string) bool {
+	if query == "" {
+		return true
+	}
+
+	query = strings.TrimSpace(strings.ToLower(query))
+
+	return strings.Contains(strings.ToLower(stack.Name), query)
 }
