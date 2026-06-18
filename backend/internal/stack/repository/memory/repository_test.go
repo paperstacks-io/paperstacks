@@ -130,7 +130,7 @@ func TestRepositoryListPublicReturnsOnlyPublicUserStacks(t *testing.T) {
 	}
 	publicStackTwo := domain.Stack{
 		UUID:     "cc92837a-d280-42cb-a689-ea58a46cdb4b",
-		Name:     "Other User Stack",
+		Name:     "Other Public Stack",
 		Owner:    user,
 		IsPublic: true,
 	}
