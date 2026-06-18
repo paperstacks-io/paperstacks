@@ -31,6 +31,8 @@ type Repository interface {
 
 type SearchOptions struct {
 	Query    string
+	SortBy   string
+	Desc     bool
 	Page     int
 	PageSize int
 }

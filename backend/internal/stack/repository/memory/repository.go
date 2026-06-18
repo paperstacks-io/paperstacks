@@ -1,9 +1,12 @@
 package memory
 
 import (
+	"cmp"
 	"context"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -151,6 +154,10 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 		}
 	}
 
+	if opts.SortBy != "" {
+		sortStacksByOrder(result, opts.SortBy, opts.Desc)
+	}
+
 	page := max(1, opts.Page)
 
 	pageSize := len(result)
@@ -173,6 +180,43 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 		PageSize: pageSize,
 		HasNext:  end < total,
 	}, nil
+}
+
+func sortStacksByOrder(stacks []domain.Stack, sortBy string, desc bool) {
+	sort.Slice(stacks, func(i, j int) bool {
+		switch sortBy {
+		case "name":
+			if stacks[i].Name == stacks[j].Name {
+				return compare(stacks[i].UUID, stacks[j].UUID, false)
+			}
+
+			return compare(stacks[i].Name, stacks[j].Name, desc)
+		case "updated_at":
+			if stacks[i].UpdatedAt.Equal(stacks[j].UpdatedAt) {
+				return compare(stacks[i].UUID, stacks[j].UUID, false)
+			}
+
+			return compareTime(stacks[i].UpdatedAt, stacks[j].UpdatedAt, desc)
+
+		default:
+			return compare(stacks[i].UUID, stacks[j].UUID, false)
+		}
+	})
+}
+
+func compare[T cmp.Ordered](a, b T, desc bool) bool {
+	if desc {
+		return a > b
+	}
+	return a < b
+}
+
+func compareTime(a, b time.Time, desc bool) bool {
+	if desc {
+		return a.After(b)
+	}
+
+	return a.Before(b)
 }
 
 func matchesQuery(stack domain.Stack, query string) bool {

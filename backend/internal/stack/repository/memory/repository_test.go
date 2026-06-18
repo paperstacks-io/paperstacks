@@ -343,3 +343,58 @@ func TestRepositorySearchPaginatesResults(t *testing.T) {
 		t.Fatalf("Search() hasNext = true, want flase")
 	}
 }
+func TestRepositorySearchSortByUpdatedAtDescending(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+	ctx := context.Background()
+
+	user := userDomain.User{
+		ExternalID: "dbe3febc-ab91-486c-b51f-38ab0f59a4d9",
+	}
+
+	stackOne := domain.NewStack("sort-created Stack One", user)
+	stackOne.IsPublic = true
+
+	stackTwo := domain.NewStack("sort-created Stack Two", user)
+	stackTwo.IsPublic = true
+
+	stackThree := domain.NewStack("sort-created Stack Three", user)
+	stackThree.IsPublic = true
+
+	stacks := []domain.Stack{
+		*stackOne,
+		*stackTwo,
+		*stackThree,
+	}
+
+	for _, stack := range stacks {
+		if err := repo.Create(ctx, stack); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+	}
+
+	result, err := repo.Search(ctx, domain.SearchOptions{
+		Query:  "sort-created",
+		SortBy: "updated_at",
+		Desc:   true,
+	})
+
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil", err)
+	}
+
+	if result.Total != 3 {
+		t.Fatalf("Search() returned %d stacks, want %d", len(result.Items), 3)
+	}
+
+	if result.Items[0].Name != "sort-created Stack Three" {
+		t.Fatalf("Search() first stack = %q, want %q", result.Items[0].Name, "sort-created Stack Three")
+	}
+	if result.Items[1].Name != "sort-created Stack Two" {
+		t.Fatalf("Search() second stack = %q, want %q", result.Items[1].Name, "sort-created Stack Two")
+	}
+	if result.Items[2].Name != "sort-created Stack One" {
+		t.Fatalf("Search() third stack = %q, want %q", result.Items[2].Name, "sort-created Stack One")
+	}
+}

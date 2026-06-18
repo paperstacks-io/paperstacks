@@ -8,7 +8,7 @@
         <span class="htmx-indicator loading loading-spinner loading-sm"></span>
       </h2>
 
-      <div hx-indicator=".htmx-indicator">
+      <form hx-target="#stack-results" hx-indicator=".htmx-indicator">
         <div class="card w-full">
           <div class="flex flex-row gap-4">
             <label class="input input-bordered flex items-center gap-2 w-full">
@@ -38,15 +38,29 @@
               />
             </label>
 
+            <select
+              class="select select-bordered block w-40"
+              name="sortBy"
+              hx-post="/app/stacks/search"
+              hx-trigger="change"
+              hx-target="#stack-results"
+              hx-vals='{"page": 1}'
+            >
+              <option value="+name">Name (A-Z)</option>
+              <option value="-name">Name (Z-A)</option>
+              <option value="+updated_at">Oldest</option>
+              <option value="-updated_at" selected>Newest</option>
+            </select>
+
             {{ if .Session.IsValid }}
             <button
               type="button"
               class="btn btn-neutral"
               onclick="
-                create_stack_modal.showModal()
-                document.getElementById('create_stack_form').reset()
-                document.getElementById('create_stack_error').innerHTML = ''
-                document.getElementById('create_stack_submit').disabled = true
+                create_stack_modal.showModal();
+                document.getElementById('create_stack_form').reset();
+                document.getElementById('create_stack_error').innerHTML = '';
+                document.getElementById('create_stack_submit').disabled = true;
               "
             >
               <span>Create stack</span>
@@ -70,7 +84,9 @@
     }
   "
                     >
-                      <label class="input input-bordered flex items-center gap-2 w-full">
+                      <label
+                        class="input input-bordered flex items-center gap-2 w-full"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           class="size-5 opacity-70"
@@ -90,7 +106,11 @@
                           type="text"
                           name="name"
                           placeholder="My Stack"
-                          oninput="document.getElementById('create_stack_submit').disabled = this.value.trim() === ''"
+                          oninput="
+                            document.getElementById(
+                              'create_stack_submit',
+                            ).disabled = this.value.trim() === ''
+                          "
                         />
                       </label>
                       <div id="create_stack_error" class="mt-2"></div>
@@ -100,16 +120,36 @@
                       >
                         <div>
                           <p class="font-medium">Public Stack</p>
-                          <p class="text-sm opacity-70">Others can view this stack</p>
+                          <p class="text-sm opacity-70">
+                            Others can view this stack
+                          </p>
                         </div>
 
-                        <input type="checkbox" name="is_public" value="true" class="toggle toggle-success" />
+                        <input
+                          type="checkbox"
+                          name="is_public"
+                          value="true"
+                          class="toggle toggle-success"
+                        />
                       </div>
 
                       <div class="modal-action">
-                        <button id="create_stack_submit" type="submit" class="btn btn-primary" disabled>Create</button>
+                        <button
+                          id="create_stack_submit"
+                          type="submit"
+                          class="btn btn-primary"
+                          disabled
+                        >
+                          Create
+                        </button>
 
-                        <button type="button" class="btn" onclick="create_stack_modal.close()">Close</button>
+                        <button
+                          type="button"
+                          class="btn"
+                          onclick="create_stack_modal.close()"
+                        >
+                          Close
+                        </button>
                       </div>
                     </form>
                   </div>
@@ -136,7 +176,7 @@
             {{ end }}
           </div>
         </div>
-      </div>
+      </form>
 
       <div id="stack-results"></div>
     </div>

@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"html/template"
+	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -147,12 +148,19 @@ func handleStacksSearch(
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		search := normalizeFormParam(r.FormValue("search"))
+		sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
 		pageStr := normalizeFormParam(r.FormValue("page"))
+
+		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
+		sortBy, desc := strings.CutPrefix(sortBy, "-")
+		log.Println("sortBy:", sortBy, "desc:", desc)
 
 		page, _ := strconv.Atoi(pageStr)
 		opts := stackDomain.SearchOptions{
-			Query: search,
-			Page:  page,
+			Query:  search,
+			SortBy: sortBy,
+			Desc:   desc,
+			Page:   page,
 		}
 
 		result, err := stackService.Search(r.Context(), opts)
