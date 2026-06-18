@@ -24,7 +24,7 @@ import (
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	phttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
+	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
@@ -53,19 +53,8 @@ func run(
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
 	webMux := http.NewServeMux()
-	server.AddRoute(
-		rootMux,
-		ctx,
-		logger,
-		sessionService,
-	)
-	phttp.AddPaperRoute(
-		apiMux,
-		logger,
-		paperService,
-		sessionService,
-	)
-
+	server.AddRoute(rootMux, ctx, logger, sessionService)
+	paperHttp.AddPaperRoute(apiMux, logger, paperService, sessionService)
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
