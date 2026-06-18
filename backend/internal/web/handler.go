@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"html/template"
-	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -153,7 +152,6 @@ func handleStacksSearch(
 
 		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
 		sortBy, desc := strings.CutPrefix(sortBy, "-")
-		log.Println("sortBy:", sortBy, "desc:", desc)
 
 		page, _ := strconv.Atoi(pageStr)
 		opts := stackDomain.SearchOptions{
