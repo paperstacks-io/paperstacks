@@ -107,8 +107,8 @@ func TestRepositoryListReturnsAllUserStacks(t *testing.T) {
 		t.Fatalf("List() error = %v", err)
 	}
 
-	if len(stacks) != 1 {
-		t.Fatalf("List() returned %d stacks, want %d", len(stacks), 1)
+	if len(stacks) != len(seedData()) {
+		t.Fatalf("List() returned %d stacks, want %d", len(stacks), len(seedData()))
 	}
 
 	for _, stack := range stacks {
@@ -156,14 +156,15 @@ func TestRepositoryListPublicReturnsOnlyPublicUserStacks(t *testing.T) {
 		t.Fatalf("ListPublic() error = %v", err)
 	}
 
-	if len(stacks) != 2 {
-		t.Fatalf("ListPublic() returned %d stacks, want %d", len(stacks), 2)
+	expected := countPublicSeedStacks() + 2
+	if len(stacks) != expected {
+		t.Fatalf("ListPublic() returned %d stacks, want %d", len(stacks), expected)
 	}
-	if stacks[0].UUID != publicStackOne.UUID {
-		t.Fatalf("ListPublic() UUID = %s, want %s", stacks[0].UUID, publicStackOne.UUID)
+	if stacks[len(stacks)-2].UUID != publicStackOne.UUID {
+		t.Fatalf("ListPublic() UUID = %s, want %s", stacks[len(stacks)-2].UUID, publicStackOne.UUID)
 	}
-	if stacks[1].UUID != publicStackTwo.UUID {
-		t.Fatalf("ListPublic() UUID = %s, want %s", stacks[1].UUID, publicStackOne.UUID)
+	if stacks[len(stacks)-1].UUID != publicStackTwo.UUID {
+		t.Fatalf("ListPublic() UUID = %s, want %s", stacks[len(stacks)-1].UUID, publicStackTwo.UUID)
 	}
 }
 
@@ -288,7 +289,7 @@ func TestRepositorySearchEmptyQueryReturnsAllStacks(t *testing.T) {
 
 	result, err := repo.Search(context.Background(), domain.SearchOptions{})
 
-	expected := 2
+	expected := countPublicSeedStacks() + 2
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -298,6 +299,16 @@ func TestRepositorySearchEmptyQueryReturnsAllStacks(t *testing.T) {
 	if len(result.Items) != expected {
 		t.Fatalf("Search() items = %d, want %d", len(result.Items), expected)
 	}
+}
+
+func countPublicSeedStacks() int {
+	count := 0
+	for _, stack := range seedData() {
+		if stack.IsPublic {
+			count++
+		}
+	}
+	return count
 }
 
 func TestRepositorySearchPaginatesResults(t *testing.T) {
