@@ -11,32 +11,58 @@
       <div hx-indicator=".htmx-indicator">
         <div class="card w-full">
           <div class="flex flex-row gap-4">
-            <label class="input input-bordered flex items-center gap-2 w-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 opacity-50"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-                />
-              </svg>
+            <form id="stack_search_form" class="flex grow flex-row gap-4" hx-target="#stack-results">
+              <label class="input input-bordered flex items-center gap-2 w-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5 opacity-50"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                  />
+                </svg>
 
-              <input
-                type="search"
-                name="search"
-                placeholder="Search Stacks..."
+                <input
+                  type="search"
+                  name="search"
+                  placeholder="Search Stacks..."
+                  hx-post="/app/stacks/search"
+                  hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+                  hx-target="#stack-results"
+                  hx-vals='{"page": 1}'
+                />
+              </label>
+
+              <select
+                class="select select-bordered block w-40"
+                name="sortBy"
                 hx-post="/app/stacks/search"
-                hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+                hx-trigger="change"
                 hx-target="#stack-results"
                 hx-vals='{"page": 1}'
-              />
-            </label>
+              >
+                <option value="+name">Name (A-Z)</option>
+                <option value="-name">Name (Z-A)</option>
+                <option value="+updated_at">Oldest</option>
+                <option value="-updated_at" selected>Newest</option>
+              </select>
+            </form>
+
+            <button
+              id="refresh_stacks_button"
+              type="button"
+              class="hidden"
+              hx-post="/app/stacks/search"
+              hx-target="#stack-results"
+              hx-include="#stack_search_form"
+              hx-vals='{"page": 1}'
+            ></button>
 
             {{ if .Session.IsValid }}
             <button
@@ -67,6 +93,7 @@
                       hx-on::after-request="
     if (event.detail.successful) {
       create_stack_modal.close();
+      document.getElementById('refresh_stacks_button').click();
     }
   "
                     >
