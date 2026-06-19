@@ -173,7 +173,13 @@ func TestRepositoryAddPaperDoesNotAddDuplicatePaper(t *testing.T) {
 
 	repo := NewRepository()
 
-	err := repo.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", paperDomain.Paper{
+	initialStack, err := repo.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() initial error = %v", err)
+	}
+	initialPaperCount := len(initialStack.Papers)
+
+	err = repo.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", paperDomain.Paper{
 		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
 	})
 	if err != nil {
@@ -192,8 +198,8 @@ func TestRepositoryAddPaperDoesNotAddDuplicatePaper(t *testing.T) {
 		t.Fatalf("GetByUUID() error = %v", err)
 	}
 
-	if len(stack.Papers) != 1 {
-		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 1)
+	if len(stack.Papers) != initialPaperCount+1 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), initialPaperCount+1)
 	}
 }
 
