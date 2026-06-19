@@ -200,7 +200,13 @@ func TestServiceAddPaperAddsPaperToStack(t *testing.T) {
 
 	service := newTestStackService()
 
-	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", existingPaperUUID)
+	initialStack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() initial error = %v", err)
+	}
+	initialPaperCount := len(initialStack.Papers)
+
+	err = service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", existingPaperUUID)
 	if err != nil {
 		t.Fatalf("AddPaper() error = %v", err)
 	}
@@ -210,16 +216,17 @@ func TestServiceAddPaperAddsPaperToStack(t *testing.T) {
 		t.Fatalf("GetByUUID() error = %v", err)
 	}
 
-	if len(stack.Papers) != 1 {
-		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 1)
+	if len(stack.Papers) != initialPaperCount+1 {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), initialPaperCount+1)
 	}
 
-	if stack.Papers[0].UUID != existingPaperUUID {
-		t.Fatalf("Paper UUID = %s, want %s", stack.Papers[0].UUID, existingPaperUUID)
+	addedPaper := stack.Papers[len(stack.Papers)-1]
+	if addedPaper.UUID != existingPaperUUID {
+		t.Fatalf("Paper UUID = %s, want %s", addedPaper.UUID, existingPaperUUID)
 	}
 
-	if stack.Papers[0].Title != "Existing Paper" {
-		t.Fatalf("Paper title = %s, want %s", stack.Papers[0].Title, "Existing Paper")
+	if addedPaper.Title != "Existing Paper" {
+		t.Fatalf("Paper title = %s, want %s", addedPaper.Title, "Existing Paper")
 	}
 }
 
@@ -228,7 +235,13 @@ func TestServiceAddPaperReturnsErrorForUnknownPaper(t *testing.T) {
 
 	service := newTestStackService()
 
-	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", "unknown-paper")
+	initialStack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() initial error = %v", err)
+	}
+	initialPaperCount := len(initialStack.Papers)
+
+	err = service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", "unknown-paper")
 	if err != paperDomain.ErrPaperNotFound {
 		t.Fatalf("AddPaper() error = %v, want %v", err, paperDomain.ErrPaperNotFound)
 	}
@@ -238,8 +251,8 @@ func TestServiceAddPaperReturnsErrorForUnknownPaper(t *testing.T) {
 		t.Fatalf("GetByUUID() error = %v", err)
 	}
 
-	if len(stack.Papers) != 0 {
-		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 0)
+	if len(stack.Papers) != initialPaperCount {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), initialPaperCount)
 	}
 }
 
@@ -248,7 +261,13 @@ func TestServiceRemovePaperRemovesPaperFromStack(t *testing.T) {
 
 	service := newTestStackService()
 
-	err := service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", existingPaperUUID)
+	initialStack, err := service.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
+	if err != nil {
+		t.Fatalf("GetByUUID() initial error = %v", err)
+	}
+	initialPaperCount := len(initialStack.Papers)
+
+	err = service.AddPaper(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2", existingPaperUUID)
 	if err != nil {
 		t.Fatalf("AddPaper() error = %v", err)
 	}
@@ -267,7 +286,7 @@ func TestServiceRemovePaperRemovesPaperFromStack(t *testing.T) {
 		t.Fatalf("GetByUUID() error = %v", err)
 	}
 
-	if len(stack.Papers) != 0 {
-		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), 0)
+	if len(stack.Papers) != initialPaperCount {
+		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), initialPaperCount)
 	}
 }
