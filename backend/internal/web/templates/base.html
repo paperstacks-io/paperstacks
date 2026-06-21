@@ -75,6 +75,51 @@
         {{end}}
         <div class="divider"></div>
       </ul>
+
+      <!-- My Stacks -->
+      {{if .Session.IsValid }}
+      <div class="px-4 pt-8">
+        <div class="mb-2 px-2 text-sm font-semibold text-base-content/50">My Stacks</div>
+        <ul class="menu w-full p-0">
+          {{range .Stacks}}
+          <li>
+            <a
+              href="{{.Path}}"
+              hx-get="{{.Path}}"
+              hx-target="#{{$.AppTargetID}}"
+              hx-select="#{{$.AppTargetID}}"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="btn btn-ghost btn-sm w-full justify-between px-3 font-semibold"
+              onclick="alert('not implemented yet')"
+            >
+              <span>{{.Name}}</span>
+              <span class="badge badge-sm border-0 bg-base-200 text-base-content/70"> {{.Size}} </span>
+            </a>
+          </li>
+
+          {{if .HasMore}}
+          <li class="mt-2">
+            <a
+              href="#"
+              hx-get="#"
+              hx-target="#{{$.AppTargetID}}"
+              hx-select="#{{$.AppTargetID}}"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="btn btn-ghost btn-sm w-full justify-between px-3 font-semibold text-base-content/60 hover:text-base-content"
+              onclick="alert('not implemented yet')"
+            >
+              <span>Show more</span>
+              <span>›</span>
+            </a>
+          </li>
+          {{end}} {{end}}
+        </ul>
+      </div>
+      {{end}}
+
+      <!-- Footer -->
       <div class="flex flex-1"></div>
       <div id="sidebar-footer" class="flex flex-col p-4 w-full">
         {{if .Session.IsValid }}

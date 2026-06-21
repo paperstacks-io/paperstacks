@@ -15,6 +15,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
@@ -25,6 +26,14 @@ type navItem struct {
 	Label  string
 	Path   string
 	Active bool
+}
+
+type navStackItem struct {
+	Name    string
+	Size    int
+	Path    string
+	Active  bool
+	HasMore bool
 }
 
 func navItems(activePath string) []navItem {
@@ -39,6 +48,36 @@ func navItems(activePath string) []navItem {
 
 	for i := range items {
 		items[i].Active = items[i].Path == activePath
+	}
+
+	return items
+}
+
+func navStackItems(stacks []stackDomain.Stack) []navStackItem {
+	testPaths := []string{
+		"/papers",
+		"/stacks",
+		"/search",
+		"/settings",
+	}
+
+	prefix := "/app"
+	items := make([]navStackItem, 0, 4)
+
+	for i, stack := range stacks {
+		if i >= 4 {
+			break
+		}
+
+		items = append(items, navStackItem{
+			Name: stack.Name,
+			Size: len(stack.Papers),
+			Path: prefix + testPaths[i],
+		})
+	}
+
+	if len(items) > 0 {
+		items[len(items)-1].HasMore = len(stacks) > 4
 	}
 
 	return items
@@ -72,7 +111,16 @@ func AddRoute(
 	defaultMiddle := middleware.NewDefault(logger, sessionService)
 	requireAuthMiddle := webauth.RequireAuthWebMiddleware()
 
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
+	mux.Handle(
+		http.MethodGet+" /{$}",
+		defaultMiddle(handleIndex(
+			logger,
+			homeTemplate,
+			navItems("/app/"),
+			cfg.HankoAPIURL,
+			stackService,
+		)),
+	)
 
 	for _, page := range []struct {
 		path         string
@@ -90,7 +138,13 @@ func AddRoute(
 			return err
 		}
 
-		pageHandler := handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL)
+		pageHandler := handleIndex(
+			logger,
+			pageTemplate,
+			navItems(page.path),
+			cfg.HankoAPIURL,
+			stackService,
+		)
 
 		if page.requiresAuth {
 			pageHandler = requireAuthMiddle(pageHandler)

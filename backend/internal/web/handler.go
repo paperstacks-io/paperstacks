@@ -28,6 +28,7 @@ type pageData struct {
 	PageContentID string
 	HankoAPIURL   string
 	Session       commonauth.Session
+	Stacks        []navStackItem
 }
 
 type papersListData struct {
@@ -59,13 +60,29 @@ type stackCreateViewData struct {
 	Message string
 }
 
-func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
+func handleIndex(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	navItems []navItem,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		session, ok := commonauth.SessionFromContext(r.Context())
 		if !ok {
 			session = &commonauth.Session{}
+		}
+
+		navStacks := []navStackItem{}
+		if session.IsValid {
+			stacks, err := stackService.List(r.Context(), session.UserID)
+			if err != nil {
+				logger.Error("read sidebar stacks", "userId", session.UserID, "error", err.Error())
+			}
+
+			navStacks = navStackItems(stacks)
 		}
 
 		data := pageData{
@@ -77,6 +94,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 			PageContentID: "page-content",
 			HankoAPIURL:   hankoAPIURL,
 			Session:       *session,
+			Stacks:        navStacks,
 		}
 
 		templateName := "base"
@@ -85,6 +103,7 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 		}
 
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+			logger.Error("render page", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
