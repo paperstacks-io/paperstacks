@@ -45,6 +45,7 @@
 </ul>
 <form class="mt-6">
   <input type="hidden" name="search" value="{{ .SearchOptions.Query }}" />
+  <input type="hidden" name="sortBy" value="{{ if .SearchOptions.Desc }}-{{ end }}{{ .SearchOptions.SortBy }}" />
   <div class="flex join justify-center">
     <button
       class="join-item btn  {{ if lt .Page 2 }} btn-disabled {{end}}"
