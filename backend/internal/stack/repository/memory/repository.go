@@ -26,7 +26,7 @@ func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
 	defer r.mu.Unlock()
 
 	for _, item := range r.data {
-		if item.Name == stack.Name && item.Owner.ExternalID == stack.Owner.ExternalID {
+		if strings.ToLower(item.Name) == strings.ToLower(stack.Name) && item.Owner.ExternalID == stack.Owner.ExternalID {
 			return domain.ErrStackAlreadyExists
 		}
 	}
@@ -186,11 +186,11 @@ func sortStacksByOrder(stacks []domain.Stack, sortBy string, desc bool) {
 	sort.Slice(stacks, func(i, j int) bool {
 		switch sortBy {
 		case "name":
-			if stacks[i].Name == stacks[j].Name {
+			if strings.EqualFold(strings.ToLower(stacks[i].Name), strings.ToLower(stacks[j].Name)) {
 				return compare(stacks[i].UUID, stacks[j].UUID, false)
 			}
 
-			return compare(stacks[i].Name, stacks[j].Name, desc)
+			return compare(strings.ToLower(stacks[i].Name), strings.ToLower(stacks[j].Name), desc)
 		case "updated_at":
 			if stacks[i].UpdatedAt.Equal(stacks[j].UpdatedAt) {
 				return compare(stacks[i].UUID, stacks[j].UUID, false)
