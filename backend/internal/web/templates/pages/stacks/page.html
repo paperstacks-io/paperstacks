@@ -80,9 +80,10 @@
 
             <dialog id="create_stack_modal" class="modal">
               <div class="modal-box">
-                <div class="card bg-base-100">
+                <div class="card">
                   <div class="card-body">
                     <h2 class="card-title">Create Stack</h2>
+
                     <form
                       id="create_stack_form"
                       hx-post="/app/stacks/create"
@@ -91,53 +92,38 @@
                       hx-on::before-request="document.getElementById('create_stack_error').innerHTML = ''"
                       hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"
                       hx-on::after-request="
-    if (event.detail.successful) {
-      create_stack_modal.close();
-      document.getElementById('refresh_stacks_button').click();
-    }
-  "
+                        if (event.detail.successful) {
+                          create_stack_modal.close();
+                          document.getElementById('refresh_stacks_button').click();
+                        }
+                      "
                     >
-                      <label class="input input-bordered flex items-center gap-2 w-full">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="size-5 opacity-70"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <path d="M12 2 2 7l10 5 10-5-10-5Z" />
-                          <path d="m2 17 10 5 10-5" />
-                          <path d="m2 12 10 5 10-5" />
-                        </svg>
-
+                      <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Stack name</legend>
                         <input
+                          class="input validator w-full"
+                          required
+                          minlength="1"
                           type="text"
                           name="name"
                           placeholder="My Stack"
                           oninput="document.getElementById('create_stack_submit').disabled = this.value.trim() === ''"
                         />
-                      </label>
-                      <div id="create_stack_error" class="mt-2"></div>
-
-                      <div
-                        class="mt-4 flex items-center justify-between rounded-box border border-base-300 bg-base-100 p-4"
-                      >
-                        <div>
-                          <p class="font-medium">Public Stack</p>
-                          <p class="text-sm opacity-70">Others can view this stack</p>
-                        </div>
-
-                        <input type="checkbox" name="is_public" value="true" class="toggle toggle-success" />
-                      </div>
-
-                      <div class="modal-action">
+                        <p class="validator-hint hidden">Required</p>
+                      </fieldset>
+                      <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Stack settings</legend>
+                        <label class="label">
+                          <input type="checkbox" class="toggle toggle-success" name="is_public" checked="checked" />
+                          Make stack public (visible to everyone)
+                        </label>
+                      </fieldset>
+                      <div class="card-actions justify-end modal-action">
                         <button id="create_stack_submit" type="submit" class="btn btn-primary" disabled>Create</button>
 
                         <button type="button" class="btn" onclick="create_stack_modal.close()">Close</button>
                       </div>
+                      <div id="create_stack_error" class="mt-2"></div>
                     </form>
                   </div>
                 </div>

@@ -233,20 +233,21 @@ func handleStacksCreate(
 		}
 
 		name := r.FormValue("name")
-		if name == "" {
-			renderError(http.StatusBadRequest, "Stack name cannot be empty.")
-			return
-		}
-
-		isPublic := r.FormValue("is_public") == "true"
+		isPublic := r.FormValue("is_public") == "on"
 
 		user := userDomain.NewUser(session.UserID, session.Email)
 
-		created := stackDomain.NewStack(name, user)
-		created.IsPublic = isPublic
+		stack := stackDomain.NewStack(name, user)
+		stack.IsPublic = isPublic
 
-		if err := stackService.Create(ctx, *created); err != nil {
+		if err := stackService.Create(ctx, *stack); err != nil {
 			logger.Error("create stack", "error", err.Error())
+
+			if err == stackDomain.ErrStackAlreadyExists {
+				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
+				return
+			}
+
 			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
 			return
 		}
