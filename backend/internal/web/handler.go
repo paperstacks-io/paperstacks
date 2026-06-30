@@ -54,7 +54,7 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
-type stackCreateViewData struct {
+type alertData struct {
 	Message string
 }
 
@@ -200,7 +200,7 @@ func handleStacksCreate(
 			createStackSuccessTarget = "#create_stack_success"
 		)
 
-		render := func(status int, target string, templateName string, data stackCreateViewData) {
+		render := func(status int, target string, templateName string, data alertData) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("HX-Retarget", target)
 			w.Header().Set("HX-Reswap", "innerHTML")
@@ -212,13 +212,13 @@ func handleStacksCreate(
 		}
 
 		renderError := func(status int, message string) {
-			render(status, createStackErrorTarget, "stacks/partials/alert-error", stackCreateViewData{
+			render(status, createStackErrorTarget, "stacks/partials/alert-error", alertData{
 				Message: message,
 			})
 		}
 
 		renderSuccess := func(message string) {
-			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", stackCreateViewData{
+			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", alertData{
 				Message: message,
 			})
 		}
