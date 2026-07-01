@@ -55,8 +55,7 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
-type stackCreateViewData struct {
-	Success bool
+type alertData struct {
 	Message string
 }
 
@@ -220,27 +219,25 @@ func handleStacksCreate(
 			createStackSuccessTarget = "#create_stack_success"
 		)
 
-		render := func(status int, target string, data stackCreateViewData) {
+		render := func(status int, target string, templateName string, data alertData) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("HX-Retarget", target)
 			w.Header().Set("HX-Reswap", "innerHTML")
 			w.WriteHeader(status)
 
-			if err := tmpl.ExecuteTemplate(w, "stacks/partials/stack-alert", data); err != nil {
+			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 				logger.Error("render stack create", "error", err.Error())
 			}
 		}
 
 		renderError := func(status int, message string) {
-			render(status, createStackErrorTarget, stackCreateViewData{
-				Success: false,
+			render(status, createStackErrorTarget, "stacks/partials/alert-error", alertData{
 				Message: message,
 			})
 		}
 
 		renderSuccess := func(message string) {
-			render(http.StatusCreated, createStackSuccessTarget, stackCreateViewData{
-				Success: true,
+			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", alertData{
 				Message: message,
 			})
 		}
@@ -252,20 +249,21 @@ func handleStacksCreate(
 		}
 
 		name := r.FormValue("name")
-		if name == "" {
-			renderError(http.StatusBadRequest, "Stack name cannot be empty.")
-			return
-		}
-
-		isPublic := r.FormValue("is_public") == "true"
+		isPublic := r.FormValue("is_public") == "on"
 
 		user := userDomain.NewUser(session.UserID, session.Email)
 
-		created := stackDomain.NewStack(name, user)
-		created.IsPublic = isPublic
+		stack := stackDomain.NewStack(name, user)
+		stack.IsPublic = isPublic
 
-		if err := stackService.Create(ctx, *created); err != nil {
+		if err := stackService.Create(ctx, *stack); err != nil {
 			logger.Error("create stack", "error", err.Error())
+
+			if err == stackDomain.ErrStackAlreadyExists {
+				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
+				return
+			}
+
 			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
 			return
 		}
