@@ -17,6 +17,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
+	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
@@ -43,6 +44,19 @@ func run(
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
+
+	if ok, _ := cfg.ObjectStorage.Validate(); ok {
+		objectStore, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
+		if err != nil {
+			logger.Error("ObjectStorage config error", "error", err)
+			return err
+		}
+
+		if err := objectStore.Check(ctx); err != nil {
+			logger.Error("ObjectStorage check error", "error", err)
+			return err
+		}
+	}
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
@@ -134,6 +148,11 @@ const bannerLogo = `
 `
 
 func banner(w io.Writer, cfg config.Config) {
+	storageStatus := "Not configured or invalid configuration"
+	if ok, _ := cfg.ObjectStorage.Validate(); ok {
+		storageStatus = cfg.ObjectStorage.Endpoint
+	}
+
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	fmt.Fprint(tw, bannerLogo)
@@ -143,6 +162,7 @@ func banner(w io.Writer, cfg config.Config) {
 	fmt.Fprintln(tw, "  Build time:\t"+build.BuildTime)
 	fmt.Fprintln(tw)
 	fmt.Fprintln(tw, "  Hanko API URL:\t"+cfg.HankoAPIURL)
+	fmt.Fprintln(tw, "  Object Storage URL:\t"+storageStatus)
 	fmt.Fprintln(tw)
 
 	_ = tw.Flush()
