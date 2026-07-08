@@ -72,6 +72,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
 
       - name: Compute Docker build args
         id: build-args
