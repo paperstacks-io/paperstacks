@@ -63,3 +63,63 @@ jobs:
 
       - name: Format
         run: npm run fmt:check
+
+  docker:
+    needs: [build, format-frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compute Docker build args
+        id: build-args
+        working-directory: ./backend
+        run: |
+          GO_VERSION="$(awk '/^go / { print $2 }' go.mod)"
+          APP_VERSION="$(git describe --tags --abbrev=0 02>/dev/null || echo development)"
+          APP_GIT_HASH="$(git rev-parse --short HEAD)"
+          APP_BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          test -n "$GO_VERSION"
+          test -n "$APP_VERSION"
+          test -n "$APP_GIT_HASH"
+          test -n "$APP_BUILD_TIME"
+
+          {
+            echo "go-version=$GO_VERSION"
+            echo "app-version=$APP_VERSION"
+            echo "app-git-hash=$APP_GIT_HASH"
+            echo "app-build-time=$APP_BUILD_TIME"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/paperstacks-io/paperstacks:latest
+            ghcr.io/paperstacks-io/paperstacks:${{ steps.build-args.outputs.app-version }}
+          build-args: |
+            GO_VERSION=${{ steps.build-args.outputs.go-version }}
+            APP_VERSION=${{ steps.build-args.outputs.app-version }}
+            APP_GIT_HASH=${{ steps.build-args.outputs.app-git-hash }}
+            APP_BUILD_TIME=${{ steps.build-args.outputs.app-build-time }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/paperstacks-io/paperstacks
+            org.opencontainers.image.description=paperstacks-io
+            org.opencontainers.image.licenses=MIT
