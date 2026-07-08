@@ -34,7 +34,11 @@ build-server: ## Build server application
 .PHONY: build-docker
 build-docker: ## Build Docker image for server
 	@GO_VERSION=$$(grep '^go ' go.mod | cut -d' ' -f2) && \
-	CONTAINER_CMD=$$(command -v docker >/dev/null 2>&1 && printf 'docker' || command -v podman >/dev/null 2>&1 && printf 'podman') && \
+	CONTAINER_CMD=$$(if command -v docker >/dev/null 2>&1; then \
+		printf 'docker'; \
+	elif command -v podman >/dev/null 2>&1; then \
+		printf 'podman'; \
+	fi) && \
 	test -n "$$CONTAINER_CMD" || { echo "Neither docker nor podman is installed"; exit 1; } && \
 	echo "Using $$CONTAINER_CMD with Go version $$GO_VERSION from go.mod" && \
 	$$CONTAINER_CMD build \
