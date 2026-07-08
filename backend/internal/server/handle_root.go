@@ -26,7 +26,7 @@ func handleRoot() http.Handler {
 						Href: baseURL + "/",
 					},
 					"web-frontend": {
-						Href: baseURL + "/web",
+						Href: baseURL + "/app",
 					},
 					"api": {
 						Href: baseURL + "/api",
