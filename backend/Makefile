@@ -3,8 +3,7 @@ BINARY_DIR=.
 BUILD_PKG=github.com/paperstacks.io/paperstacks/internal/common/build
 VERSION ?= $(if $(APP_VERSION),$(APP_VERSION),$(shell git describe --tags 2>/dev/null || echo development))
 GIT_HASH ?= $(if $(APP_GIT_HASH),$(APP_GIT_HASH),$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown))
-BUILD_TIME ?= $(if $(APP_BUILD_TIME),$(APP_BUILD_TIME),$(shell date -u +"%Y-%m-%dT%H:%M:%SZ"))
-BUILD_LDFLAGS=-ldflags "-X $(BUILD_PKG).Version=$(VERSION) -X $(BUILD_PKG).GitHash=$(GIT_HASH) -X $(BUILD_PKG).BuildTime=$(BUILD_TIME)"
+BUILD_LDFLAGS=-ldflags "-X $(BUILD_PKG).Version=$(VERSION) -X $(BUILD_PKG).GitHash=$(GIT_HASH)"
 
 .PHONY: deps
 deps: ## Install all Go dependencies
@@ -44,9 +43,7 @@ build-docker: ## Build Docker image for server
 	GO_VERSION=$$GO_VERSION \
 	APP_VERSION=$(VERSION) \
 	APP_GIT_HASH=$(GIT_HASH) \
-	APP_BUILD_TIME=$(BUILD_TIME) \
 	docker compose build paperstacks
-	# $$COMPOSE_CMD build paperstacks
 
 .PHONY: help
 help:
