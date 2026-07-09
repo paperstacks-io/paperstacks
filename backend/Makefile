@@ -34,19 +34,19 @@ build-server: ## Build server application
 .PHONY: build-docker
 build-docker: ## Build Docker image for server
 	@GO_VERSION=$$(grep '^go ' go.mod | cut -d' ' -f2) && \
-	CONTAINER_CMD=$$(if command -v docker >/dev/null 2>&1; then \
-		printf 'docker'; \
-	elif command -v podman >/dev/null 2>&1; then \
-		printf 'podman'; \
+	COMPOSE_CMD=$$(if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then \
+		printf 'docker compose'; \
+	elif command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then \
+		printf 'podman compose'; \
 	fi) && \
-	test -n "$$CONTAINER_CMD" || { echo "Neither docker nor podman is installed"; exit 1; } && \
-	echo "Using $$CONTAINER_CMD with Go version $$GO_VERSION from go.mod" && \
-	$$CONTAINER_CMD build \
-		--build-arg GO_VERSION=$$GO_VERSION \
-		--build-arg APP_VERSION=$(VERSION) \
-		--build-arg APP_GIT_HASH=$(GIT_HASH) \
-		--build-arg APP_BUILD_TIME=$(BUILD_TIME) \
-		-t paperstacks .
+	test -n "$$COMPOSE_CMD" || { echo "Neither docker compose nor podman compose is installed"; exit 1; } && \
+	echo "Using $$COMPOSE_CMD with Go version $$GO_VERSION from go.mod" && \
+	GO_VERSION=$$GO_VERSION \
+	APP_VERSION=$(VERSION) \
+	APP_GIT_HASH=$(GIT_HASH) \
+	APP_BUILD_TIME=$(BUILD_TIME) \
+	docker compose build paperstacks
+	# $$COMPOSE_CMD build paperstacks
 
 .PHONY: help
 help:

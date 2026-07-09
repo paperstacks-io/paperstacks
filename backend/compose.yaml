@@ -1,8 +1,16 @@
-version: "3.8"
-
 services:
   paperstacks:
-    build: .
-    image: paperstacks
+    build:
+      context: .
+      args:
+        GO_VERSION: ${GO_VERSION:-1}
+        APP_VERSION: ${APP_VERSION:-development}
+        APP_GIT_HASH: ${APP_GIT_HASH:-unknown}
+        APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+      labels:
+        org.opencontainers.image.source: https://github.com/paperstacks-io/paperstacks
+        org.opencontainers.image.description: paperstacks-io
+        org.opencontainers.image.licenses: MIT
+    image: ghcr.io/paperstacks-io/paperstacks:latest
     ports:
       - "8080:8080"
