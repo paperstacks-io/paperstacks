@@ -65,6 +65,7 @@ jobs:
         run: npm run fmt:check
 
   docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build, format-frontend]
     runs-on: ubuntu-24.04-arm
     permissions:
