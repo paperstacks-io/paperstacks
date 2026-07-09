@@ -79,24 +79,7 @@ jobs:
       - name: Compute Docker build args
         id: build-args
         working-directory: ./backend
-        run: |
-          GO_VERSION="$(awk '/^go / { print $2 }' go.mod)"
-          APP_VERSION="$(git describe --tags --abbrev=0 02>/dev/null || echo development)"
-          APP_GIT_HASH="$(git rev-parse --short HEAD)"
-          APP_BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-          test -n "$GO_VERSION"
-          test -n "$APP_VERSION"
-          test -n "$APP_GIT_HASH"
-          test -n "$APP_BUILD_TIME"
-
-          {
-            echo "go-version=$GO_VERSION"
-            echo "app-version=$APP_VERSION"
-            echo "app-git-hash=$APP_GIT_HASH"
-            echo "app-build-time=$APP_BUILD_TIME"
-          } >> "$GITHUB_OUTPUT"
-
+        run: make build-github-output >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -120,7 +103,6 @@ jobs:
             GO_VERSION=${{ steps.build-args.outputs.go-version }}
             APP_VERSION=${{ steps.build-args.outputs.app-version }}
             APP_GIT_HASH=${{ steps.build-args.outputs.app-git-hash }}
-            APP_BUILD_TIME=${{ steps.build-args.outputs.app-build-time }}
           labels: |
             org.opencontainers.image.source=https://github.com/paperstacks-io/paperstacks
             org.opencontainers.image.description=paperstacks-io
