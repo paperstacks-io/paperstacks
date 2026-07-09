@@ -5,7 +5,7 @@ services:
       args:
         GO_VERSION: ${GO_VERSION:-1}
         APP_VERSION: ${APP_VERSION:-development}
-        APP_GIT_HASH: ${APP_GIT_HASH:-unknown}
+        APP_GIT_HASH: ${APP_GIT_HASH}
       labels:
         org.opencontainers.image.source: https://github.com/paperstacks-io/paperstacks
         org.opencontainers.image.description: paperstacks-io
