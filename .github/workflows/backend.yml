@@ -15,7 +15,7 @@ jobs:
         working-directory: ./backend
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -51,7 +51,7 @@ jobs:
       run:
         working-directory: ./backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
@@ -63,3 +63,48 @@ jobs:
 
       - name: Format
         run: npm run fmt:check
+
+  docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, format-frontend]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute Docker build args
+        id: build-args
+        working-directory: ./backend
+        run: make build-github-output >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ghcr.io/paperstacks-io/paperstacks:latest
+            ghcr.io/paperstacks-io/paperstacks:${{ steps.build-args.outputs.app-version }}
+          build-args: |
+            GO_VERSION=${{ steps.build-args.outputs.go-version }}
+            APP_VERSION=${{ steps.build-args.outputs.app-version }}
+            APP_GIT_HASH=${{ steps.build-args.outputs.app-git-hash }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/paperstacks-io/paperstacks
+            org.opencontainers.image.description=paperstacks-io
+            org.opencontainers.image.licenses=MIT
