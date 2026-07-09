@@ -159,7 +159,6 @@ func banner(w io.Writer, cfg config.Config) {
 	fmt.Fprintln(tw)
 	fmt.Fprintln(tw, "  Version:\t"+build.Version)
 	fmt.Fprintln(tw, "  Git hash:\t"+build.GitHash)
-	fmt.Fprintln(tw, "  Build time:\t"+build.BuildTime)
 	fmt.Fprintln(tw)
 	fmt.Fprintln(tw, "  Hanko API URL:\t"+cfg.HankoAPIURL)
 	fmt.Fprintln(tw, "  Object Storage URL:\t"+storageStatus)

@@ -21,7 +21,6 @@ type pageData struct {
 	Title         string
 	AppVersion    string
 	AppGitHash    string
-	AppBuildTime  string
 	PageName      string
 	NavItems      []navItem
 	AppTargetID   string
@@ -70,7 +69,6 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 		data := pageData{
 			AppVersion:    build.Version,
 			AppGitHash:    build.GitHash,
-			AppBuildTime:  build.BuildTime,
 			NavItems:      navItems,
 			AppTargetID:   "app-shell",
 			PageContentID: "page-content",
