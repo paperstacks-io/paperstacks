@@ -74,6 +74,14 @@
         </li>
         {{end}}
         <div class="divider"></div>
+        {{if .Session.IsValid }}
+        <span class="font-light">My Library</span>
+        <li><a onClick="alert('Not implemented yet!')">My Papers</a></li>
+        <li><a onClick="alert('Not implemented yet!')">My Stacks</a></li>
+        <span class="font-light">Tools</span>
+        <li><a onClick="alert('Not implemented yet!')">Import Papers</a></li>
+        <li><a onClick="alert('Not implemented yet!')">Export to BibTeX</a></li>
+        {{ end }}
       </ul>
       <div class="flex flex-1"></div>
       <div id="sidebar-footer" class="flex flex-col p-4 w-full">
