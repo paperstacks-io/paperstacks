@@ -7,10 +7,9 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./tmp/server"
-  cmd = "go build -o ./tmp/server ./cmd/server/"
+  cmd = "make build-server"
   delay = 1000
-  entrypoint = ["./tmp/server"]
+  entrypoint = ["./server"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "node_modules"]
   exclude_file = []
   exclude_regex = ["_test.go"]
