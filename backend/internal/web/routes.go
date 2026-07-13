@@ -106,6 +106,7 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearch(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
+	mux.Handle(http.MethodGet+" /stacks/public/count", defaultMiddle(handleStacksPublicCount(logger, tmpl, stackService)))
 
 	return nil
 }

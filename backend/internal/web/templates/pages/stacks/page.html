@@ -4,7 +4,11 @@
   <div class="card bg-base-100 shadow-sm w-full">
     <div class="card-body w-full">
       <h2 class="card-title">
-        List of stacks
+        Public stacks
+        <div class="badge badge-neutral badge-outline">
+          <span hx-get="/app/stacks/public/count" hx-trigger="load" hx-swap="innerHTML"> ... </span>
+          availabe
+        </div>
         <span class="htmx-indicator loading loading-spinner loading-sm"></span>
       </h2>
 
