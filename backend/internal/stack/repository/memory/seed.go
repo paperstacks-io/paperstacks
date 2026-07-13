@@ -29,7 +29,7 @@ func seedData() []domain.Stack {
 }
 
 func demoUser() userDomain.User {
-	return userDomain.User{ExternalID: demoUserExternalID}
+	return userDomain.User{ExternalID: demoUserExternalID, Email: "demo@paperstacks.io"}
 }
 
 func seedPaper(uuid, title string) paperDomain.Paper {
