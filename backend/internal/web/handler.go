@@ -22,7 +22,6 @@ type pageData struct {
 	AppVersion  string
 	AppGitHash  string
 	PageName    string
-	NavItems    []navItem
 	HankoAPIURL string
 	Session     commonauth.Session
 }
@@ -55,7 +54,7 @@ type alertData struct {
 	Message string
 }
 
-func handlePage(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
+func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -67,7 +66,7 @@ func handlePage(tmpl *template.Template, navItems []navItem, hankoAPIURL string)
 		data := pageData{
 			AppVersion:  build.Version,
 			AppGitHash:  build.GitHash,
-			NavItems:    navItems,
+			PageName:    pageNameFromPath(r.URL.Path),
 			HankoAPIURL: hankoAPIURL,
 			Session:     *session,
 		}
@@ -85,11 +84,20 @@ func handlePage(tmpl *template.Template, navItems []navItem, hankoAPIURL string)
 
 func handleStacksPage(
 	tmpl *template.Template,
-	navItems []navItem,
 	hankoAPIURL string,
 	stackService *stackApp.StackService,
 ) http.Handler {
-	return handlePage(tmpl, navItems, hankoAPIURL)
+	return handlePage(tmpl, hankoAPIURL)
+}
+
+func pageNameFromPath(path string) string {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "home"
+	}
+
+	pageName, _, _ := strings.Cut(path, "/")
+	return pageName
 }
 
 func handlePapersSearch(

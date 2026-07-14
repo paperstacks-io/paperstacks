@@ -21,29 +21,6 @@ import (
 //go:embed assets/* all:templates
 var content embed.FS
 
-type navItem struct {
-	Label  string
-	Path   string
-	Active bool
-}
-
-func navItems(activePath string) []navItem {
-	prefix := "/app"
-	items := []navItem{
-		{Label: "Home", Path: prefix + "/"},
-		{Label: "Papers", Path: prefix + "/papers"},
-		{Label: "Stacks", Path: prefix + "/stacks"},
-		{Label: "Search", Path: prefix + "/search"},
-		{Label: "Settings", Path: prefix + "/settings"},
-	}
-
-	for i := range items {
-		items[i].Active = items[i].Path == activePath
-	}
-
-	return items
-}
-
 func AddRoute(
 	mux *http.ServeMux,
 	cfg config.Config,
@@ -81,22 +58,22 @@ func AddRoute(
 
 	// Pages
 	homeTmpl := pageTemplate("home/page")
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handlePage(homeTmpl, navItems("/"), cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handlePage(homeTmpl, cfg.HankoAPIURL)))
 
 	papersTmpl := pageTemplate("papers/page")
-	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, navItems("/papers"), cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
 
 	stacksTmpl := pageTemplate("stacks/page")
-	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(stacksTmpl, navItems("/stacks"), cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(stacksTmpl, cfg.HankoAPIURL, stackService)))
 
 	searchTmpl := pageTemplate("search/page")
-	mux.Handle(http.MethodGet+" /search", defaultMiddle(handlePage(searchTmpl, navItems("/search"), cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /search", defaultMiddle(handlePage(searchTmpl, cfg.HankoAPIURL)))
 
 	settingsTmpl := pageTemplate("settings/page")
-	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, navItems("/settings"), cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, cfg.HankoAPIURL)))
 
 	authTmpl := pageTemplate("auth/page")
-	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, navItems("/auth"), cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
 
 	// Partials
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
