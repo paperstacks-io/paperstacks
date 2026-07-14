@@ -301,25 +301,6 @@ func handleStacksCreate(
 	})
 }
 
-func handleStacksPublicCount(
-	logger *slog.Logger,
-	tmpl *template.Template,
-	stackService *stackApp.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		counter, err := stackService.CountPublic(r.Context())
-		if err != nil {
-			logger.Error("count public stacks", "error", err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		_, _ = w.Write([]byte(strconv.Itoa(counter)))
-	})
-}
-
 func handleLogout(
 	logger *slog.Logger,
 	sessionService commonauth.SessionService,
