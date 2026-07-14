@@ -18,13 +18,13 @@ import (
 )
 
 type pageData struct {
-	Title         string
-	AppVersion    string
-	AppGitHash    string
-	PageName      string
-	NavItems      []navItem
-	HankoAPIURL   string
-	Session       commonauth.Session
+	Title       string
+	AppVersion  string
+	AppGitHash  string
+	PageName    string
+	NavItems    []navItem
+	HankoAPIURL string
+	Session     commonauth.Session
 }
 
 type papersListData struct {
@@ -55,7 +55,7 @@ type alertData struct {
 	Message string
 }
 
-func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
+func handlePage(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -81,6 +81,15 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
+}
+
+func handleStacksPage(
+	tmpl *template.Template,
+	navItems []navItem,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return handlePage(tmpl, navItems, hankoAPIURL)
 }
 
 func handlePapersSearch(
