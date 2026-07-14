@@ -6,7 +6,7 @@
       <h2 class="card-title">
         Public stacks
         <div class="badge badge-neutral badge-outline">
-          <span hx-get="/app/stacks/public/count" hx-trigger="load" hx-swap="innerHTML"> ... </span>
+          <span>{{ .PublicStackCount }}</span>
           availabe
         </div>
         <span class="htmx-indicator loading loading-spinner loading-sm"></span>

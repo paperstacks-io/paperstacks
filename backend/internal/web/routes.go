@@ -64,7 +64,7 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
 
 	stacksTmpl := pageTemplate("stacks/page")
-	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(stacksTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(logger, stacksTmpl, cfg.HankoAPIURL, stackService)))
 
 	searchTmpl := pageTemplate("search/page")
 	mux.Handle(http.MethodGet+" /search", defaultMiddle(handlePage(searchTmpl, cfg.HankoAPIURL)))
