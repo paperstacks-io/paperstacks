@@ -23,8 +23,6 @@ type pageData struct {
 	AppGitHash    string
 	PageName      string
 	NavItems      []navItem
-	AppTargetID   string
-	PageContentID string
 	HankoAPIURL   string
 	Session       commonauth.Session
 }
@@ -67,13 +65,11 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 		}
 
 		data := pageData{
-			AppVersion:    build.Version,
-			AppGitHash:    build.GitHash,
-			NavItems:      navItems,
-			AppTargetID:   "app-shell",
-			PageContentID: "page-content",
-			HankoAPIURL:   hankoAPIURL,
-			Session:       *session,
+			AppVersion:  build.Version,
+			AppGitHash:  build.GitHash,
+			NavItems:    navItems,
+			HankoAPIURL: hankoAPIURL,
+			Session:     *session,
 		}
 
 		templateName := "base"
