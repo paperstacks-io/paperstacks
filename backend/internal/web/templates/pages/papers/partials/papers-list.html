@@ -58,7 +58,7 @@
 
   <div class="flex join justify-center">
     <button
-      class="join-item btn  {{ if lt .Page 2 }} btn-disabled {{end}}"
+      class="join-item btn  {{ if lt .Page 2 }} btn-disabled {{ end }}"
       hx-post="/app/papers/search"
       hx-include="closest form"
       hx-vals='{"page": {{ .PrevPage }}}'
@@ -69,7 +69,7 @@
     {{ range .Pagination }}
     <button
       type="button"
-      class="join-item btn {{if .IsActive}}btn-active{{ end }} {{if .IsSeperator}}btn-disabled{{ end }} "
+      class="join-item btn {{ if .IsActive }}btn-active{{ end }} {{ if .IsSeperator }}btn-disabled{{ end }} "
       hx-post="/app/papers/search"
       hx-include="closest form"
       hx-vals='{"page": {{ .TargetPage }}}'
@@ -80,7 +80,7 @@
 
     {{ end }}
     <button
-      class="join-item btn {{if not .HasNext }} btn-disabled {{end}}"
+      class="join-item btn {{ if not .HasNext }} btn-disabled {{ end }}"
       hx-post="/app/papers/search"
       hx-include="closest form"
       hx-vals='{"page": {{ .NextPage }}}'

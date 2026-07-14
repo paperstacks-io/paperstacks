@@ -59,7 +59,7 @@ func AddRoute(
 
 	tmpl := template.Must(template.ParseFS(content, templateFiles...))
 
-	homeTemplate, err := pageTemplateSet(tmpl, "home")
+	homeTemplate, err := pageTemplateSet(tmpl, "home/page")
 	if err != nil {
 		return err
 	}
@@ -79,11 +79,11 @@ func AddRoute(
 		template     string
 		requiresAuth bool
 	}{
-		{path: "/papers", template: "paper", requiresAuth: false},
-		{path: "/stacks", template: "stack", requiresAuth: false},
-		{path: "/search", template: "search", requiresAuth: false},
-		{path: "/settings", template: "settings", requiresAuth: true},
-		{path: "/auth", template: "auth", requiresAuth: false},
+		{path: "/papers", template: "papers/page", requiresAuth: false},
+		{path: "/stacks", template: "stacks/page", requiresAuth: false},
+		{path: "/search", template: "search/page", requiresAuth: false},
+		{path: "/settings", template: "settings/page", requiresAuth: true},
+		{path: "/auth", template: "auth/page", requiresAuth: false},
 	} {
 		pageTemplate, err := pageTemplateSet(tmpl, page.template)
 		if err != nil {
@@ -147,7 +147,7 @@ func pageTemplateSet(base *template.Template, pageTemplate string) (*template.Te
 		return nil, fmt.Errorf("clone web templates: %w", err)
 	}
 
-	if _, err := cloned.Parse(`{{define "page-body"}}{{template "` + pageTemplate + `" .}}{{end}}`); err != nil {
+	if _, err := cloned.Parse(`{{ define "page-body" }}{{ template "` + pageTemplate + `" . }}{{ end }}`); err != nil {
 		return nil, fmt.Errorf("parse page template alias: %w", err)
 	}
 

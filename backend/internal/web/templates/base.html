@@ -1,4 +1,4 @@
-{{define "base"}}
+{{ define "base" }}
 <!doctype html>
 <html data-theme="emerald" lang="en">
   <head>
@@ -19,13 +19,13 @@
     </script>
   </head>
   <body class="bg-base-200">
-    {{template "app" .}}
+    {{ template "app" . }}
   </body>
 </html>
-{{end}}
+{{ end }}
 
 <!-- App -->
-{{define "app"}}
+{{ define "app" }}
 <div id="{{.AppTargetID}}" class="drawer min-h-screen lg:drawer-open">
   <input id="app-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col items-center justify-center">
@@ -47,7 +47,7 @@
       </div>
     </nav>
     <!-- Page content here -->
-    {{template "page-content" .}}
+    {{ template "page-content" . }}
   </div>
 
   <!-- Sidebar -->
@@ -59,7 +59,7 @@
         <img src="./assets/img/logo-text.png" width="200" alt="paperstacks.io logo" />
       </div>
       <ul class="menu border-b border-base-300 w-full p-4">
-        {{range .NavItems}}
+        {{ range .NavItems }}
         <li>
           <a
             href="{{.Path}}"
@@ -68,13 +68,13 @@
             hx-select="#{{$.AppTargetID}}"
             hx-swap="outerHTML"
             hx-push-url="true"
-            class="{{if .Active}}menu-active{{end}}"
+            class="{{ if .Active }}menu-active{{ end }}"
             >{{.Label}}</a
           >
         </li>
-        {{end}}
+        {{ end }}
         <div class="divider"></div>
-        {{if .Session.IsValid }}
+        {{ if .Session.IsValid }}
         <span class="font-light">My Library</span>
         <li><a onClick="alert('Not implemented yet!')">My Papers</a></li>
         <li><a onClick="alert('Not implemented yet!')">My Stacks</a></li>
@@ -85,10 +85,10 @@
       </ul>
       <div class="flex flex-1"></div>
       <div id="sidebar-footer" class="flex flex-col p-4 w-full">
-        {{if .Session.IsValid }}
+        {{ if .Session.IsValid }}
         <p class="text-sm text-center">{{.Session.Email}}</p>
         <button class="btn btn-sm btn-neutral" hx-post="/app/auth/logout">Logout</button>
-        {{else}}
+        {{ else }}
         <button
           href="/app/auth"
           hx-get="/app/auth"
@@ -100,7 +100,7 @@
         >
           Login
         </button>
-        {{end}}
+        {{ end }}
         <div class="divider"></div>
         <p class="text-sm text-secondary">
           {{ .AppVersion}}
@@ -110,9 +110,9 @@
     </aside>
   </div>
 </div>
-{{end}}
+{{ end }}
 
 <!-- The content of each page -->
-{{define "page-content"}}
-<div id="{{.PageContentID}}" class="flex min-h-0 min-w-0 w-full flex-1 flex-col">{{template "page-body" .}}</div>
-{{end}}
+{{ define "page-content" }}
+<div id="{{.PageContentID}}" class="flex min-h-0 min-w-0 w-full flex-1 flex-col">{{ template "page-body" . }}</div>
+{{ end }}
