@@ -21,29 +21,6 @@ import (
 //go:embed assets/* all:templates
 var content embed.FS
 
-type navItem struct {
-	Label  string
-	Path   string
-	Active bool
-}
-
-func navItems(activePath string) []navItem {
-	prefix := "/app"
-	items := []navItem{
-		{Label: "Home", Path: prefix + "/"},
-		{Label: "Papers", Path: prefix + "/papers"},
-		{Label: "Stacks", Path: prefix + "/stacks"},
-		{Label: "Search", Path: prefix + "/search"},
-		{Label: "Settings", Path: prefix + "/settings"},
-	}
-
-	for i := range items {
-		items[i].Active = items[i].Path == activePath
-	}
-
-	return items
-}
-
 func AddRoute(
 	mux *http.ServeMux,
 	cfg config.Config,
@@ -59,11 +36,6 @@ func AddRoute(
 
 	tmpl := template.Must(template.ParseFS(content, templateFiles...))
 
-	homeTemplate, err := pageTemplateSet(tmpl, "home/page")
-	if err != nil {
-		return err
-	}
-
 	assets, err := fs.Sub(content, "assets")
 	if err != nil {
 		return fmt.Errorf("load web assets: %w", err)
@@ -71,42 +43,46 @@ func AddRoute(
 
 	defaultMiddle := middleware.NewDefault(logger, sessionService)
 	requireAuthMiddle := webauth.RequireAuthWebMiddleware()
-
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
-
-	for _, page := range []struct {
-		path         string
-		template     string
-		requiresAuth bool
-	}{
-		{path: "/papers", template: "papers/page", requiresAuth: false},
-		{path: "/stacks", template: "stacks/page", requiresAuth: false},
-		{path: "/search", template: "search/page", requiresAuth: false},
-		{path: "/settings", template: "settings/page", requiresAuth: true},
-		{path: "/auth", template: "auth/page", requiresAuth: false},
-	} {
-		pageTemplate, err := pageTemplateSet(tmpl, page.template)
-		if err != nil {
-			return err
-		}
-
-		pageHandler := handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL)
-
-		if page.requiresAuth {
-			pageHandler = requireAuthMiddle(pageHandler)
-		}
-		pageHandler = defaultMiddle(pageHandler)
-
-		mux.Handle(http.MethodGet+" "+page.path, pageHandler)
+	authenticated := func(handler http.Handler) http.Handler {
+		return defaultMiddle(requireAuthMiddle(handler))
 	}
 
-	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
+	pageTemplate := func(name string) *template.Template {
+		pageTemplate, err := pageTemplateSet(tmpl, name)
+		if err != nil {
+			panic(fmt.Errorf("load %s page template: %w", name, err))
+		}
 
-	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
+		return pageTemplate
+	}
+
+	// Pages
+	homeTmpl := pageTemplate("home/page")
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handlePage(homeTmpl, cfg.HankoAPIURL)))
+
+	papersTmpl := pageTemplate("papers/page")
+	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
+
+	stacksTmpl := pageTemplate("stacks/page")
+	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(logger, stacksTmpl, cfg.HankoAPIURL, stackService)))
+
+	searchTmpl := pageTemplate("search/page")
+	mux.Handle(http.MethodGet+" /search", defaultMiddle(handlePage(searchTmpl, cfg.HankoAPIURL)))
+
+	settingsTmpl := pageTemplate("settings/page")
+	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, cfg.HankoAPIURL)))
+
+	authTmpl := pageTemplate("auth/page")
+	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
+
+	// Partials
+	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearch(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
-	mux.Handle(http.MethodGet+" /stacks/public/count", defaultMiddle(handleStacksPublicCount(logger, tmpl, stackService)))
+
+	// Static content
+	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
 
 	return nil
 }

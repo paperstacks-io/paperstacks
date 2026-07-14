@@ -26,7 +26,7 @@
 
 <!-- App -->
 {{ define "app" }}
-<div id="{{.AppTargetID}}" class="drawer min-h-screen lg:drawer-open">
+<div id="app-shell" class="drawer min-h-screen lg:drawer-open">
   <input id="app-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col items-center justify-center">
     <!-- Navbar -->
@@ -59,20 +59,66 @@
         <img src="./assets/img/logo-text.png" width="200" alt="paperstacks.io logo" />
       </div>
       <ul class="menu border-b border-base-300 w-full p-4">
-        {{ range .NavItems }}
         <li>
           <a
-            href="{{.Path}}"
-            hx-get="{{.Path}}"
-            hx-target="#{{$.AppTargetID}}"
-            hx-select="#{{$.AppTargetID}}"
+            href="/app/"
+            hx-get="/app/"
+            hx-target="#app-shell"
+            hx-select="#app-shell"
             hx-swap="outerHTML"
             hx-push-url="true"
-            class="{{ if .Active }}menu-active{{ end }}"
-            >{{.Label}}</a
+            class="{{ if eq .PageName `home` }}menu-active{{ end }}"
+            >Home</a
           >
         </li>
-        {{ end }}
+        <li>
+          <a
+            href="/app/papers"
+            hx-get="/app/papers"
+            hx-target="#app-shell"
+            hx-select="#app-shell"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
+            >Papers</a
+          >
+        </li>
+        <li>
+          <a
+            href="/app/stacks"
+            hx-get="/app/stacks"
+            hx-target="#app-shell"
+            hx-select="#app-shell"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            class="{{ if eq .PageName `stacks` }}menu-active{{ end }}"
+            >Stacks</a
+          >
+        </li>
+        <li>
+          <a
+            href="/app/search"
+            hx-get="/app/search"
+            hx-target="#app-shell"
+            hx-select="#app-shell"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            class="{{ if eq .PageName `search` }}menu-active{{ end }}"
+            >Search</a
+          >
+        </li>
+        <li>
+          <a
+            href="/app/settings"
+            hx-get="/app/settings"
+            hx-target="#app-shell"
+            hx-select="#app-shell"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            class="{{ if eq .PageName `settings` }}menu-active{{ end }}"
+            >Settings</a
+          >
+        </li>
         <div class="divider"></div>
         {{ if .Session.IsValid }}
         <span class="font-light">My Library</span>
@@ -92,8 +138,8 @@
         <button
           href="/app/auth"
           hx-get="/app/auth"
-          hx-target="#{{$.AppTargetID}}"
-          hx-select="#{{$.AppTargetID}}"
+          hx-target="#app-shell"
+          hx-select="#app-shell"
           hx-swap="outerHTML"
           hx-push-url="true"
           class="btn btn-sm btn-neutral"
@@ -114,5 +160,5 @@
 
 <!-- The content of each page -->
 {{ define "page-content" }}
-<div id="{{.PageContentID}}" class="flex min-h-0 min-w-0 w-full flex-1 flex-col">{{ template "page-body" . }}</div>
+<div id="page-content" class="flex min-h-0 min-w-0 w-full flex-1 flex-col">{{ template "page-body" . }}</div>
 {{ end }}

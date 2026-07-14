@@ -18,15 +18,12 @@ import (
 )
 
 type pageData struct {
-	Title         string
-	AppVersion    string
-	AppGitHash    string
-	PageName      string
-	NavItems      []navItem
-	AppTargetID   string
-	PageContentID string
-	HankoAPIURL   string
-	Session       commonauth.Session
+	Title       string
+	AppVersion  string
+	AppGitHash  string
+	PageName    string
+	HankoAPIURL string
+	Session     commonauth.Session
 }
 
 type papersListData struct {
@@ -53,11 +50,16 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
+type stacksPageData struct {
+	pageData
+	PublicStackCount int
+}
+
 type alertData struct {
 	Message string
 }
 
-func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
+func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -67,24 +69,72 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 		}
 
 		data := pageData{
-			AppVersion:    build.Version,
-			AppGitHash:    build.GitHash,
-			NavItems:      navItems,
-			AppTargetID:   "app-shell",
-			PageContentID: "page-content",
-			HankoAPIURL:   hankoAPIURL,
-			Session:       *session,
+			AppVersion:  build.Version,
+			AppGitHash:  build.GitHash,
+			PageName:    pageNameFromPath(r.URL.Path),
+			HankoAPIURL: hankoAPIURL,
+			Session:     *session,
 		}
 
-		templateName := "base"
-		if r.Header.Get("HX-Request") == "true" {
-			templateName = "app"
-		}
-
-		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
+		renderTemplate(w, r, tmpl, data)
 	})
+}
+
+func handleStacksPage(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		counter, err := stackService.CountPublic(r.Context())
+		if err != nil {
+			logger.Error("count public stacks", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := stacksPageData{
+			pageData: pageData{
+				AppVersion:  build.Version,
+				AppGitHash:  build.GitHash,
+				PageName:    pageNameFromPath(r.URL.Path),
+				HankoAPIURL: hankoAPIURL,
+				Session:     *session,
+			},
+			PublicStackCount: counter,
+		}
+
+		renderTemplate(w, r, tmpl, data)
+	})
+}
+
+func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
+	templateName := "base"
+	if r.Header.Get("HX-Request") == "true" {
+		templateName = "app"
+	}
+
+	if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+}
+
+func pageNameFromPath(path string) string {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "home"
+	}
+
+	pageName, _, _ := strings.Cut(path, "/")
+	return pageName
 }
 
 func handlePapersSearch(
@@ -248,25 +298,6 @@ func handleStacksCreate(
 		}
 
 		renderSuccess("Stack '" + name + "' created successfully.")
-	})
-}
-
-func handleStacksPublicCount(
-	logger *slog.Logger,
-	tmpl *template.Template,
-	stackService *stackApp.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		counter, err := stackService.CountPublic(r.Context())
-		if err != nil {
-			logger.Error("count public stacks", "error", err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		_, _ = w.Write([]byte(strconv.Itoa(counter)))
 	})
 }
 
