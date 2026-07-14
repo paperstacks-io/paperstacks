@@ -10,18 +10,24 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-type DocumentService struct {
-	repo    domain.Repository
-	storage domain.Storage
+type PaperService interface {
+	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
 
-func NewDocumentService(repo domain.Repository, storage domain.Storage) *DocumentService {
+type DocumentService struct {
+	repo         domain.Repository
+	storage      domain.Storage
+	paperService PaperService
+}
+
+func NewDocumentService(repo domain.Repository, storage domain.Storage, paperService PaperService) *DocumentService {
 	return &DocumentService{
-		repo:    repo,
-		storage: storage,
+		repo:         repo,
+		storage:      storage,
+		paperService: paperService,
 	}
 }
 
@@ -42,31 +48,39 @@ func (c *limitCountingReader) Read(p []byte) (int, error) {
 
 func (s *DocumentService) Upload(
 	ctx context.Context,
-	document domain.Document,
-	user userDomain.User,
+	paperUUID string,
+	fileName string,
+	userID string,
 	r io.Reader,
 ) (domain.Document, error) {
-	const maxFileSize = 10 * 1024 * 1024
-	if document.Size > maxFileSize {
-		return domain.Document{}, domain.ErrFileSizeExceeded
+	if _, err := s.paperService.GetByUUID(ctx, paperUUID); err != nil {
+		return domain.Document{}, err
 	}
 
-	buf := make([]byte, 512)
-	n, err := io.ReadFull(io.LimitReader(r, 512), buf)
+	const (
+		maxFileSize        = 10 * 1024 * 1024
+		pdfSignature       = "%PDF-"
+		pdfSignatureLength = len(pdfSignature)
+		documentType       = "application/pdf"
+		sniffBufferSize    = 512
+	)
+
+	buf := make([]byte, sniffBufferSize)
+	n, err := io.ReadFull(io.LimitReader(r, sniffBufferSize), buf)
 	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
 		return domain.Document{}, fmt.Errorf("failed to read file header: %w", err)
 	}
 
-	if n < 5 {
+	if n < pdfSignatureLength {
 		return domain.Document{}, domain.ErrInvalidFileType
 	}
 
-	if string(buf[:5]) != "%PDF-" {
+	if string(buf[:pdfSignatureLength]) != pdfSignature {
 		return domain.Document{}, domain.ErrInvalidFileType
 	}
 
 	detectedType := http.DetectContentType(buf[:n])
-	if detectedType != "application/pdf" {
+	if detectedType != documentType {
 		return domain.Document{}, domain.ErrInvalidFileType
 	}
 
@@ -76,22 +90,22 @@ func (s *DocumentService) Upload(
 		limit: maxFileSize,
 	}
 
+	trimmedFileName := strings.TrimSpace(fileName)
 	docUUID := uuid.NewString()
-	storageKey := docUUID + ".pdf"
+	storageKey := fmt.Sprintf("paper/%s/%s.pdf", paperUUID, docUUID)
 
-	storageURI, err := s.storage.Put(ctx, storageKey, limitReader)
+	err = s.storage.Put(ctx, storageKey, limitReader)
 	if err != nil {
 		return domain.Document{}, fmt.Errorf("failed to store physical file: %w", err)
 	}
 
 	doc := domain.Document{
-		UUID:         docUUID,
-		UploaderUUID: user.ExternalID,
-		PaperUUID:    document.PaperUUID,
-		FileName:     strings.TrimSpace(document.FileName),
-		ContentType:  "application/pdf",
-		Size:         limitReader.read,
-		StorageURI:   storageURI,
+		Key:         storageKey,
+		UserID:      userID,
+		PaperUUID:   paperUUID,
+		FileName:    trimmedFileName,
+		ContentType: "application/pdf",
+		Size:        limitReader.read,
 	}
 
 	savedDoc, err := s.repo.Save(ctx, doc)

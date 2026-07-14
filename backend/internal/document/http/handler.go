@@ -9,16 +9,12 @@ import (
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/document/application"
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
-	paperService "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
-	userService "github.com/paperstacks.io/paperstacks/internal/user/application"
 )
 
 func handleUploadDocument(
 	logger *slog.Logger,
 	service *application.DocumentService,
-	userService *userService.UserService,
-	paperService *paperService.PaperService,
 ) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -27,13 +23,6 @@ func handleUploadDocument(
 			session, ok := commonauth.SessionFromContext(ctx)
 			if !ok || session == nil || !session.IsValid {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			user, err := userService.GetByExternalID(ctx, session.UserID)
-			if err != nil {
-				logger.Error("get user by external id", "user_id", session.UserID, "error", err)
-				http.Error(w, "failed to get user", http.StatusInternalServerError)
 				return
 			}
 
@@ -48,34 +37,25 @@ func handleUploadDocument(
 			}
 			defer file.Close()
 
-			req := DocumentRequest{
-				PaperUUID: r.FormValue("paper_uuid"),
-				FileName:  fileHeader.Filename,
-			}
-
-			if err := req.ValidateUploadRequest(); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+			paperUUID := r.FormValue("paper_uuid")
+			if paperUUID == "" {
+				http.Error(w, "paper_uuid is required", http.StatusBadRequest)
 				return
 			}
 
-			if _, err := paperService.GetByUUID(ctx, req.PaperUUID); err != nil {
-				if errors.Is(err, paperDomain.ErrPaperNotFound) {
-					http.Error(w, "paper not found", http.StatusBadRequest)
-					return
-				}
-				logger.Error("validate paper exists", "paper_uuid", req.PaperUUID, "error", err)
-				http.Error(w, "failed to validate paper", http.StatusInternalServerError)
+			fileName := fileHeader.Filename
+			if fileName == "" {
+				http.Error(w, "file_name is required", http.StatusBadRequest)
 				return
 			}
 
-			d := req.toDomain()
-			uploadedDocument, err := service.Upload(ctx, d, user, file)
+			uploadedDocument, err := service.Upload(ctx, paperUUID, fileName, session.UserID, file)
 			if err != nil {
-				if errors.Is(err, domain.ErrFileSizeExceeded) || errors.Is(err, domain.ErrInvalidFileType) {
+				if errors.Is(err, domain.ErrFileSizeExceeded) || errors.Is(err, domain.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				logger.Error("upload document", "user_id", user.ExternalID, "error", err)
+				logger.Error("upload document", "user_id", session.UserID, "error", err)
 				http.Error(w, "failed to upload document", http.StatusInternalServerError)
 				return
 			}

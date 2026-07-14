@@ -25,6 +25,6 @@ func (r *Repository) Save(ctx context.Context, doc domain.Document) (domain.Docu
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.data[doc.UUID] = doc
+	r.data[doc.Key] = doc
 	return doc, nil
 }

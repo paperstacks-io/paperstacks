@@ -48,7 +48,7 @@ func run(
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
-	documentService := docApp.NewDocumentService(docRepo, docStorage)
+	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
@@ -58,7 +58,7 @@ func run(
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
-	docHttp.UploadDocumentRoute(apiMux, logger, documentService, userService, paperService, sessionService)
+	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
 	web.AddRoute(webMux, cfg, logger, paperService, stackService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))

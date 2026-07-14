@@ -22,15 +22,15 @@ func NewStorage() *Storage {
 	}
 }
 
-func (s *Storage) Put(ctx context.Context, key string, r io.Reader) (string, error) {
+func (s *Storage) Put(ctx context.Context, key string, r io.Reader) error {
 	fileBytes, err := io.ReadAll(r)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file bytes: %w", err)
+		return fmt.Errorf("failed to read file bytes: %w", err)
 	}
 
 	s.mu.Lock()
 	s.data[key] = fileBytes
 	s.mu.Unlock()
 
-	return "mem://documents/" + key, nil
+	return nil
 }

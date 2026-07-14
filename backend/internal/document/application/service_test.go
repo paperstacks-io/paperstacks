@@ -10,35 +10,45 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	"github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
 
-func TestUploadSuccess(t *testing.T) {
+func setupTestService(t *testing.T) (*DocumentService, *memory.Repository, *memory.Storage, *paperMemory.Repository) {
 	repo := memory.NewRepository()
 	storage := memory.NewStorage()
-	service := NewDocumentService(repo, storage)
+	paperRepo := paperMemory.NewRepository()
+	paperService := paperApp.NewPaperService(paperRepo)
+	service := NewDocumentService(repo, storage, paperService)
+	return service, repo, storage, paperRepo
+}
+
+func TestUploadSuccess(t *testing.T) {
+	service, repo, _, paperRepo := setupTestService(t)
 
 	ctx := context.Background()
-	user := userDomain.User{ExternalID: "test-user-123"}
-	docMetadata := domain.Document{
-		PaperUUID: "paper-uuid-xyz",
-		FileName:  "  test_document.pdf  ",
-		Size:      15,
+
+	_, err := paperRepo.Save(ctx, paperDomain.Paper{
+		UUID: "paper-uuid-xyz",
+	})
+	if err != nil {
+		t.Fatalf("failed to save paper: %v", err)
 	}
 
 	pdfContent := []byte("%PDF-1.4\ncontent")
 	r := bytes.NewReader(pdfContent)
 
-	doc, err := service.Upload(ctx, docMetadata, user, r)
+	doc, err := service.Upload(ctx, "paper-uuid-xyz", "  test_document.pdf  ", "test-user-123", r)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	if doc.UUID == "" {
-		t.Error("expected doc.UUID to be generated, got empty string")
+	if !strings.HasPrefix(doc.Key, "paper/paper-uuid-xyz/") || !strings.HasSuffix(doc.Key, ".pdf") {
+		t.Errorf("expected doc.Key to have format 'paper/paper-uuid-xyz/{uuid}.pdf', got: %s", doc.Key)
 	}
-	if doc.UploaderUUID != "test-user-123" {
-		t.Errorf("expected UploaderUUID to be 'test-user-123', got: %s", doc.UploaderUUID)
+	if doc.UserID != "test-user-123" {
+		t.Errorf("expected UploaderUUID to be 'test-user-123', got: %s", doc.UserID)
 	}
 	if doc.PaperUUID != "paper-uuid-xyz" {
 		t.Errorf("expected PaperUUID to be 'paper-uuid-xyz', got: %s", doc.PaperUUID)
@@ -52,85 +62,63 @@ func TestUploadSuccess(t *testing.T) {
 	if doc.Size != int64(len(pdfContent)) {
 		t.Errorf("expected Size to be %d, got: %d", len(pdfContent), doc.Size)
 	}
-	if !strings.HasPrefix(doc.StorageURI, "mem://documents/") {
-		t.Errorf("expected StorageURI to start with 'mem://documents/', got: %s", doc.StorageURI)
-	}
 
 	savedDoc, err := repo.Save(ctx, doc)
 	if err != nil {
 		t.Errorf("expected document to be queryable in repository: %v", err)
 	}
-	if savedDoc.UUID != doc.UUID {
-		t.Errorf("expected saved document UUID to be %s, got %s", doc.UUID, savedDoc.UUID)
-	}
-}
-
-func TestUploadExceedsDeclaredSizeLimit(t *testing.T) {
-	repo := memory.NewRepository()
-	storage := memory.NewStorage()
-	service := NewDocumentService(repo, storage)
-
-	ctx := context.Background()
-	user := userDomain.User{ExternalID: "test-user-123"}
-	docMetadata := domain.Document{
-		PaperUUID: "paper-uuid-xyz",
-		FileName:  "test.pdf",
-		Size:      11 * 1024 * 1024,
-	}
-
-	pdfContent := []byte("%PDF-1.4\ncontent")
-	r := bytes.NewReader(pdfContent)
-
-	_, err := service.Upload(ctx, docMetadata, user, r)
-	if !errors.Is(err, domain.ErrFileSizeExceeded) {
-		t.Errorf("expected ErrFileSizeExceeded, got: %v", err)
+	if savedDoc.Key != doc.Key {
+		t.Errorf("expected saved document UUID to be %s, got %s", doc.Key, savedDoc.Key)
 	}
 }
 
 func TestUploadInvalidMagicBytes(t *testing.T) {
-	repo := memory.NewRepository()
-	storage := memory.NewStorage()
-	service := NewDocumentService(repo, storage)
+	service, _, _, paperRepo := setupTestService(t)
 
 	ctx := context.Background()
-	user := userDomain.User{ExternalID: "test-user-123"}
-	docMetadata := domain.Document{
-		PaperUUID: "paper-uuid-xyz",
-		FileName:  "test.pdf",
-		Size:      100,
-	}
+
+	_, _ = paperRepo.Save(ctx, paperDomain.Paper{UUID: "paper-uuid-xyz"})
 
 	invalidContent := []byte("NOTAPDF-1.4\ncontent")
 	r := bytes.NewReader(invalidContent)
 
-	_, err := service.Upload(ctx, docMetadata, user, r)
+	_, err := service.Upload(ctx, "paper-uuid-xyz", "test.pdf", "test-user-123", r)
 	if !errors.Is(err, domain.ErrInvalidFileType) {
 		t.Errorf("expected ErrInvalidFileType, got: %v", err)
 	}
 }
 
 func TestUploadActualStreamExceedsLimit(t *testing.T) {
-	repo := memory.NewRepository()
-	storage := memory.NewStorage()
-	service := NewDocumentService(repo, storage)
+	service, _, _, paperRepo := setupTestService(t)
 
 	ctx := context.Background()
-	user := userDomain.User{ExternalID: "test-user-123"}
-	docMetadata := domain.Document{
-		PaperUUID: "paper-uuid-xyz",
-		FileName:  "test.pdf",
-		Size:      100,
-	}
 
+	_, _ = paperRepo.Save(ctx, paperDomain.Paper{UUID: "paper-uuid-xyz"})
+
+	const sizeExceedingLimit = 11 * 1024 * 1024
 	header := []byte("%PDF-1.4\n")
 	infiniteReader := io.MultiReader(
 		bytes.NewReader(header),
-		io.LimitReader(infiniteZeroReader{}, 11*1024*1024),
+		io.LimitReader(infiniteZeroReader{}, sizeExceedingLimit),
 	)
 
-	_, err := service.Upload(ctx, docMetadata, user, infiniteReader)
+	_, err := service.Upload(ctx, "paper-uuid-xyz", "test.pdf", "test-user-123", infiniteReader)
 	if !errors.Is(err, domain.ErrFileSizeExceeded) {
 		t.Errorf("expected ErrFileSizeExceeded, got: %v", err)
+	}
+}
+
+func TestUploadPaperDoesNotExist(t *testing.T) {
+	service, _, _, _ := setupTestService(t)
+
+	ctx := context.Background()
+
+	pdfContent := []byte("%PDF-1.4\ncontent")
+	r := bytes.NewReader(pdfContent)
+
+	_, err := service.Upload(ctx, "non-existent-paper-uuid", "test.pdf", "test-user-123", r)
+	if !errors.Is(err, paperDomain.ErrPaperNotFound) {
+		t.Errorf("expected ErrPaperNotFound, got: %v", err)
 	}
 }
 

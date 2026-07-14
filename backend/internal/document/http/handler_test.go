@@ -19,8 +19,6 @@ import (
 	paperApplication "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
-	userApplication "github.com/paperstacks.io/paperstacks/internal/user/application"
-	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
 type mockSessionService struct{}
@@ -39,16 +37,9 @@ func (m mockSessionService) LogoutSession(ctx context.Context, token string) err
 }
 
 func setupTestRouter(t *testing.T) (http.Handler, *application.DocumentService) {
-	docRepo := documentMemory.NewRepository()
-	docStorage := documentMemory.NewStorage()
-	docService := application.NewDocumentService(docRepo, docStorage)
-
-	userRepo := userMemory.NewRepository()
-	userService := userApplication.NewUserService(userRepo, "", nil)
-
 	paperRepo := paperMemory.NewRepository()
 	_, err := paperRepo.Save(context.Background(), paperDomain.Paper{
-		UUID:  "paper-uuid-123",
+		UUID:  "960ae542-c8ee-4454-9ad3-536ffbbacde6",
 		DOI:   "10.1145/1234567.1234568",
 		Title: "Mock Paper",
 	})
@@ -57,10 +48,9 @@ func setupTestRouter(t *testing.T) (http.Handler, *application.DocumentService) 
 	}
 	paperService := paperApplication.NewPaperService(paperRepo)
 
-	_, err = userService.CreateIfNotExist(context.Background(), "user-1", "user@example.com")
-	if err != nil {
-		t.Fatalf("failed to create mock user: %v", err)
-	}
+	docRepo := documentMemory.NewRepository()
+	docStorage := documentMemory.NewStorage()
+	docService := application.NewDocumentService(docRepo, docStorage, paperService)
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 
@@ -69,8 +59,6 @@ func setupTestRouter(t *testing.T) (http.Handler, *application.DocumentService) 
 		mux,
 		logger,
 		docService,
-		userService,
-		paperService,
 		mockSessionService{},
 	)
 	return mux, docService
@@ -85,7 +73,7 @@ func TestUploadDocument(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	err := writer.WriteField("paper_uuid", "paper-uuid-123")
+	err := writer.WriteField("paper_uuid", "960ae542-c8ee-4454-9ad3-536ffbbacde6")
 	if err != nil {
 		t.Fatalf("failed to write field: %v", err)
 	}
@@ -121,8 +109,8 @@ func TestUploadDocument(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if response.PaperUUID != "paper-uuid-123" {
-		t.Errorf("PaperUUID = %q, want %q", response.PaperUUID, "paper-uuid-123")
+	if response.PaperUUID != "960ae542-c8ee-4454-9ad3-536ffbbacde6" {
+		t.Errorf("PaperUUID = %q, want %q", response.PaperUUID, "960ae542-c8ee-4454-9ad3-536ffbbacde6")
 	}
 
 	if response.FileName != "test.pdf" {
@@ -133,8 +121,8 @@ func TestUploadDocument(t *testing.T) {
 		t.Errorf("Size = %d, want %d", response.Size, len(pdfContent))
 	}
 
-	if response.StorageURI == "" {
-		t.Errorf("expected StorageURI to be populated, got empty string")
+	if !strings.HasPrefix(response.Key, "paper/960ae542-c8ee-4454-9ad3-536ffbbacde6/") || !strings.HasSuffix(response.Key, ".pdf") {
+		t.Errorf("Key = %q, expected format 'paper/960ae542-c8ee-4454-9ad3-536ffbbacde6/{uuid}.pdf'", response.Key)
 	}
 }
 
@@ -182,7 +170,7 @@ func TestUploadDocumentValidationInvalidFileType(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	writer.WriteField("paper_uuid", "paper-uuid-123")
+	writer.WriteField("paper_uuid", "960ae542-c8ee-4454-9ad3-536ffbbacde6")
 	part, err := writer.CreateFormFile("file", "test.txt")
 	if err != nil {
 		t.Fatalf("failed to create form file: %v", err)
@@ -212,11 +200,12 @@ func TestUploadDocumentMaxBytesLimit(t *testing.T) {
 
 	mux, _ := setupTestRouter(t)
 
-	largeData := make([]byte, 16*1024*1024)
+	const fileSizeExceedingLimit = 16 * 1024 * 1024
+	largeData := make([]byte, fileSizeExceedingLimit)
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	writer.WriteField("paper_uuid", "paper-uuid-123")
+	writer.WriteField("paper_uuid", "960ae542-c8ee-4454-9ad3-536ffbbacde6")
 	part, err := writer.CreateFormFile("file", "large.pdf")
 	if err != nil {
 		t.Fatalf("failed to create form file: %v", err)
@@ -237,6 +226,6 @@ func TestUploadDocumentMaxBytesLimit(t *testing.T) {
 	mux.ServeHTTP(res, req)
 
 	if res.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d for request exceeding 15MB", res.Code, http.StatusBadRequest)
+		t.Errorf("status = %d, want %d for request exceeding max file size limit (10MB)", res.Code, http.StatusBadRequest)
 	}
 }

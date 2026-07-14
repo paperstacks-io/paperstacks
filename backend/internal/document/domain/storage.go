@@ -12,5 +12,5 @@ var (
 )
 
 type Storage interface {
-	Put(ctx context.Context, key string, r io.Reader) (string, error)
+	Put(ctx context.Context, key string, r io.Reader) error
 }
