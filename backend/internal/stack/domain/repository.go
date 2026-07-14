@@ -20,6 +20,7 @@ type Repository interface {
 	List(ctx context.Context, userExternalID string) ([]Stack, error)
 	ListPublic(ctx context.Context, userExternalID string) ([]Stack, error)
 	Search(ctx context.Context, options SearchOptions) (SearchResult, error)
+	CountPublic(ctx context.Context) (int, error)
 
 	// commands
 	Create(ctx context.Context, stack Stack) error

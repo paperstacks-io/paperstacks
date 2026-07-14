@@ -13,12 +13,14 @@ import (
 )
 
 type Repository struct {
-	mu   sync.RWMutex
-	data []domain.Stack
+	mu               sync.RWMutex
+	data             []domain.Stack
+	countPublicCache int
+	countPublicDirty bool
 }
 
 func NewRepository() *Repository {
-	return &Repository{data: seedData()}
+	return &Repository{data: seedData(), countPublicDirty: true}
 }
 
 func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
@@ -32,6 +34,7 @@ func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
 	}
 
 	r.data = append(r.data, stack)
+	r.countPublicDirty = true
 	return nil
 }
 
@@ -52,6 +55,8 @@ func (r *Repository) Update(ctx context.Context, modified domain.Stack) (domain.
 func (r *Repository) Delete(ctx context.Context, uuid string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.countPublicDirty = true
 
 	for i, item := range r.data {
 		if item.UUID == uuid {
@@ -104,6 +109,34 @@ func (r *Repository) ListPublic(ctx context.Context, userExternalID string) ([]d
 	}
 
 	return stacks, nil
+}
+
+func (r *Repository) CountPublic(ctx context.Context) (int, error) {
+	r.mu.RLock()
+	if !r.countPublicDirty {
+		count := r.countPublicCache
+		r.mu.RUnlock()
+		return count, nil
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if !r.countPublicDirty {
+		return r.countPublicCache, nil
+	}
+
+	counter := 0
+	for _, item := range r.data {
+		if item.IsPublic {
+			counter++
+		}
+	}
+
+	r.countPublicCache = counter
+	r.countPublicDirty = false
+	return counter, nil
 }
 
 func (r *Repository) AddPaper(ctx context.Context, stackUUID string, paper paperDomain.Paper) error {

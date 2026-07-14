@@ -107,6 +107,10 @@ func (s *StackService) ListPublic(ctx context.Context, userExternalID string) ([
 	return s.repo.ListPublic(ctx, userExternalID)
 }
 
+func (s StackService) CountPublic(ctx context.Context) (int, error) {
+	return s.repo.CountPublic(ctx)
+}
+
 // AddPaper adds a paper to the specified stack.
 //
 // If the paper is already assigned to the stack, no changes are made.
