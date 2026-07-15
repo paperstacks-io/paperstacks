@@ -1,46 +1,19 @@
 {{ define "home/page" }}
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Home</li>
+      </ul>
+    </div>
+  </div>
+</header>
 
 <section class="bg-base-200 col-span-12 shadow-xs">
-  <div class="hero-content text-center">
+  <div class="hero-content text-center py-64">
     <div class="max-w-md">
       <img src="./assets/img/logo-text.png" />
     </div>
   </div>
 </section>
-
-<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-12 shadow-xs">
-  <div class="stat">
-    <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/squares-2x2.svg" class="size-7 opacity-40"></svg>
-    </div>
-    <div class="stat-title">Total products</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">3,842</div>
-    <div class="stat-desc">+126 this month</div>
-  </div>
-  <div class="stat">
-    <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/check-circle.svg" class="size-7 opacity-40"></svg>
-    </div>
-    <div class="stat-title">Active products</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">3,108</div>
-    <div class="stat-desc">81% of catalog</div>
-  </div>
-  <div class="stat">
-    <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/exclamation-triangle.svg" class="size-7 opacity-40"></svg>
-    </div>
-    <div class="stat-title">Low stock</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">92</div>
-    <div class="stat-desc">18 out of stock</div>
-  </div>
-  <div class="stat">
-    <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/banknotes.svg" class="size-7 opacity-40"></svg>
-    </div>
-    <div class="stat-title">Revenue</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">$842K</div>
-    <div class="stat-desc">4.8% conversion rate</div>
-  </div>
-</section>
-
 {{ end }}

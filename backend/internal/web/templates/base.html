@@ -36,12 +36,13 @@
       class="drawer-content bg-base-100 lg:mt-2 lg:border-t lg:border-s lg:border-base-300 lg:rounded-ss-4xl lg:[corner-start-start-shape:squircle] lg:bg-[radial-gradient(ellipse_50rem_30rem_at_50%_0%,color-mix(oklch(96%_0.008_68)_3%,transparent)_0%,transparent_80%)]"
     >
       <div id="page-shell" class="grid grid-cols-12 gap-6 p-4 lg:p-10">
-        <header class="col-span-12 flex items-center gap-1">
-          <label for="my-drawer" class="btn btn-square btn-ghost drawer-button lg:hidden" aria-label="Open sidebar">
+        <!-- Header for small screen size -->
+        <header class="col-span-12 flex items-center gap-1 lg:hidden">
+          <label for="my-drawer" class="btn btn-square btn-ghost drawer-button" aria-label="Open sidebar">
             <svg data-src="https://unpkg.com/heroicons/20/solid/bars-3.svg" class="h-5 w-5"></svg>
           </label>
           <div class="grow">
-            <h1 class="page-title lg:text-xl lg:font-light opacity-50">{{ .PageName }}</h1>
+            <h1 class="page-title lg:text-xl lg:font-light opacity-50 uppercase">papersttacks.io</h1>
           </div>
         </header>
 
