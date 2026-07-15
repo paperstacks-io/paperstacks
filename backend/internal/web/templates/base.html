@@ -15,53 +15,87 @@
     <script src="/app/assets/htmx.min.js" defer></script>
 
     <script src="https://cdn.jsdelivr.net/npm/theme-change@3/index.js"></script>
+    <!-- svg loader for icons -->
+    <script src="https://cdn.jsdelivr.net/npm/external-svg-loader@1.6.10/svg-loader.min.js" async></script>
     <script type="module">
       import { register } from "https://esm.run/@teamhanko/hanko-elements"
       window.hanko = register("{{.HankoAPIURL}}")
     </script>
   </head>
-  <body class="bg-base-200">
-    {{ template "app" . }}
-  </body>
+
+  {{ template "app" . }}
 </html>
 {{ end }}
 
 <!-- App -->
 {{ define "app" }}
-<div id="app-shell" class="drawer min-h-screen lg:drawer-open">
-  <input id="app-drawer" type="checkbox" class="drawer-toggle" />
-  <div class="drawer-content flex flex-col items-center justify-center">
-    <!-- Navbar -->
-    <nav class="navbar bg-base-300 w-full lg:hidden">
-      <label for="app-drawer" class="btn drawer-button" aria-controls="app-drawer" aria-label="Open sidebar">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          class="inline-block h-5 w-5 stroke-current"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-      </label>
+<body class="drawer lg:drawer-open min-h-screen bg-base-200">
+  <input id="my-drawer" type="checkbox" class="drawer-toggle" aria-label="Toggle sidebar" />
+  <main
+    id="app-shell"
+    class="drawer-content bg-base-100 lg:mt-2 lg:border-t lg:border-s lg:border-base-300 lg:rounded-ss-4xl lg:[corner-start-start-shape:squircle] lg:bg-[radial-gradient(ellipse_50rem_30rem_at_50%_0%,color-mix(oklch(96%_0.008_68)_3%,transparent)_0%,transparent_80%)]"
+  >
+    <div class="grid grid-cols-12 gap-6 p-4 lg:p-10">
+      <header class="col-span-12 flex items-center gap-1">
+        <label for="my-drawer" class="btn btn-square btn-ghost drawer-button lg:hidden" aria-label="Open sidebar">
+          <svg data-src="https://unpkg.com/heroicons/20/solid/bars-3.svg" class="h-5 w-5"></svg>
+        </label>
+        <div class="grow">
+          <h1 class="page-title lg:text-xl lg:font-light opacity-50">Page Title</h1>
+        </div>
+        <label class="btn btn-circle btn-sm btn-ghost swap swap-rotate" aria-label="Toggle theme">
+          <input type="checkbox" value="light" data-set-theme aria-label="Toggle theme" />
+          <svg class="swap-on size-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
+            />
+          </svg>
+          <svg class="swap-off size-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"
+            />
+          </svg>
+        </label>
+      </header>
 
-      <div class="px-4">
-        <span class="text-sm font-semibold uppercase tracking-[0.2em] opacity-70">Paperstacks.io</span>
-      </div>
-    </nav>
-    <!-- Page content here -->
-    {{ template "page-content" . }}
-  </div>
+      <!-- header -->
+      <header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+        <div class="grow">
+          <div class="breadcrumbs text-sm">
+            <ul>
+              <li><a href="/index.html">Dashboard</a></li>
+              <li><h1>Operations Overview</h1></li>
+            </ul>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="/products/new.html" class="btn btn-sm btn-primary">
+            <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-4"></svg>
+            New product
+          </a>
+          <a href="/tools/export.html" class="btn btn-sm">
+            <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-down-tray.svg" class="size-4"></svg>
+            Export
+          </a>
+          <a href="/tools/system-health.html" class="btn btn-sm">
+            <svg data-src="https://unpkg.com/heroicons/20/solid/server.svg" class="size-4"></svg>
+            System health
+          </a>
+        </div>
+      </header>
+      <!-- /header -->
+
+      {{ template "page-content" . }}
+    </div>
+  </main>
 
   <!-- Sidebar -->
-  <div class="drawer-side">
-    <label for="app-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-
-    <aside class="flex min-h-full w-64 flex-col bg-base-300">
-      <div class="flex p-4">
-        <img src="./assets/img/logo-text.png" width="200" alt="paperstacks.io logo" />
-      </div>
-
-      <ul class="menu border-b border-base-300 w-full p-4">
+  <aside class="drawer-side -z10">
+    <label for="my-drawer" class="drawer-overlay"></label>
+    <!-- sidebar menu -->
+    <nav class="bg-base-200 flex min-h-screen w-64 flex-col gap-2 px-2 pt-10">
+      <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
+      <ul class="menu w-full overflow-y-auto">
         <li>
           <a
             href="/app/"
@@ -123,6 +157,7 @@
           >
         </li>
         <div class="divider"></div>
+
         {{ if .Session.IsValid }}
         <span class="font-light">My Library</span>
         <li><a onClick="alert('Not implemented yet!')">My Papers</a></li>
@@ -132,11 +167,36 @@
         <li><a onClick="alert('Not implemented yet!')">Export to BibTeX</a></li>
         {{ end }}
       </ul>
-      <div class="flex flex-1"></div>
-      <div id="sidebar-footer" class="flex flex-col p-4 w-full">
+
+      <!-- Sidebar footer -->
+      <div class="sticky bottom-0 py-2 mt-auto px-5">
+        <div class="flex justify-between">
+          <div class="tooltip" data-tip="{{ .AppGitHash }}">
+            <div class="badge badge-outline font-mono px-4 py-3">{{ .AppVersion }}</div>
+          </div>
+
+          <label class="swap swap-rotate">
+            <input type="checkbox" value="dark" data-set-theme aria-label="Toggle theme" />
+            <!-- sun icon -->
+            <svg class="swap-off h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
+              />
+            </svg>
+
+            <!-- moon icon -->
+            <svg class="swap-on h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"
+              />
+            </svg>
+          </label>
+        </div>
+
+        <div class="divider"></div>
         {{ if .Session.IsValid }}
         <p class="text-sm text-center">{{.Session.Email}}</p>
-        <button class="btn btn-sm btn-neutral" hx-post="/app/auth/logout">Logout</button>
+        <button class="btn btn-sm btn-neutral w-full" hx-post="/app/auth/logout">Logout</button>
         {{ else }}
         <button
           href="/app/auth"
@@ -145,39 +205,15 @@
           hx-select="#app-shell"
           hx-swap="outerHTML"
           hx-push-url="true"
-          class="btn btn-sm btn-neutral"
+          class="btn btn-sm btn-neutral w-full"
         >
           Login
         </button>
         {{ end }}
-        <div class="divider"></div>
-
-        <label class="swap swap-rotate">
-          <input type="checkbox" value="dark" data-set-theme aria-label="Toggle theme" />
-
-          <!-- sun icon -->
-          <svg class="swap-off h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
-            />
-          </svg>
-
-          <!-- moon icon -->
-          <svg class="swap-on h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"
-            />
-          </svg>
-        </label>
-
-        <p class="text-sm text-secondary mt-4">
-          {{ .AppVersion}}
-          <a href="https://github.com/paperstacks-io/paperstacks/commit/{{ .AppGitHash }}">{{ .AppGitHash }}</a>
-        </p>
       </div>
-    </aside>
-  </div>
-</div>
+    </nav>
+  </aside>
+</body>
 {{ end }}
 
 <!-- The content of each page -->
