@@ -1,7 +1,13 @@
 {{ define "search/page" }}
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Search</li>
+      </ul>
+    </div>
+  </div>
+</header>
 
-<div class="flex px-4 py-10 sm:px-6 lg:px-10 flex-col">
-  Search page {{ template "shared/partials/not-implemented-alert" }}
-</div>
-
+<section class="card bg-base-200 col-span-12 shadow-xs">{{ template "shared/partials/not-implemented-alert" }}</section>
 {{ end }}
