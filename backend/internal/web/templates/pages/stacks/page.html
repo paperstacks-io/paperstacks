@@ -1,6 +1,16 @@
 {{ define "stacks/page" }}
 
-<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Stacks</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section class="card bg-base-200 col-span-12 shadow-xs">
   <div class="card bg-base-100 shadow-sm w-full">
     <div class="card-body w-full">
       <h2 class="card-title">
@@ -158,6 +168,6 @@
       <div id="stack-results"></div>
     </div>
   </div>
-</div>
+</section>
 
 {{ end }}
