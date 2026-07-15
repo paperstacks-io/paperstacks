@@ -1,59 +1,62 @@
 {{ define "papers/page" }}
-<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
-  <div class="card bg-base-100 shadow-sm w-full">
-    <div class="card-body w-full">
-      <h2 class="card-title">
-        List of papers
-        <span class="htmx-indicator loading loading-spinner loading-sm"></span>
-      </h2>
-      <form hx-target="#search-results" hx-indicator=".htmx-indicator">
-        <div class="card w-full">
-          <div class="flex flex-row gap-4">
-            <label class="input input-bordered flex items-center gap-2 w-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 opacity-50"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-                />
-              </svg>
-              <input
-                type="search"
-                name="search"
-                placeholder="Search Papers..."
-                hx-post="/app/papers/search"
-                hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
-                hx-target="#search-results"
-                hx-vals='{"page": 1}'
-              />
-            </label>
 
-            <select
-              class="select select-bordered block w-32"
-              name="sortBy"
-              hx-post="/app/papers/search"
-              hx-trigger="change"
-              hx-target="#search-results"
-              hx-vals='{"page": 1}'
-            >
-              <option value="+title">Title (A-Z)</option>
-              <option value="-title">Title (Z-A)</option>
-              <option value="+year">Oldest</option>
-              <option value="-year" selected>Newest</option>
-            </select>
-          </div>
-        </div>
-      </form>
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Papers</li>
+      </ul>
+    </div>
+  </div>
+</header>
 
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <div class="flex flex-col gap-2">
+      <div class="grow">
+        <h2 class="card-title">
+          List of papers
+          <span class="htmx-indicator loading loading-spinner loading-sm"></span>
+        </h2>
+        <p class="text-base-content/60">Search for papers that are provided as public by users.</p>
+      </div>
+    </div>
+  </div>
+  <div class="card-body gap-4">
+    <form hx-target="#search-results" hx-indicator=".htmx-indicator">
+      <div class="flex flex-col gap-3 lg:flex-row">
+        <label class="input input-sm w-full lg:max-w-sm">
+          <svg data-src="https://unpkg.com/heroicons/20/solid/magnifying-glass.svg" class="h-4 w-4 opacity-50"></svg>
+          <input
+            type="search"
+            name="search"
+            placeholder="Search papers"
+            hx-post="/app/papers/search"
+            hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+            hx-target="#search-results"
+            hx-vals='{"page": 1}'
+          />
+        </label>
+        <select
+          aria-label="Select sort option"
+          class="select select-sm"
+          name="sortBy"
+          hx-post="/app/papers/search"
+          hx-trigger="change"
+          hx-target="#search-results"
+          hx-vals='{"page": 1}'
+        >
+          <option value="+title">Title (A-Z)</option>
+          <option value="-title">Title (Z-A)</option>
+          <option value="+year">Oldest</option>
+          <option value="-year" selected>Sort: Newest</option>
+        </select>
+      </div>
+    </form>
+    <div class="overflow-x-auto">
       <div id="search-results"></div>
     </div>
   </div>
-</div>
+</section>
+
 {{ end }}
