@@ -1,20 +1,46 @@
 {{ define "home/page" }}
-<div class="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
-  <div class="hero bg-base-200 min-h-screen">
-    <div class="hero-content text-center">
-      <div class="max-w-md">
-        <img src="./assets/img/logo-text.png" />
-        <p class="py-6">paperstacks.io — Find, stack, sort, and share research papers that matter</p>
-        <button class="btn btn-neutral">Neutral</button>
-        <button class="btn btn-primary">Primary</button>
-        <button class="btn btn-secondary">Secondary</button>
-        <button class="btn btn-accent">Accent</button>
-        <button class="btn btn-info">Info</button>
-        <button class="btn btn-success">Success</button>
-        <button class="btn btn-warning">Warning</button>
-        <button class="btn btn-error">Error</button>
-      </div>
+
+<section class="bg-base-200 col-span-12 shadow-xs">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <img src="./assets/img/logo-text.png" />
     </div>
   </div>
-</div>
+</section>
+
+<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-12 shadow-xs">
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/squares-2x2.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Total products</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">3,842</div>
+    <div class="stat-desc">+126 this month</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/check-circle.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Active products</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">3,108</div>
+    <div class="stat-desc">81% of catalog</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/exclamation-triangle.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Low stock</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">92</div>
+    <div class="stat-desc">18 out of stock</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/banknotes.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Revenue</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">$842K</div>
+    <div class="stat-desc">4.8% conversion rate</div>
+  </div>
+</section>
+
 {{ end }}
