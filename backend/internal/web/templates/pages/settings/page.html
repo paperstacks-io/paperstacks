@@ -1,16 +1,42 @@
 {{ define "settings/page" }}
-<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
-  <div class="card bg-base-100 shadow-sm w-full">
-    <div class="card-body w-full">
-      <h2 class="card-title">App Settings</h2>
-      No application settings yet.
-      <div class="divider"></div>
-      <h2 class="card-title">User Account Settings</h2>
-      <hanko-profile />
-      <script type="module">
-        const { hanko } = await window.hanko
-      </script>
+
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Settings</li>
+      </ul>
     </div>
   </div>
-</div>
+</header>
+
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <div class="flex flex-col gap-2">
+      <div class="grow">
+        <h2 class="card-title">App settings</h2>
+        <p class="text-base-content/60">Application specific settings</p>
+      </div>
+    </div>
+  </div>
+  <div class="px-6 pt-4 pb-6">No application specific setting yet.</div>
+</section>
+
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <div class="flex flex-col gap-2">
+      <div class="grow">
+        <h2 class="card-title">User Account</h2>
+        <p class="text-base-content/60">User acount specific settings that are managed through hanko.io</p>
+      </div>
+    </div>
+  </div>
+  <div class="px-6 pt-4 pb-6">
+    <hanko-profile />
+    <script type="module">
+      const { hanko } = await window.hanko
+    </script>
+  </div>
+</section>
+
 {{ end }}
