@@ -53,7 +53,7 @@
     </div>
   </div>
   <div class="card-body gap-4">
-    <form id="stack_search_form" hx-target="#stack-results">
+    <form id="stack_search_form" hx-post="/app/stacks/my/search" hx-trigger="load" hx-target="#stack-results">
       <div class="flex flex-col gap-3 lg:flex-row">
         <label class="input input-bordered flex items-center gap-2 w-full">
           <svg data-src="https://unpkg.com/heroicons/20/solid/magnifying-glass.svg" class="h-4 w-4 opacity-50"></svg>
@@ -62,7 +62,7 @@
             type="search"
             name="search"
             placeholder="methodology..."
-            hx-post="/app/stacks/search"
+            hx-post="/app/stacks/my/search"
             hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
             hx-target="#stack-results"
             hx-vals='{"page": 1}'
@@ -72,7 +72,7 @@
         <select
           class="select select-bordered block w-40"
           name="sortBy"
-          hx-post="/app/stacks/search"
+          hx-post="/app/stacks/my/search"
           hx-trigger="change"
           hx-target="#stack-results"
           hx-vals='{"page": 1}'

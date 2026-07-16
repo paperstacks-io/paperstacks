@@ -19,7 +19,8 @@ type Repository interface {
 	GetByUUID(ctx context.Context, uuid string) (Stack, error)
 	List(ctx context.Context, userExternalID string) ([]Stack, error)
 	ListPublic(ctx context.Context, userExternalID string) ([]Stack, error)
-	Search(ctx context.Context, options SearchOptions) (SearchResult, error)
+	SearchPublic(ctx context.Context, options SearchOptions) (SearchResult, error)
+	SearchByOwner(ctx context.Context, userExternalID string, options SearchOptions) (SearchResult, error)
 	CountPublic(ctx context.Context) (int, error)
 
 	// commands

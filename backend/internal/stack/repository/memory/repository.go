@@ -175,7 +175,7 @@ func (r *Repository) RemovePaper(ctx context.Context, stackUUID string, paperUUI
 	return domain.ErrStackNotFound
 }
 
-func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+func (r *Repository) SearchPublic(_ context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -206,6 +206,45 @@ func (r *Repository) Search(_ context.Context, opts domain.SearchOptions) (domai
 	items := make([]domain.Stack, 0, end-start)
 	items = append(items, result[start:end]...)
 
+	return domain.SearchResult{
+		Items:    items,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+		HasNext:  end < total,
+	}, nil
+}
+
+func (r *Repository) SearchByOwner(ctx context.Context, userExternalID string, opts domain.SearchOptions) (domain.SearchResult, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make([]domain.Stack, 0, len(r.data))
+
+	for _, stack := range r.data {
+		if stack.Owner.ExternalID == userExternalID && matchesQuery(stack, opts.Query) {
+			result = append(result, stack)
+		}
+	}
+
+	if opts.SortBy != "" {
+		sortStacksByOrder(result, opts.SortBy, opts.Desc)
+	}
+
+	page := max(1, opts.Page)
+
+	pageSize := len(result)
+	if opts.PageSize > 0 {
+		pageSize = opts.PageSize
+	}
+	pageSize = max(1, pageSize)
+
+	total := len(result)
+	start := min((page-1)*pageSize, total)
+	end := min(start+pageSize, total)
+
+	items := make([]domain.Stack, 0, end-start)
+	items = append(items, result[start:end]...)
 	return domain.SearchResult{
 		Items:    items,
 		Total:    total,

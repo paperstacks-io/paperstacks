@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -49,6 +48,20 @@ type stacksListData struct {
 	NextPage      int
 	SearchOptions stackDomain.SearchOptions
 	Pagination    []PaginationItem
+}
+
+func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
+	return stacksListData{
+		Items:         result.Items,
+		Total:         result.Total,
+		Page:          result.Page,
+		PageSize:      result.PageSize,
+		HasNext:       result.HasNext,
+		PrevPage:      result.Page - 1,
+		NextPage:      result.Page + 1,
+		SearchOptions: opts,
+		Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
+	}
 }
 
 type stacksPageData struct {
@@ -111,6 +124,7 @@ func handleStacksPage(
 				HankoAPIURL: hankoAPIURL,
 				Session:     *session,
 			},
+			StacksCountTotal:  0,
 			StacksCountPublic: counter,
 		}
 
@@ -138,8 +152,6 @@ func handleStacksMyPage(
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-
-		fmt.Println(r.URL.Path)
 
 		data := stacksPageData{
 			pageData: pageData{
@@ -216,7 +228,7 @@ func handlePapersSearch(
 	})
 }
 
-func handleStacksSearch(
+func handleStacksSearchPublic(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	stackService *stackApp.StackService,
@@ -224,21 +236,7 @@ func handleStacksSearch(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		search := normalizeFormParam(r.FormValue("search"))
-		sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
-		pageStr := normalizeFormParam(r.FormValue("page"))
-
-		sortBy, _ := strings.CutPrefix(sortByRaw, "+")
-		sortBy, desc := strings.CutPrefix(sortBy, "-")
-
-		page, _ := strconv.Atoi(pageStr)
-		opts := stackDomain.SearchOptions{
-			Query:  search,
-			SortBy: sortBy,
-			Desc:   desc,
-			Page:   page,
-		}
-
+		opts := searchOptionsFromRequest(r)
 		result, err := stackService.Search(r.Context(), opts)
 		if err != nil {
 			logger.Error("read stacks", "error", err.Error())
@@ -246,17 +244,7 @@ func handleStacksSearch(
 			return
 		}
 
-		data := stacksListData{
-			Items:         result.Items,
-			Total:         result.Total,
-			Page:          result.Page,
-			PageSize:      result.PageSize,
-			HasNext:       result.HasNext,
-			PrevPage:      result.Page - 1,
-			NextPage:      result.Page + 1,
-			SearchOptions: opts,
-			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
-		}
+		data := NewStacksListData(result, opts)
 
 		templateName := "stacks/partials/stacks-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
@@ -264,6 +252,53 @@ func handleStacksSearch(
 			return
 		}
 	})
+}
+
+func handleStacksSearchByOwner(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		opts := searchOptionsFromRequest(r)
+		result, err := stackService.SearchByOwner(r.Context(), session.UserID, opts)
+		if err != nil {
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := NewStacksListData(result, opts)
+		templateName := "stacks/partials/stacks-list"
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func searchOptionsFromRequest(r *http.Request) stackDomain.SearchOptions {
+	search := normalizeFormParam(r.FormValue("search"))
+	sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
+	pageStr := normalizeFormParam(r.FormValue("page"))
+
+	sortBy, _ := strings.CutPrefix(sortByRaw, "+")
+	sortBy, desc := strings.CutPrefix(sortBy, "-")
+
+	page, _ := strconv.Atoi(pageStr)
+	return stackDomain.SearchOptions{
+		Query:  search,
+		SortBy: sortBy,
+		Desc:   desc,
+		Page:   page,
+	}
 }
 
 func handleStacksCreate(

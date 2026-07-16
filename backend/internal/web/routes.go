@@ -80,7 +80,8 @@ func AddRoute(
 	// Partials
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
-	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearch(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearchPublic(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/my/search", defaultMiddle(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
 	// Static content

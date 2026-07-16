@@ -24,7 +24,7 @@ func seedData() []domain.Stack {
 		{UUID: "a8de9118-e7d9-4a0b-9e77-7872f08d8efa", Name: "Testing", IsPublic: true, Owner: demoUser(), Papers: testingPapers(), CreatedAt: seedStackTimestamp2, UpdatedAt: seedStackTimestamp2},
 		{UUID: "c6ff032d-104f-4f5f-a9d7-87f874c75c0a", Name: "Secondary Studies", IsPublic: true, Owner: demoUser(), Papers: secondaryStudiesPapers(), CreatedAt: seedStackTimestamp3, UpdatedAt: seedStackTimestamp3},
 		{UUID: "d67f909d-84a3-4c4e-823c-0c9a20e89790", Name: "Bayesian", IsPublic: true, Owner: demoUser(), Papers: bayesianPapers(), CreatedAt: seedStackTimestamp4, UpdatedAt: seedStackTimestamp4},
-		{UUID: "f4152eb2-b303-461c-a683-5bfe80258f8e", Name: "Research Methodology", IsPublic: true, Owner: demoUser(), Papers: researchMethodologyPapers(), CreatedAt: seedStackTimestamp5, UpdatedAt: seedStackTimestamp5},
+		{UUID: "f4152eb2-b303-461c-a683-5bfe80258f8e", Name: "Research Methodology", IsPublic: false, Owner: demoUser(), Papers: researchMethodologyPapers(), CreatedAt: seedStackTimestamp5, UpdatedAt: seedStackTimestamp5},
 	}
 }
 
