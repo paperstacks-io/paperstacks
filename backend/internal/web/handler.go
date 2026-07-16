@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -52,7 +53,8 @@ type stacksListData struct {
 
 type stacksPageData struct {
 	pageData
-	PublicStackCount int
+	StacksCountTotal  int
+	StacksCountPublic int
 }
 
 type alertData struct {
@@ -109,7 +111,46 @@ func handleStacksPage(
 				HankoAPIURL: hankoAPIURL,
 				Session:     *session,
 			},
-			PublicStackCount: counter,
+			StacksCountPublic: counter,
+		}
+
+		renderTemplate(w, r, tmpl, data)
+	})
+}
+
+func handleStacksMyPage(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		counter, err := stackService.CountPublic(r.Context())
+		if err != nil {
+			logger.Error("count public stacks", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Println(r.URL.Path)
+
+		data := stacksPageData{
+			pageData: pageData{
+				AppVersion:  build.Version,
+				AppGitHash:  build.GitHash,
+				PageName:    pageNameFromPath(r.URL.Path),
+				HankoAPIURL: hankoAPIURL,
+				Session:     *session,
+			},
+			StacksCountTotal:  0,
+			StacksCountPublic: counter,
 		}
 
 		renderTemplate(w, r, tmpl, data)
@@ -125,16 +166,6 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Templ
 	if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
-}
-
-func pageNameFromPath(path string) string {
-	path = strings.Trim(path, "/")
-	if path == "" {
-		return "home"
-	}
-
-	pageName, _, _ := strings.Cut(path, "/")
-	return pageName
 }
 
 func handlePapersSearch(
@@ -326,6 +357,17 @@ func handleLogout(
 
 		http.Redirect(w, r, "/app/", http.StatusSeeOther)
 	})
+}
+
+func pageNameFromPath(path string) string {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "home"
+	}
+
+	pageName, _, _ := strings.Cut(path, "?")
+
+	return pageName
 }
 
 func normalizeFormParam(s string) string {
