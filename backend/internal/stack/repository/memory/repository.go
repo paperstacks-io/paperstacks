@@ -13,14 +13,19 @@ import (
 )
 
 type Repository struct {
-	mu               sync.RWMutex
-	data             []domain.Stack
-	countPublicCache int
-	countPublicDirty bool
+	mu                sync.RWMutex
+	data              []domain.Stack
+	countPublicCache  int
+	countPublicDirty  bool
+	statsByOwnerCache map[string]domain.Stats
 }
 
 func NewRepository() *Repository {
-	return &Repository{data: seedData(), countPublicDirty: true}
+	return &Repository{
+		data:              seedData(),
+		countPublicDirty:  true,
+		statsByOwnerCache: make(map[string]domain.Stats),
+	}
 }
 
 func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
@@ -35,6 +40,7 @@ func (r *Repository) Create(ctx context.Context, stack domain.Stack) error {
 
 	r.data = append(r.data, stack)
 	r.countPublicDirty = true
+	r.invalidateStatsByOwnerLocked(stack.Owner.ExternalID)
 	return nil
 }
 
@@ -45,6 +51,8 @@ func (r *Repository) Update(ctx context.Context, modified domain.Stack) (domain.
 	for i, item := range r.data {
 		if item.UUID == modified.UUID && item.Owner.ExternalID == modified.Owner.ExternalID {
 			r.data[i] = modified
+			r.countPublicDirty = true
+			r.invalidateStatsByOwnerLocked(modified.Owner.ExternalID)
 			return modified, nil
 		}
 	}
@@ -61,6 +69,7 @@ func (r *Repository) Delete(ctx context.Context, uuid string) error {
 	for i, item := range r.data {
 		if item.UUID == uuid {
 			r.data = append(r.data[:i], r.data[i+1:]...)
+			r.invalidateStatsByOwnerLocked(item.Owner.ExternalID)
 			return nil
 		}
 	}
@@ -151,6 +160,7 @@ func (r *Repository) AddPaper(ctx context.Context, stackUUID string, paper paper
 				}
 			}
 			r.data[i].Papers = append(r.data[i].Papers, paper)
+			r.invalidateStatsByOwnerLocked(s.Owner.ExternalID)
 			return nil
 		}
 	}
@@ -166,6 +176,7 @@ func (r *Repository) RemovePaper(ctx context.Context, stackUUID string, paperUUI
 			for j, p := range item.Papers {
 				if p.UUID == paperUUID {
 					r.data[i].Papers = append(r.data[i].Papers[:j], r.data[i].Papers[j+1:]...)
+					r.invalidateStatsByOwnerLocked(item.Owner.ExternalID)
 					return nil
 				}
 			}
@@ -256,7 +267,18 @@ func (r *Repository) SearchByOwner(ctx context.Context, userExternalID string, o
 
 func (r *Repository) StatsByOwner(ctx context.Context, userExternalID string) (domain.Stats, error) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
+	if stats, ok := r.statsByOwnerCache[userExternalID]; ok {
+		r.mu.RUnlock()
+		return stats, nil
+	}
+	r.mu.RUnlock()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if stats, ok := r.statsByOwnerCache[userExternalID]; ok {
+		return stats, nil
+	}
 
 	stats := domain.Stats{}
 	for _, stack := range r.data {
@@ -271,7 +293,16 @@ func (r *Repository) StatsByOwner(ctx context.Context, userExternalID string) (d
 		}
 	}
 
+	if r.statsByOwnerCache == nil {
+		r.statsByOwnerCache = make(map[string]domain.Stats)
+	}
+	r.statsByOwnerCache[userExternalID] = stats
+
 	return stats, nil
+}
+
+func (r *Repository) invalidateStatsByOwnerLocked(userExternalID string) {
+	delete(r.statsByOwnerCache, userExternalID)
 }
 
 func sortStacksByOrder(stacks []domain.Stack, sortBy string, desc bool) {
