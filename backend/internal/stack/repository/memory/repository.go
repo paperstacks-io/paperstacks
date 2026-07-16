@@ -254,6 +254,26 @@ func (r *Repository) SearchByOwner(ctx context.Context, userExternalID string, o
 	}, nil
 }
 
+func (r *Repository) StatsByOwner(ctx context.Context, userExternalID string) (domain.Stats, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	stats := domain.Stats{}
+	for _, stack := range r.data {
+		if stack.Owner.ExternalID != userExternalID {
+			continue
+		}
+
+		stats.TotalStacks++
+		stats.TotalPapers += len(stack.Papers)
+		if stack.IsPublic {
+			stats.PublicStacks++
+		}
+	}
+
+	return stats, nil
+}
+
 func sortStacksByOrder(stacks []domain.Stack, sortBy string, desc bool) {
 	sort.Slice(stacks, func(i, j int) bool {
 		switch sortBy {

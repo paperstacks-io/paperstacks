@@ -62,11 +62,16 @@ func AddRoute(
 
 	papersTmpl := pageTemplate("papers/page")
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
+	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
 	stacksTmpl := pageTemplate("stacks/page")
 	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(logger, stacksTmpl, cfg.HankoAPIURL, stackService)))
 	stacksMyTmpl := pageTemplate("stacks/my")
 	mux.Handle(http.MethodGet+" /stacks/my", defaultMiddle(handleStacksMyPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearchPublic(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/my/search", defaultMiddle(handleStacksSearchByOwner(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/my/stats", defaultMiddle(handleStacksStatsByOwner(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
 	searchTmpl := pageTemplate("search/page")
 	mux.Handle(http.MethodGet+" /search", defaultMiddle(handlePage(searchTmpl, cfg.HankoAPIURL)))
@@ -76,13 +81,7 @@ func AddRoute(
 
 	authTmpl := pageTemplate("auth/page")
 	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
-
-	// Partials
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
-	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
-	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearchPublic(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/my/search", defaultMiddle(handleStacksSearchByOwner(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
 	// Static content
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))

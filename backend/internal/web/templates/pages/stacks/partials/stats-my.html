@@ -1,0 +1,21 @@
+{{ define "stacks/partials/stats-my" }}
+<!-- <section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs"> -->
+<div class="stat">
+  <div class="stat-figure">
+    <svg data-src="https://unpkg.com/heroicons/20/solid/rectangle-stack.svg" class="size-7 opacity-40"></svg>
+  </div>
+  <div class="stat-title">Stacks</div>
+  <div class="stat-value text-xl font-semibold tabular-nums">{{ .TotalStacks }}</div>
+  <div class="stat-desc">{{ .PublicStacks }} public</div>
+</div>
+
+<div class="stat">
+  <div class="stat-figure">
+    <svg data-src="https://unpkg.com/heroicons/20/solid/document.svg" class="size-7 opacity-40"></svg>
+  </div>
+  <div class="stat-title">Papers</div>
+  <div class="stat-value text-xl font-semibold tabular-nums">{{ .TotalPapers }}</div>
+  <div class="stat-desc">Across all stacks</div>
+</div>
+<!-- </section> -->
+{{ end }}

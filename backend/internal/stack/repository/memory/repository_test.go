@@ -307,6 +307,59 @@ func TestRepositorySearchEmptyQueryReturnsAllStacks(t *testing.T) {
 	}
 }
 
+func TestRepositoryStatsByOwner(t *testing.T) {
+	t.Parallel()
+
+	otherUser := userDomain.User{ExternalID: "other-user"}
+	repo := &Repository{
+		data: []domain.Stack{
+			{
+				UUID:     "34cef86a-c369-4f61-9ac1-6c4ca09f50f3",
+				Name:     "Public Stack One",
+				Owner:    user,
+				IsPublic: true,
+				Papers: []paperDomain.Paper{
+					{UUID: "c8b0970b-114a-44cb-97fb-1a83297cc46d"},
+					{UUID: "8eca1e47-a689-457b-b2ce-98bd5c7ee565"},
+				},
+			},
+			{
+				UUID:     "2051a4d9-23f6-4bfa-8d44-367c28760198",
+				Name:     "Private Stack",
+				Owner:    user,
+				IsPublic: false,
+				Papers: []paperDomain.Paper{
+					{UUID: "c7633fde-474a-423d-9863-e78449f14a3c"},
+				},
+			},
+			{
+				UUID:     "bd9ee496-7381-4c69-a7ba-65bc38010af4",
+				Name:     "Other User Stack",
+				Owner:    otherUser,
+				IsPublic: true,
+				Papers: []paperDomain.Paper{
+					{UUID: "a376c7e7-d614-4cd9-b348-eed9207c549b"},
+				},
+			},
+		},
+	}
+
+	stats, err := repo.StatsByOwner(context.Background(), user.ExternalID)
+	if err != nil {
+		t.Fatalf("StatsByOwner() error = %v", err)
+	}
+
+	if stats.TotalStacks != 2 {
+		t.Fatalf("StatsByOwner() TotalStacks = %d, want %d", stats.TotalStacks, 2)
+	}
+	if stats.PublicStacks != 1 {
+		t.Fatalf("StatsByOwner() PublicStacks = %d, want %d", stats.PublicStacks, 1)
+	}
+	if stats.TotalPapers != 3 {
+		t.Fatalf("StatsByOwner() TotalPapers = %d, want %d", stats.TotalPapers, 3)
+	}
+}
+
 func countPublicSeedStacks() int {
 	count := 0
 	for _, stack := range seedData() {
