@@ -127,7 +127,19 @@
           {{ if .Session.IsValid }}
           <span class="font-light">My Library</span>
           <li><a onClick="alert('Not implemented yet!')">My Papers</a></li>
-          <li><a onClick="alert('Not implemented yet!')">My Stacks</a></li>
+          <li>
+            <a
+              href="/app/stacks/my"
+              hx-get="/app/stacks/my"
+              hx-target="#page-shell"
+              hx-select="#page-shell"
+              hx-select-oob="#sidebar-menu:outerHTML"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="{{ if eq .PageName `stacks/my` }}menu-active{{ end }}"
+              >My Stacks</a
+            >
+          </li>
           <span class="font-light">Tools</span>
           <li><a onClick="alert('Not implemented yet!')">Import Papers</a></li>
           <li><a onClick="alert('Not implemented yet!')">Export to BibTeX</a></li>

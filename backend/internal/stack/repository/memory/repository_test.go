@@ -243,7 +243,7 @@ func TestRepositorySearchByName(t *testing.T) {
 		t.Fatalf("Create() public stack error = %v", err)
 	}
 
-	result, err := repo.Search(context.Background(), domain.SearchOptions{
+	result, err := repo.SearchPublic(context.Background(), domain.SearchOptions{
 		Query: "  Unique Public Stack  ",
 	})
 	if err != nil {
@@ -293,7 +293,7 @@ func TestRepositorySearchEmptyQueryReturnsAllStacks(t *testing.T) {
 		}
 	}
 
-	result, err := repo.Search(context.Background(), domain.SearchOptions{})
+	result, err := repo.SearchPublic(context.Background(), domain.SearchOptions{})
 
 	expected := countPublicSeedStacks() + 2
 	if err != nil {
@@ -349,7 +349,7 @@ func TestRepositorySearchPaginatesResults(t *testing.T) {
 		}
 	}
 
-	result, err := repo.Search(context.Background(), domain.SearchOptions{
+	result, err := repo.SearchPublic(context.Background(), domain.SearchOptions{
 		Query: "pagination-unique",
 	})
 	if err != nil {
@@ -369,6 +369,7 @@ func TestRepositorySearchPaginatesResults(t *testing.T) {
 		t.Fatalf("Search() hasNext = true, want false")
 	}
 }
+
 func TestRepositorySearchSortByUpdatedAtDescending(t *testing.T) {
 	t.Parallel()
 
@@ -396,12 +397,11 @@ func TestRepositorySearchSortByUpdatedAtDescending(t *testing.T) {
 		}
 	}
 
-	result, err := repo.Search(ctx, domain.SearchOptions{
+	result, err := repo.SearchPublic(ctx, domain.SearchOptions{
 		Query:  "sort-created",
 		SortBy: "updated_at",
 		Desc:   true,
 	})
-
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
