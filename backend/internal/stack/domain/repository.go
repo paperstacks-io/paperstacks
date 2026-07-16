@@ -22,6 +22,7 @@ type Repository interface {
 	SearchPublic(ctx context.Context, options SearchOptions) (SearchResult, error)
 	SearchByOwner(ctx context.Context, userExternalID string, options SearchOptions) (SearchResult, error)
 	CountPublic(ctx context.Context) (int, error)
+	StatsByOwner(ctx context.Context, userExternalID string) (Stats, error)
 
 	// commands
 	Create(ctx context.Context, stack Stack) error
@@ -52,4 +53,10 @@ type SearchResult struct {
 	Page     int
 	PageSize int
 	HasNext  bool
+}
+
+type Stats struct {
+	TotalStacks  int
+	PublicStacks int
+	TotalPapers  int
 }

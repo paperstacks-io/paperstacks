@@ -177,3 +177,7 @@ func (s *StackService) SearchByOwner(ctx context.Context, userExternalID string,
 
 	return s.repo.SearchByOwner(ctx, userExternalID, opts)
 }
+
+func (s *StackService) GetStatsByOwner(ctx context.Context, userExternalID string) (domain.Stats, error) {
+	return s.repo.StatsByOwner(ctx, userExternalID)
+}

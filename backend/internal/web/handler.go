@@ -284,6 +284,34 @@ func handleStacksSearchByOwner(
 	})
 }
 
+func handleStacksStatsByOwner(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		ctx := r.Context()
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok {
+			session = &commonauth.Session{}
+		}
+		stats, err := stackService.GetStatsByOwner(ctx, session.UserID)
+		if err != nil {
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		templateName := "stacks/partials/stats-my"
+		if err := tmpl.ExecuteTemplate(w, templateName, stats); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
 func searchOptionsFromRequest(r *http.Request) stackDomain.SearchOptions {
 	search := normalizeFormParam(r.FormValue("search"))
 	sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
