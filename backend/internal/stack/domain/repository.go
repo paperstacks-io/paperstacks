@@ -38,6 +38,13 @@ type SearchOptions struct {
 	PageSize int
 }
 
+func (o *SearchOptions) Validate() error {
+	if o.SortBy != "name" && o.SortBy != "updated_at" {
+		return ErrInvalidSearch
+	}
+	return nil
+}
+
 type SearchResult struct {
 	Items    []Stack
 	Total    int
