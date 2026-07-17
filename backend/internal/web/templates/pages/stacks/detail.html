@@ -37,7 +37,37 @@
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
         <h2 class="card-title">Papers</h2>
-        Content goes here
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Article</th>
+                <th>Authors</th>
+                <th>Year</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -53,30 +83,28 @@
     </div>
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
-        <h2 class="card-title">Info</h2>
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div class="grow">
+            <h2 class="card-title">Info</h2>
+          </div>
+          <a class="btn btn-sm">Save changes</a>
+        </div>
+
         <fieldset class="fieldset">
-          <label class="label">Category</label>
-          <select class="select w-full" aria-label="Select option">
-            <option selected>Software</option>
-            <option>Services</option>
-            <option>Templates</option>
-          </select>
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label">Tags</label>
+          <label class="label">Title</label>
           <input
             class="input w-full"
-            value="featured, recurring, analytics"
-            aria-label="featured, recurring, analytics"
+            value="What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation"
+            aria-label="title"
           />
         </fieldset>
         <fieldset class="fieldset">
-          <label class="label">SEO title</label>
-          <input class="input w-full" value="Launch Analytics Kit" aria-label="Launch Analytics Kit" />
+          <label class="label">Authors</label>
+          <input class="input w-full" value="ASIF KAMAL TURZO; AMIANGSHU BOSU;" aria-label="authors" />
         </fieldset>
         <fieldset class="fieldset">
-          <label class="label">Connected products</label>
-          <input class="input w-full" value="Growth Suite, Commerce Pro" aria-label="Growth Suite, Commerce Pro" />
+          <label class="label">Year</label>
+          <input class="input w-full" value="2024" aria-label="paper year" />
         </fieldset>
 
         <button class="btn btn-dash min-h-24">
