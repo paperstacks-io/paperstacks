@@ -1,0 +1,90 @@
+{{ define "stacks/detail" }}
+
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Stack Detail: Code Review</li>
+      </ul>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button class="btn btn-sm">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
+      Export
+    </button>
+    <button class="btn btn-sm">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
+      Delete
+    </button>
+  </div>
+</header>
+
+<!-- stats -->
+<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-3 shadow-xs">
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Papers</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">50</div>
+    <div class="stat-desc">in this stacks</div>
+  </div>
+</section>
+
+<section class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="grid gap-6">
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <h2 class="card-title">Papers</h2>
+        Content goes here
+      </div>
+    </div>
+  </div>
+  <aside class="grid content-start gap-6">
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <h2 class="card-title">Settings</h2>
+        <label class="label cursor-pointer justify-between">
+          Public (visible to everyone)
+          <input type="checkbox" class="toggle toggle-success" name="is_public" checked="checked" />
+        </label>
+      </div>
+    </div>
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <h2 class="card-title">Info</h2>
+        <fieldset class="fieldset">
+          <label class="label">Category</label>
+          <select class="select w-full" aria-label="Select option">
+            <option selected>Software</option>
+            <option>Services</option>
+            <option>Templates</option>
+          </select>
+        </fieldset>
+        <fieldset class="fieldset">
+          <label class="label">Tags</label>
+          <input
+            class="input w-full"
+            value="featured, recurring, analytics"
+            aria-label="featured, recurring, analytics"
+          />
+        </fieldset>
+        <fieldset class="fieldset">
+          <label class="label">SEO title</label>
+          <input class="input w-full" value="Launch Analytics Kit" aria-label="Launch Analytics Kit" />
+        </fieldset>
+        <fieldset class="fieldset">
+          <label class="label">Connected products</label>
+          <input class="input w-full" value="Growth Suite, Commerce Pro" aria-label="Growth Suite, Commerce Pro" />
+        </fieldset>
+
+        <button class="btn btn-dash min-h-24">
+          <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
+          Add PDF
+        </button>
+      </div>
+    </div>
+  </aside>
+</section>
+{{ end }}
