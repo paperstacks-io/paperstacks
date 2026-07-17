@@ -37,6 +37,21 @@
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
         <h2 class="card-title">Papers</h2>
+
+        <form>
+          <div class="flex flex-col gap-3 lg:flex-row">
+            <label class="input input-sm w-full">
+              <svg data-src="https://unpkg.com/heroicons/20/solid/funnel.svg" class="h-4 w-4 opacity-50"></svg>
+              <input type="search" name="search" placeholder="exploratory..." />
+            </label>
+            <select aria-label="Select sort option" class="select select-sm w-full lg:max-w-sm" name="sortBy">
+              <option value="+title">Title (A-Z)</option>
+              <option value="-title">Title (Z-A)</option>
+              <option value="+year">Oldest</option>
+              <option value="-year" selected>Sort: Newest</option>
+            </select>
+          </div>
+        </form>
         <div class="overflow-x-auto">
           <table class="table">
             <thead>
@@ -65,8 +80,70 @@
                   <a class="btn btn-ghost btn-xs">PDF</a>
                 </td>
               </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
             </tbody>
           </table>
+
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <p class="text-base-content/60 text-sm">Showing 1-5 of 50 papers</p>
+            <div class="join lg:ml-auto">
+              <button class="join-item btn btn-sm btn-disabled">«</button>
+              <button type="button" class="join-item btn btn-sm btn-neutral">1</button>
+              <button type="button" class="join-item btn btn-sm">2</button>
+              <button type="button" class="join-item btn btn-sm">3</button>
+              <button class="join-item btn btn-sm">»</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
