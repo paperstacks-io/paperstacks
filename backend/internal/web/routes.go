@@ -73,9 +73,6 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/my/stats", defaultMiddle(handleStacksStatsByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
-	searchTmpl := pageTemplate("search/page")
-	mux.Handle(http.MethodGet+" /search", defaultMiddle(handlePage(searchTmpl, cfg.HankoAPIURL)))
-
 	settingsTmpl := pageTemplate("settings/page")
 	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, cfg.HankoAPIURL)))
 
