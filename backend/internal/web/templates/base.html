@@ -68,66 +68,12 @@
               hx-swap="outerHTML"
               hx-push-url="true"
               class="{{ if eq .PageName `home` }}menu-active{{ end }}"
-              >Home</a
             >
+              <svg data-src="https://unpkg.com/heroicons/20/solid/home.svg" class="size-4"></svg>
+              Home
+            </a>
           </li>
-          <li>
-            <a
-              href="/app/papers"
-              hx-get="/app/papers"
-              hx-target="#page-shell"
-              hx-select="#page-shell"
-              hx-select-oob="#sidebar-menu:outerHTML"
-              hx-swap="outerHTML"
-              hx-push-url="true"
-              class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
-              >Papers</a
-            >
-          </li>
-          <li>
-            <a
-              href="/app/stacks"
-              hx-get="/app/stacks"
-              hx-target="#page-shell"
-              hx-select="#page-shell"
-              hx-select-oob="#sidebar-menu:outerHTML"
-              hx-swap="outerHTML"
-              hx-push-url="true"
-              class="{{ if eq .PageName `stacks` }}menu-active{{ end }}"
-              >Stacks</a
-            >
-          </li>
-          <li>
-            <a
-              href="/app/search"
-              hx-get="/app/search"
-              hx-target="#page-shell"
-              hx-select="#page-shell"
-              hx-select-oob="#sidebar-menu:outerHTML"
-              hx-swap="outerHTML"
-              hx-push-url="true"
-              class="{{ if eq .PageName `search` }}menu-active{{ end }}"
-              >Search</a
-            >
-          </li>
-          <li>
-            <a
-              href="/app/settings"
-              hx-get="/app/settings"
-              hx-target="#page-shell"
-              hx-select="#page-shell"
-              hx-select-oob="#sidebar-menu:outerHTML"
-              hx-swap="outerHTML"
-              hx-push-url="true"
-              class="{{ if eq .PageName `settings` }}menu-active{{ end }}"
-              >Settings</a
-            >
-          </li>
-          <div class="divider"></div>
 
-          {{ if .Session.IsValid }}
-          <span class="font-light">My Library</span>
-          <li><a onClick="alert('Not implemented yet!')">My Papers</a></li>
           <li>
             <a
               href="/app/stacks/my"
@@ -138,46 +84,182 @@
               hx-swap="outerHTML"
               hx-push-url="true"
               class="{{ if eq .PageName `stacks/my` }}menu-active{{ end }}"
-              >My Stacks</a
             >
+              <svg data-src="https://unpkg.com/heroicons/20/solid/rectangle-stack.svg" class="size-4"></svg>
+              Stacks Overview
+            </a>
           </li>
-          <span class="font-light">Tools</span>
-          <li><a onClick="alert('Not implemented yet!')">Import Papers</a></li>
-          <li><a onClick="alert('Not implemented yet!')">Export to BibTeX</a></li>
+          <li>
+            <details name="sidebar-group">
+              <summary>
+                <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
+                Legacy
+              </summary>
+              <ul>
+                <li>
+                  <a
+                    href="/app/papers"
+                    hx-get="/app/papers"
+                    hx-target="#page-shell"
+                    hx-select="#page-shell"
+                    hx-select-oob="#sidebar-menu:outerHTML"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                    class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
+                    >Papers</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/app/stacks"
+                    hx-get="/app/stacks"
+                    hx-target="#page-shell"
+                    hx-select="#page-shell"
+                    hx-select-oob="#sidebar-menu:outerHTML"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                    class="{{ if eq .PageName `stacks` }}menu-active{{ end }}"
+                    >Stacks</a
+                  >
+                </li>
+              </ul>
+            </details>
+          </li>
+
+          {{ if .Session.IsValid }}
+          <div class="divider"></div>
+
+          <span class="font-light">Stacks</span>
+
+          <li
+            href="/app/stacks/detail"
+            hx-get="/app/stacks/detail"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar-menu:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            <summary>
+              <a>Code Review</a>
+              <span class="badge badge-xs">50</span>
+            </summary>
+          </li>
+          <li
+            href="/app/stacks/detail"
+            hx-get="/app/stacks/detail"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar-menu:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            <summary>
+              <a>Bayesian</a>
+              <span class="badge badge-xs">9</span>
+            </summary>
+          </li>
+          <li
+            href="/app/stacks/detail"
+            hx-get="/app/stacks/detail"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar-menu:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            <summary>
+              <a>Research Methodology</a>
+              <span class="badge badge-xs">32</span>
+            </summary>
+          </li>
+          <li
+            href="/app/stacks/detail"
+            hx-get="/app/stacks/detail"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar-menu:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            <summary>
+              <a>Secondary Studies</a>
+              <span class="badge badge-xs">18</span>
+            </summary>
+          </li>
+          <li
+            href="/app/stacks/detail"
+            hx-get="/app/stacks/detail"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar-menu:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            <summary>
+              <a>Testing</a>
+              <span class="badge badge-xs">68</span>
+            </summary>
+          </li>
           {{ end }}
         </ul>
 
         <!-- Sidebar footer -->
-        <div class="sticky bottom-0 py-2 mt-auto px-5">
-          <div class="flex justify-between">
-            <div class="tooltip" data-tip="{{ .AppGitHash }}">
-              <div class="badge badge-outline font-mono px-4 py-3">{{ .AppVersion }}</div>
+        <div class="sticky bottom-0 py-2 mt-auto z-10 bg-gradient-to-b from-transparent to-25% to-base-200 pt-8">
+          <ul class="menu w-full overflow-y-auto">
+            <div class="flex justify-between">
+              <div class="tooltip" data-tip="{{ .AppGitHash }}">
+                <div class="badge badge-outline font-mono px-4 py-3">{{ .AppVersion }}</div>
+              </div>
+
+              <label class="swap swap-rotate">
+                <input type="checkbox" value="dark" data-set-theme aria-label="Toggle theme" />
+                <svg data-src="https://unpkg.com/heroicons/24/outline/sun.svg" class="swap-off h-6 w-6"></svg>
+                <svg data-src="https://unpkg.com/heroicons/24/outline/moon.svg" class="swap-on h-6 w-6"></svg>
+              </label>
             </div>
+            <div class="divider">{{.Session.Email}}</div>
+            {{ if .Session.IsValid }}
 
-            <label class="swap swap-rotate">
-              <input type="checkbox" value="dark" data-set-theme aria-label="Toggle theme" />
-              <svg data-src="https://unpkg.com/heroicons/24/outline/sun.svg" class="swap-off h-6 w-6"></svg>
-              <svg data-src="https://unpkg.com/heroicons/24/outline/moon.svg" class="swap-on h-6 w-6"></svg>
-            </label>
-          </div>
+            <li>
+              <a
+                href="/app/settings"
+                hx-get="/app/settings"
+                hx-target="#page-shell"
+                hx-select="#page-shell"
+                hx-select-oob="#sidebar-menu:outerHTML"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                class="{{ if eq .PageName `settings` }}menu-active{{ end }}"
+              >
+                <svg data-src="https://unpkg.com/heroicons/20/solid/adjustments-vertical.svg" class="size-4"></svg>
+                Settings
+              </a>
+            </li>
 
-          <div class="divider"></div>
-          {{ if .Session.IsValid }}
-          <p class="text-sm text-center">{{.Session.Email}}</p>
-          <button class="btn btn-sm btn-neutral w-full" hx-post="/app/auth/logout">Logout</button>
-          {{ else }}
-          <button
-            href="/app/auth"
-            hx-get="/app/auth"
-            hx-target="#page-shell"
-            hx-select="#page-shell"
-            hx-swap="outerHTML"
-            hx-push-url="true"
-            class="btn btn-sm btn-neutral w-full"
-          >
-            Login
-          </button>
-          {{ end }}
+            <li>
+              <a hx-post="/app/auth/logout">
+                <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-right-on-rectangle.svg" class="size-4"></svg>
+                Logout
+              </a>
+            </li>
+            {{ else }}
+            <li>
+              <a
+                href="/app/auth"
+                hx-get="/app/auth"
+                hx-target="#page-shell"
+                hx-select="#page-shell"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                class="btn btn-sm btn-primary"
+              >
+                <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-left-on-rectangle.svg" class="size-4"></svg>
+                Login
+              </a>
+            </li>
+            {{ end }}
+          </ul>
         </div>
       </nav>
     </aside>
