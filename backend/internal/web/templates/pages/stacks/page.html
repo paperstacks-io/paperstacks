@@ -1,42 +1,82 @@
-{{ define "stack" }}
+{{ define "stacks/page" }}
 
-<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Stacks</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section class="card bg-base-200 col-span-12 shadow-xs">
   <div class="card bg-base-100 shadow-sm w-full">
     <div class="card-body w-full">
       <h2 class="card-title">
-        List of stacks
+        Public stacks
+        <div class="badge badge-neutral badge-outline">
+          <span>{{ .StacksCountPublic }}</span>
+          availabe
+        </div>
         <span class="htmx-indicator loading loading-spinner loading-sm"></span>
       </h2>
 
       <div hx-indicator=".htmx-indicator">
         <div class="card w-full">
           <div class="flex flex-row gap-4">
-            <label class="input input-bordered flex items-center gap-2 w-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 opacity-50"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-                />
-              </svg>
+            <form id="stack_search_form" class="flex grow flex-row gap-4" hx-target="#stack-results">
+              <label class="input input-bordered flex items-center gap-2 w-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5 opacity-50"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m21 21-4.35-4.35m1.6-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                  />
+                </svg>
 
-              <input
-                type="search"
-                name="search"
-                placeholder="Search Stacks..."
+                <input
+                  type="search"
+                  name="search"
+                  placeholder="Search Stacks..."
+                  hx-post="/app/stacks/search"
+                  hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+                  hx-target="#stack-results"
+                  hx-vals='{"page": 1}'
+                />
+              </label>
+
+              <select
+                class="select select-bordered block w-40"
+                name="sortBy"
                 hx-post="/app/stacks/search"
-                hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+                hx-trigger="change"
                 hx-target="#stack-results"
                 hx-vals='{"page": 1}'
-              />
-            </label>
+              >
+                <option value="+name">Name (A-Z)</option>
+                <option value="-name">Name (Z-A)</option>
+                <option value="+updated_at">Oldest</option>
+                <option value="-updated_at" selected>Newest</option>
+              </select>
+            </form>
+
+            <button
+              id="refresh_stacks_button"
+              type="button"
+              class="hidden"
+              hx-post="/app/stacks/search"
+              hx-target="#stack-results"
+              hx-include="#stack_search_form"
+              hx-vals='{"page": 1}'
+            ></button>
 
             {{ if .Session.IsValid }}
             <button
@@ -54,9 +94,10 @@
 
             <dialog id="create_stack_modal" class="modal">
               <div class="modal-box">
-                <div class="card bg-base-100">
+                <div class="card">
                   <div class="card-body">
                     <h2 class="card-title">Create Stack</h2>
+
                     <form
                       id="create_stack_form"
                       hx-post="/app/stacks/create"
@@ -65,52 +106,38 @@
                       hx-on::before-request="document.getElementById('create_stack_error').innerHTML = ''"
                       hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"
                       hx-on::after-request="
-    if (event.detail.successful) {
-      create_stack_modal.close();
-    }
-  "
+                        if (event.detail.successful) {
+                          create_stack_modal.close();
+                          document.getElementById('refresh_stacks_button').click();
+                        }
+                      "
                     >
-                      <label class="input input-bordered flex items-center gap-2 w-full">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="size-5 opacity-70"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <path d="M12 2 2 7l10 5 10-5-10-5Z" />
-                          <path d="m2 17 10 5 10-5" />
-                          <path d="m2 12 10 5 10-5" />
-                        </svg>
-
+                      <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Stack name</legend>
                         <input
+                          class="input validator w-full"
+                          required
+                          minlength="1"
                           type="text"
                           name="name"
                           placeholder="My Stack"
                           oninput="document.getElementById('create_stack_submit').disabled = this.value.trim() === ''"
                         />
-                      </label>
-                      <div id="create_stack_error" class="mt-2"></div>
-
-                      <div
-                        class="mt-4 flex items-center justify-between rounded-box border border-base-300 bg-base-100 p-4"
-                      >
-                        <div>
-                          <p class="font-medium">Public Stack</p>
-                          <p class="text-sm opacity-70">Others can view this stack</p>
-                        </div>
-
-                        <input type="checkbox" name="is_public" value="true" class="toggle toggle-success" />
-                      </div>
-
-                      <div class="modal-action">
+                        <p class="validator-hint hidden">Required</p>
+                      </fieldset>
+                      <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Stack settings</legend>
+                        <label class="label">
+                          <input type="checkbox" class="toggle toggle-success" name="is_public" checked="checked" />
+                          Make stack public (visible to everyone)
+                        </label>
+                      </fieldset>
+                      <div class="card-actions justify-end modal-action">
                         <button id="create_stack_submit" type="submit" class="btn btn-primary" disabled>Create</button>
 
                         <button type="button" class="btn" onclick="create_stack_modal.close()">Close</button>
                       </div>
+                      <div id="create_stack_error" class="mt-2"></div>
                     </form>
                   </div>
                 </div>
@@ -125,8 +152,8 @@
             <button
               type="button"
               hx-get="/app/auth"
-              hx-target="#{{ $.AppTargetID }}"
-              hx-select="#{{ $.AppTargetID }}"
+              hx-target="#app-shell"
+              hx-select="#app-shell"
               hx-swap="outerHTML"
               hx-push-url="true"
               class="btn btn-soft"
@@ -141,6 +168,6 @@
       <div id="stack-results"></div>
     </div>
   </div>
-</div>
+</section>
 
 {{ end }}

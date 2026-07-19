@@ -1,0 +1,60 @@
+hanko-auth,
+hanko-profile {
+  /* Color Scheme */
+  --color: var(--color-base-content);
+  --color-shade-1: color-mix(
+    in oklch,
+    var(--color-base-content) 55%,
+    var(--color-base-100)
+  );
+  --color-shade-2: var(--color-base-300);
+
+  --brand-color: var(--color-primary);
+  --brand-color-shade-1: color-mix(in oklch, var(--color-primary) 85%, white);
+  --brand-contrast-color: var(--color-primary-content);
+
+  --background-color: var(--color-base-200);
+  --error-color: var(--color-error);
+  --link-color: var(--color-primary);
+
+  /* Font Styles */
+  --font-weight: 400;
+  --font-size: 16px;
+  --font-family: inherit;
+
+  /* Border Styles */
+  --border-radius: var(--radius-box);
+  --border-style: solid;
+  --border-width: var(--border);
+
+  /* Item Styles */
+  --item-height: 2.5rem;
+  --item-margin: 0.5rem 0;
+
+  /* Container Styles */
+  --container-padding: 30px;
+  --container-max-width: 410px;
+
+  /* Headline Styles */
+  --headline1-font-size: 24px;
+  --headline1-font-weight: 600;
+  --headline1-margin: 0 0 1rem;
+
+  --headline2-font-size: 16px;
+  --headline2-font-weight: 600;
+  --headline2-margin: 1rem 0 0.5rem;
+
+  /* Divider Styles */
+  --divider-padding: 0 42px;
+  --divider-visibility: visible;
+
+  /* Link Styles */
+  --link-text-decoration: none;
+  --link-text-decoration-hover: underline;
+
+  /* Input Styles */
+  --input-min-width: 14em;
+
+  /* Button Styles */
+  --button-min-width: max-content;
+}

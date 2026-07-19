@@ -18,16 +18,12 @@ import (
 )
 
 type pageData struct {
-	Title         string
-	AppVersion    string
-	AppGitHash    string
-	AppBuildTime  string
-	PageName      string
-	NavItems      []navItem
-	AppTargetID   string
-	PageContentID string
-	HankoAPIURL   string
-	Session       commonauth.Session
+	Title       string
+	AppVersion  string
+	AppGitHash  string
+	PageName    string
+	HankoAPIURL string
+	Session     commonauth.Session
 }
 
 type papersListData struct {
@@ -54,12 +50,31 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
-type stackCreateViewData struct {
-	Success bool
+func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
+	return stacksListData{
+		Items:         result.Items,
+		Total:         result.Total,
+		Page:          result.Page,
+		PageSize:      result.PageSize,
+		HasNext:       result.HasNext,
+		PrevPage:      result.Page - 1,
+		NextPage:      result.Page + 1,
+		SearchOptions: opts,
+		Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
+	}
+}
+
+type stacksPageData struct {
+	pageData
+	StacksCountTotal  int
+	StacksCountPublic int
+}
+
+type alertData struct {
 	Message string
 }
 
-func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string) http.Handler {
+func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -69,25 +84,100 @@ func handleIndex(tmpl *template.Template, navItems []navItem, hankoAPIURL string
 		}
 
 		data := pageData{
-			AppVersion:    build.Version,
-			AppGitHash:    build.GitHash,
-			AppBuildTime:  build.BuildTime,
-			NavItems:      navItems,
-			AppTargetID:   "app-shell",
-			PageContentID: "page-content",
-			HankoAPIURL:   hankoAPIURL,
-			Session:       *session,
+			AppVersion:  build.Version,
+			AppGitHash:  build.GitHash,
+			PageName:    pageNameFromPath(r.URL.Path),
+			HankoAPIURL: hankoAPIURL,
+			Session:     *session,
 		}
 
-		templateName := "base"
-		if r.Header.Get("HX-Request") == "true" {
-			templateName = "app"
-		}
-
-		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
+		renderTemplate(w, r, tmpl, data)
 	})
+}
+
+func handleStacksPage(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		counter, err := stackService.CountPublic(r.Context())
+		if err != nil {
+			logger.Error("count public stacks", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := stacksPageData{
+			pageData: pageData{
+				AppVersion:  build.Version,
+				AppGitHash:  build.GitHash,
+				PageName:    pageNameFromPath(r.URL.Path),
+				HankoAPIURL: hankoAPIURL,
+				Session:     *session,
+			},
+			StacksCountTotal:  0,
+			StacksCountPublic: counter,
+		}
+
+		renderTemplate(w, r, tmpl, data)
+	})
+}
+
+func handleStacksMyPage(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		counter, err := stackService.CountPublic(r.Context())
+		if err != nil {
+			logger.Error("count public stacks", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := stacksPageData{
+			pageData: pageData{
+				AppVersion:  build.Version,
+				AppGitHash:  build.GitHash,
+				PageName:    pageNameFromPath(r.URL.Path),
+				HankoAPIURL: hankoAPIURL,
+				Session:     *session,
+			},
+			StacksCountTotal:  0,
+			StacksCountPublic: counter,
+		}
+
+		renderTemplate(w, r, tmpl, data)
+	})
+}
+
+func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
+	templateName := "base"
+	if r.Header.Get("HX-Request") == "true" {
+		templateName = "app"
+	}
+
+	if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
 }
 
 func handlePapersSearch(
@@ -138,7 +228,7 @@ func handlePapersSearch(
 	})
 }
 
-func handleStacksSearch(
+func handleStacksSearchPublic(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	stackService *stackApp.StackService,
@@ -146,15 +236,7 @@ func handleStacksSearch(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		search := normalizeFormParam(r.FormValue("search"))
-		pageStr := normalizeFormParam(r.FormValue("page"))
-
-		page, _ := strconv.Atoi(pageStr)
-		opts := stackDomain.SearchOptions{
-			Query: search,
-			Page:  page,
-		}
-
+		opts := searchOptionsFromRequest(r)
 		result, err := stackService.Search(r.Context(), opts)
 		if err != nil {
 			logger.Error("read stacks", "error", err.Error())
@@ -162,17 +244,7 @@ func handleStacksSearch(
 			return
 		}
 
-		data := stacksListData{
-			Items:         result.Items,
-			Total:         result.Total,
-			Page:          result.Page,
-			PageSize:      result.PageSize,
-			HasNext:       result.HasNext,
-			PrevPage:      result.Page - 1,
-			NextPage:      result.Page + 1,
-			SearchOptions: opts,
-			Pagination:    BuildPagination(result.Total, result.PageSize, result.Page),
-		}
+		data := NewStacksListData(result, opts)
 
 		templateName := "stacks/partials/stacks-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
@@ -180,6 +252,81 @@ func handleStacksSearch(
 			return
 		}
 	})
+}
+
+func handleStacksSearchByOwner(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		opts := searchOptionsFromRequest(r)
+		result, err := stackService.SearchByOwner(r.Context(), session.UserID, opts)
+		if err != nil {
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := NewStacksListData(result, opts)
+		templateName := "stacks/partials/stacks-list"
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func handleStacksStatsByOwner(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		ctx := r.Context()
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok {
+			session = &commonauth.Session{}
+		}
+		stats, err := stackService.GetStatsByOwner(ctx, session.UserID)
+		if err != nil {
+			logger.Error("read stacks", "error", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		templateName := "stacks/partials/stats-my"
+		if err := tmpl.ExecuteTemplate(w, templateName, stats); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func searchOptionsFromRequest(r *http.Request) stackDomain.SearchOptions {
+	search := normalizeFormParam(r.FormValue("search"))
+	sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
+	pageStr := normalizeFormParam(r.FormValue("page"))
+
+	sortBy, _ := strings.CutPrefix(sortByRaw, "+")
+	sortBy, desc := strings.CutPrefix(sortBy, "-")
+
+	page, _ := strconv.Atoi(pageStr)
+	return stackDomain.SearchOptions{
+		Query:  search,
+		SortBy: sortBy,
+		Desc:   desc,
+		Page:   page,
+	}
 }
 
 func handleStacksCreate(
@@ -195,27 +342,25 @@ func handleStacksCreate(
 			createStackSuccessTarget = "#create_stack_success"
 		)
 
-		render := func(status int, target string, data stackCreateViewData) {
+		render := func(status int, target string, templateName string, data alertData) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("HX-Retarget", target)
 			w.Header().Set("HX-Reswap", "innerHTML")
 			w.WriteHeader(status)
 
-			if err := tmpl.ExecuteTemplate(w, "stacks/partials/stack-alert", data); err != nil {
+			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 				logger.Error("render stack create", "error", err.Error())
 			}
 		}
 
 		renderError := func(status int, message string) {
-			render(status, createStackErrorTarget, stackCreateViewData{
-				Success: false,
+			render(status, createStackErrorTarget, "stacks/partials/alert-error", alertData{
 				Message: message,
 			})
 		}
 
 		renderSuccess := func(message string) {
-			render(http.StatusCreated, createStackSuccessTarget, stackCreateViewData{
-				Success: true,
+			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", alertData{
 				Message: message,
 			})
 		}
@@ -227,20 +372,21 @@ func handleStacksCreate(
 		}
 
 		name := r.FormValue("name")
-		if name == "" {
-			renderError(http.StatusBadRequest, "Stack name cannot be empty.")
-			return
-		}
-
-		isPublic := r.FormValue("is_public") == "true"
+		isPublic := r.FormValue("is_public") == "on"
 
 		user := userDomain.NewUser(session.UserID, session.Email)
 
-		created := stackDomain.NewStack(name, user)
-		created.IsPublic = isPublic
+		stack := stackDomain.NewStack(name, user)
+		stack.IsPublic = isPublic
 
-		if err := stackService.Create(ctx, *created); err != nil {
+		if err := stackService.Create(ctx, *stack); err != nil {
 			logger.Error("create stack", "error", err.Error())
+
+			if err == stackDomain.ErrStackAlreadyExists {
+				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
+				return
+			}
+
 			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
 			return
 		}
@@ -274,6 +420,17 @@ func handleLogout(
 
 		http.Redirect(w, r, "/app/", http.StatusSeeOther)
 	})
+}
+
+func pageNameFromPath(path string) string {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "home"
+	}
+
+	pageName, _, _ := strings.Cut(path, "?")
+
+	return pageName
 }
 
 func normalizeFormParam(s string) string {

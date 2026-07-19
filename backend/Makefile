@@ -1,10 +1,10 @@
 GOCMD=go
 BINARY_DIR=.
 BUILD_PKG=github.com/paperstacks.io/paperstacks/internal/common/build
-VERSION ?= $(if $(APP_VERSION),$(APP_VERSION),$(shell git describe --tags 2>/dev/null || echo development))
+GO_VERSION ?= $(shell awk '/^go / { print $$2 }' go.mod)
+VERSION ?= $(if $(APP_VERSION),$(APP_VERSION),$(shell git describe --tags --abbrev=0 2>/dev/null || echo development))
 GIT_HASH ?= $(if $(APP_GIT_HASH),$(APP_GIT_HASH),$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown))
-BUILD_TIME ?= $(if $(APP_BUILD_TIME),$(APP_BUILD_TIME),$(shell date -u +"%Y-%m-%dT%H:%M:%SZ"))
-BUILD_LDFLAGS=-ldflags "-X $(BUILD_PKG).Version=$(VERSION) -X $(BUILD_PKG).GitHash=$(GIT_HASH) -X $(BUILD_PKG).BuildTime=$(BUILD_TIME)"
+BUILD_LDFLAGS=-ldflags "-X $(BUILD_PKG).Version=$(VERSION) -X $(BUILD_PKG).GitHash=$(GIT_HASH)"
 
 .PHONY: deps
 deps: ## Install all Go dependencies
@@ -33,16 +33,26 @@ build-server: ## Build server application
 
 .PHONY: build-docker
 build-docker: ## Build Docker image for server
-	@GO_VERSION=$$(grep '^go ' go.mod | cut -d' ' -f2) && \
-	CONTAINER_CMD=$$(command -v docker >/dev/null 2>&1 && printf 'docker' || command -v podman >/dev/null 2>&1 && printf 'podman') && \
-	test -n "$$CONTAINER_CMD" || { echo "Neither docker nor podman is installed"; exit 1; } && \
-	echo "Using $$CONTAINER_CMD with Go version $$GO_VERSION from go.mod" && \
-	$$CONTAINER_CMD build \
-		--build-arg GO_VERSION=$$GO_VERSION \
-		--build-arg APP_VERSION=$(VERSION) \
-		--build-arg APP_GIT_HASH=$(GIT_HASH) \
-		--build-arg APP_BUILD_TIME=$(BUILD_TIME) \
-		-t paperstacks .
+	@COMPOSE_CMD=$$(if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then \
+		printf 'docker compose'; \
+	elif command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then \
+		printf 'podman compose'; \
+	fi) && \
+	test -n "$$COMPOSE_CMD" || { echo "Neither docker compose nor podman compose is installed"; exit 1; } && \
+	echo "Using $$COMPOSE_CMD with Go version $(GO_VERSION) from go.mod" && \
+	GO_VERSION=$(GO_VERSION) \
+	APP_VERSION=$(VERSION) \
+	APP_GIT_HASH=$(GIT_HASH) \
+	$$COMPOSE_CMD build paperstacks
+
+.PHONY: build-github-output
+build-github-output: ## Print build values as GitHub Actions outputs
+	@test -n '$(GO_VERSION)' || { printf '%s\n' 'GO_VERSION is empty' >&2; exit 1; }
+	@test -n '$(VERSION)' || { printf '%s\n' 'VERSION is empty' >&2; exit 1; }
+	@test -n '$(GIT_HASH)' || { printf '%s\n' 'GIT_HASH is empty' >&2; exit 1; }
+	@printf 'go-version=%s\n' '$(GO_VERSION)'
+	@printf 'app-version=%s\n' '$(VERSION)'
+	@printf 'app-git-hash=%s\n' '$(GIT_HASH)'
 
 .PHONY: help
 help:

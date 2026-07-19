@@ -1,3 +1,6 @@
 secrets/
 **/.idea/
 **/.vscode/
+
+# Build artifacts
+tmp/

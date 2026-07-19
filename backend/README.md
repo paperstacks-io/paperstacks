@@ -85,6 +85,24 @@ If you make modifications on the HTMX/CSS part also run:
 npm run watch:css
 ```
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) and uses Git tags prefixed with v (for example, v1.2.3).
+
+When preparing a new release:
+
+1. Determine the next version according to Semantic Versioning:
+   - **PATCH** (`v1.2.3` → `v1.2.4`): Bug fixes and other backward-compatible changes.
+   - **MINOR** (`v1.2.3` → `v1.3.0`): New backward-compatible features.
+   - **MAJOR** (`v1.2.3` → `v2.0.0`): Breaking changes.
+
+2. Create an annotated Git tag for the release and push the tag:
+
+```bash
+  git tag -a v1.2.3 -m "Release v1.2.3"
+  git push origin v1.2.3
+```
+
 ## HTTP API
 
 `openapi.yaml` contains a API documentation that can be viewed with

@@ -1,23 +1,45 @@
-{{define "auth"}}
-<div class="flex justify-center px-4 py-10 sm:px-6 lg:px-10">
-  <div class="card bg-base-100 shadow-sm">
-    <div class="card-body">
-      {{ if eq .HankoAPIURL "" }}
-      <h2 class="card-title">Authentication not available</h2>
-      <p>You have to set the <strong>HANKO_API_URL</strong> variable in the <strong>.env</strong> file.</p>
-      {{ else }}
-      <hanko-auth id="authComponent"></hanko-auth>
-      <script type="module">
-        const authComponent = document.getElementById("authComponent")
-        const next = new URLSearchParams(window.location.search).get("next")
-        const redirectTo = next && next.startsWith("/app/") ? next : "/app"
+{{ define "auth/page" }}
 
-        authComponent.addEventListener("onSessionCreated", () => {
-          document.location.href = redirectTo
-        })
-      </script>
-      {{ end }}
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Authentication</li>
+      </ul>
     </div>
   </div>
-</div>
-{{end}}
+</header>
+
+<section class="card bg-base-200 col-start-5 col-end-9 shadow-xs">
+  <div class="card-body">
+    {{ if eq .HankoAPIURL "" }}
+    <div class="flex flex-col gap-2">
+      <div class="grow">
+        <h2 class="card-title">Authentication not available</h2>
+        <p class="text-base-content/60">
+          You have to set the <strong>HANKO_API_URL</strong> variable in the <strong>.env</strong> file.
+        </p>
+      </div>
+    </div>
+    {{ else }}
+    <hanko-auth id="authComponent"></hanko-auth>
+    <script type="module">
+      const authComponent = document.getElementById("authComponent")
+      const next = new URLSearchParams(window.location.search).get("next")
+      const redirectTo = next && next.startsWith("/app/") ? next : "/app"
+
+      authComponent.addEventListener("onSessionCreated", () => {
+        document.location.href = redirectTo
+      })
+    </script>
+
+    <div role="alert" class="alert alert-info alert-vertical alert-soft">
+      <span><strong>Demo Account</strong></span>
+      <span>Email: <code>demo@paperstacks.io</code></span>
+      <span>Password: <code>demo</code></span>
+    </div>
+    {{ end }}
+  </div>
+</section>
+
+{{ end }}

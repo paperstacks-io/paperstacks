@@ -21,29 +21,6 @@ import (
 //go:embed assets/* all:templates
 var content embed.FS
 
-type navItem struct {
-	Label  string
-	Path   string
-	Active bool
-}
-
-func navItems(activePath string) []navItem {
-	prefix := "/app"
-	items := []navItem{
-		{Label: "Home", Path: prefix + "/"},
-		{Label: "Papers", Path: prefix + "/papers"},
-		{Label: "Stacks", Path: prefix + "/stacks"},
-		{Label: "Search", Path: prefix + "/search"},
-		{Label: "Settings", Path: prefix + "/settings"},
-	}
-
-	for i := range items {
-		items[i].Active = items[i].Path == activePath
-	}
-
-	return items
-}
-
 func AddRoute(
 	mux *http.ServeMux,
 	cfg config.Config,
@@ -59,11 +36,6 @@ func AddRoute(
 
 	tmpl := template.Must(template.ParseFS(content, templateFiles...))
 
-	homeTemplate, err := pageTemplateSet(tmpl, "home")
-	if err != nil {
-		return err
-	}
-
 	assets, err := fs.Sub(content, "assets")
 	if err != nil {
 		return fmt.Errorf("load web assets: %w", err)
@@ -71,41 +43,47 @@ func AddRoute(
 
 	defaultMiddle := middleware.NewDefault(logger, sessionService)
 	requireAuthMiddle := webauth.RequireAuthWebMiddleware()
-
-	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handleIndex(homeTemplate, navItems("/"), cfg.HankoAPIURL)))
-
-	for _, page := range []struct {
-		path         string
-		template     string
-		requiresAuth bool
-	}{
-		{path: "/papers", template: "paper", requiresAuth: false},
-		{path: "/stacks", template: "stack", requiresAuth: false},
-		{path: "/search", template: "search", requiresAuth: false},
-		{path: "/settings", template: "settings", requiresAuth: true},
-		{path: "/auth", template: "auth", requiresAuth: false},
-	} {
-		pageTemplate, err := pageTemplateSet(tmpl, page.template)
-		if err != nil {
-			return err
-		}
-
-		pageHandler := handleIndex(pageTemplate, navItems(page.path), cfg.HankoAPIURL)
-
-		if page.requiresAuth {
-			pageHandler = requireAuthMiddle(pageHandler)
-		}
-		pageHandler = defaultMiddle(pageHandler)
-
-		mux.Handle(http.MethodGet+" "+page.path, pageHandler)
+	authenticated := func(handler http.Handler) http.Handler {
+		return defaultMiddle(requireAuthMiddle(handler))
 	}
 
+	pageTemplate := func(name string) *template.Template {
+		pageTemplate, err := pageTemplateSet(tmpl, name)
+		if err != nil {
+			panic(fmt.Errorf("load %s page template: %w", name, err))
+		}
+
+		return pageTemplate
+	}
+
+	// Pages
+	homeTmpl := pageTemplate("home/page")
+	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handlePage(homeTmpl, cfg.HankoAPIURL)))
+
+	papersTmpl := pageTemplate("papers/page")
+	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
+	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
+
+	stacksTmpl := pageTemplate("stacks/page")
+	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(logger, stacksTmpl, cfg.HankoAPIURL, stackService)))
+	stacksMyTmpl := pageTemplate("stacks/my")
+	mux.Handle(http.MethodGet+" /stacks/my", defaultMiddle(handleStacksMyPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
+	stacksDetailTmpl := pageTemplate("stacks/detail")
+	mux.Handle(http.MethodGet+" /stacks/detail", defaultMiddle(handlePage(stacksDetailTmpl, cfg.HankoAPIURL)))
+	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearchPublic(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/my/search", defaultMiddle(handleStacksSearchByOwner(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/my/stats", defaultMiddle(handleStacksStatsByOwner(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
+
+	settingsTmpl := pageTemplate("settings/page")
+	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, cfg.HankoAPIURL)))
+
+	authTmpl := pageTemplate("auth/page")
+	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
 
+	// Static content
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
-	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
-	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearch(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 
 	return nil
 }
@@ -146,7 +124,7 @@ func pageTemplateSet(base *template.Template, pageTemplate string) (*template.Te
 		return nil, fmt.Errorf("clone web templates: %w", err)
 	}
 
-	if _, err := cloned.Parse(`{{define "page-body"}}{{template "` + pageTemplate + `" .}}{{end}}`); err != nil {
+	if _, err := cloned.Parse(`{{ define "page-body" }}{{ template "` + pageTemplate + `" . }}{{ end }}`); err != nil {
 		return nil, fmt.Errorf("parse page template alias: %w", err)
 	}
 

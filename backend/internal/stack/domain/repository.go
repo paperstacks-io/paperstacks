@@ -19,7 +19,10 @@ type Repository interface {
 	GetByUUID(ctx context.Context, uuid string) (Stack, error)
 	List(ctx context.Context, userExternalID string) ([]Stack, error)
 	ListPublic(ctx context.Context, userExternalID string) ([]Stack, error)
-	Search(ctx context.Context, options SearchOptions) (SearchResult, error)
+	SearchPublic(ctx context.Context, options SearchOptions) (SearchResult, error)
+	SearchByOwner(ctx context.Context, userExternalID string, options SearchOptions) (SearchResult, error)
+	CountPublic(ctx context.Context) (int, error)
+	StatsByOwner(ctx context.Context, userExternalID string) (Stats, error)
 
 	// commands
 	Create(ctx context.Context, stack Stack) error
@@ -31,8 +34,17 @@ type Repository interface {
 
 type SearchOptions struct {
 	Query    string
+	SortBy   string
+	Desc     bool
 	Page     int
 	PageSize int
+}
+
+func (o *SearchOptions) Validate() error {
+	if o.SortBy != "name" && o.SortBy != "updated_at" {
+		return ErrInvalidSearch
+	}
+	return nil
 }
 
 type SearchResult struct {
@@ -41,4 +53,10 @@ type SearchResult struct {
 	Page     int
 	PageSize int
 	HasNext  bool
+}
+
+type Stats struct {
+	TotalStacks  int
+	PublicStacks int
+	TotalPapers  int
 }

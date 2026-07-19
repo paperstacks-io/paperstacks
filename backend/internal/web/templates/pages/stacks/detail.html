@@ -1,0 +1,195 @@
+{{ define "stacks/detail" }}
+
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>Stack Detail: Code Review</li>
+      </ul>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button class="btn btn-sm">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
+      Export
+    </button>
+    <button class="btn btn-sm">
+      <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
+      Delete
+    </button>
+  </div>
+</header>
+
+<!-- stats -->
+<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-3 shadow-xs">
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Papers</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">50</div>
+    <div class="stat-desc">in this stacks</div>
+  </div>
+</section>
+
+<section class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="grid gap-6">
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <h2 class="card-title">Papers</h2>
+
+        <form>
+          <div class="flex flex-col gap-3 lg:flex-row">
+            <label class="input input-sm w-full">
+              <svg data-src="https://unpkg.com/heroicons/20/solid/funnel.svg" class="h-4 w-4 opacity-50"></svg>
+              <input type="search" name="search" placeholder="exploratory..." />
+            </label>
+            <select aria-label="Select sort option" class="select select-sm w-full lg:max-w-sm" name="sortBy">
+              <option value="+title">Title (A-Z)</option>
+              <option value="-title">Title (Z-A)</option>
+              <option value="+year">Oldest</option>
+              <option value="-year" selected>Sort: Newest</option>
+            </select>
+          </div>
+        </form>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Article</th>
+                <th>Authors</th>
+                <th>Year</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div>
+                      <div class="font-bold">
+                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
+                      </div>
+                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                    </div>
+                  </div>
+                </td>
+                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
+                <td>2024</td>
+                <td class="text-right">
+                  <a class="btn btn-ghost btn-xs">PDF</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <p class="text-base-content/60 text-sm">Showing 1-5 of 50 papers</p>
+            <div class="join lg:ml-auto">
+              <button class="join-item btn btn-sm btn-disabled">«</button>
+              <button type="button" class="join-item btn btn-sm btn-neutral">1</button>
+              <button type="button" class="join-item btn btn-sm">2</button>
+              <button type="button" class="join-item btn btn-sm">3</button>
+              <button class="join-item btn btn-sm">»</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="grid content-start gap-6">
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <h2 class="card-title">Settings</h2>
+        <label class="label cursor-pointer justify-between">
+          Public (visible to everyone)
+          <input type="checkbox" class="toggle toggle-success" name="is_public" checked="checked" />
+        </label>
+      </div>
+    </div>
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div class="grow">
+            <h2 class="card-title">Info</h2>
+          </div>
+          <a class="btn btn-sm">Save changes</a>
+        </div>
+
+        <fieldset class="fieldset">
+          <label class="label">Title</label>
+          <input
+            class="input w-full"
+            value="What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation"
+            aria-label="title"
+          />
+        </fieldset>
+        <fieldset class="fieldset">
+          <label class="label">Authors</label>
+          <input class="input w-full" value="ASIF KAMAL TURZO; AMIANGSHU BOSU;" aria-label="authors" />
+        </fieldset>
+        <fieldset class="fieldset">
+          <label class="label">Year</label>
+          <input class="input w-full" value="2024" aria-label="paper year" />
+        </fieldset>
+
+        <button class="btn btn-dash min-h-24">
+          <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
+          Add PDF
+        </button>
+      </div>
+    </div>
+  </aside>
+</section>
+{{ end }}

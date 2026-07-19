@@ -107,6 +107,10 @@ func (s *StackService) ListPublic(ctx context.Context, userExternalID string) ([
 	return s.repo.ListPublic(ctx, userExternalID)
 }
 
+func (s StackService) CountPublic(ctx context.Context) (int, error) {
+	return s.repo.CountPublic(ctx)
+}
+
 // AddPaper adds a paper to the specified stack.
 //
 // If the paper is already assigned to the stack, no changes are made.
@@ -128,12 +132,14 @@ func (s *StackService) RemovePaper(ctx context.Context, stackUUID string, paperU
 	return s.repo.RemovePaper(ctx, strings.TrimSpace(stackUUID), strings.TrimSpace(paperUUID))
 }
 
-// Search returns stacks matching the provided search options.
+// Search returns public stacks matching the provided search options.
 // It normalizes the query and applies default pagination values before
 //
 // It returns an error if the stacks could not be searched.
 func (s *StackService) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
 	opts.Query = strings.ToLower(strings.TrimSpace(opts.Query))
+	opts.SortBy = strings.ToLower(strings.TrimSpace(opts.SortBy))
+
 	opts.Page = max(defaultSearchPage, opts.Page)
 
 	if opts.PageSize <= 1 {
@@ -141,5 +147,37 @@ func (s *StackService) Search(ctx context.Context, opts domain.SearchOptions) (d
 	}
 	opts.PageSize = min(maxSearchPageSize, opts.PageSize)
 
-	return s.repo.Search(ctx, opts)
+	err := opts.Validate()
+	if err != nil {
+		return domain.SearchResult{}, err
+	}
+
+	return s.repo.SearchPublic(ctx, opts)
+}
+
+// SearchByOwner returns stacks of a user that match the provided search options.
+// It normalizes the query and applies default pagination values before
+//
+// It returns an error if the stacks could not be searched.
+func (s *StackService) SearchByOwner(ctx context.Context, userExternalID string, opts domain.SearchOptions) (domain.SearchResult, error) {
+	opts.Query = strings.ToLower(strings.TrimSpace(opts.Query))
+	opts.SortBy = strings.ToLower(strings.TrimSpace(opts.SortBy))
+
+	opts.Page = max(defaultSearchPage, opts.Page)
+
+	if opts.PageSize <= 1 {
+		opts.PageSize = defaultSearchPageSize
+	}
+	opts.PageSize = min(maxSearchPageSize, opts.PageSize)
+
+	err := opts.Validate()
+	if err != nil {
+		return domain.SearchResult{}, err
+	}
+
+	return s.repo.SearchByOwner(ctx, userExternalID, opts)
+}
+
+func (s *StackService) GetStatsByOwner(ctx context.Context, userExternalID string) (domain.Stats, error) {
+	return s.repo.StatsByOwner(ctx, userExternalID)
 }

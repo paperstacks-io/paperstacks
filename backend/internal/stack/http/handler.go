@@ -280,11 +280,17 @@ func handleSearchStacks(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := normalizeQueryParam(r.URL.Query().Get("q"))
+		sortByRaw := normalizeQueryParam(r.URL.Query().Get("sortBy"))
 		page, _ := strconv.Atoi(normalizeQueryParam(r.URL.Query().Get("page")))
 		pageSize, _ := strconv.Atoi(normalizeQueryParam(r.URL.Query().Get("pageSize")))
 
+		sortBy, desc := strings.CutPrefix(sortByRaw, "-")
+		sortBy, _ = strings.CutPrefix(sortBy, "+")
+
 		result, err := service.Search(r.Context(), domain.SearchOptions{
 			Query:    query,
+			SortBy:   sortBy,
+			Desc:     desc,
 			Page:     page,
 			PageSize: pageSize,
 		})
