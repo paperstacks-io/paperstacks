@@ -59,6 +59,18 @@ CREATE TYPE public.publication_status AS ENUM (
 	'withdrawn'
 );
 
+CREATE TABLE public.app_user (
+	external_id text NOT NULL,
+	email text NOT NULL,
+	created_at timestamptz NOT NULL DEFAULT now(),
+	updated_at timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT app_user_pk PRIMARY KEY (external_id),
+	CONSTRAINT app_user_email_uq UNIQUE (email)
+);
+
+COMMENT ON TABLE public.app_user IS
+E'Represents a user identified by the external authentication provider';
+
 CREATE TABLE public.paper (
 	uuid uuid NOT NULL,
 	doi text,
@@ -75,6 +87,28 @@ CREATE TABLE public.paper (
 );
 
 COMMENT ON TABLE public.paper IS E'represents a paper with multiple possible pdfs';
+
+CREATE TABLE public.stack (
+	uuid uuid NOT NULL,
+	name text NOT NULL,
+	owner_external_id text NOT NULL,
+	is_public boolean NOT NULL DEFAULT false,
+	created_at timestamptz NOT NULL DEFAULT now(),
+	updated_at timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT stack_pk PRIMARY KEY (uuid),
+	CONSTRAINT stack_owner_name_uq UNIQUE (owner_external_id, name)
+);
+
+COMMENT ON TABLE public.stack IS
+E'Represents a named collection of papers owned by a user';
+
+ALTER TABLE public.stack ADD CONSTRAINT stack_owner_fk
+FOREIGN KEY (owner_external_id)
+REFERENCES public.app_user (external_id)
+ON DELETE RESTRICT ON UPDATE CASCADE;
+
+COMMENT ON CONSTRAINT stack_owner_fk ON public.stack IS
+E'Prevents deleting a user while that user still owns one or more stacks';
 
 CREATE TABLE public.paper_author (
 	uuid_paper uuid NOT NULL,
@@ -93,6 +127,33 @@ REFERENCES public.author (key)
 ON DELETE RESTRICT ON UPDATE CASCADE;
 
 CREATE INDEX paper_author_key_author_idx ON public.paper_author (key_author);
+
+CREATE TABLE public.stack_paper (
+	uuid_stack uuid NOT NULL,
+	uuid_paper uuid NOT NULL,
+	CONSTRAINT stack_paper_pk PRIMARY KEY (uuid_stack, uuid_paper)
+);
+
+COMMENT ON TABLE public.stack_paper IS
+E'Associates papers with stacks';
+
+ALTER TABLE public.stack_paper ADD CONSTRAINT stack_paper_stack_fk
+FOREIGN KEY (uuid_stack)
+REFERENCES public.stack (uuid)
+ON DELETE CASCADE ON UPDATE CASCADE;
+
+COMMENT ON CONSTRAINT stack_paper_stack_fk ON public.stack_paper IS
+E'Deleting a stack removes only its paper associations; the papers remain';
+
+ALTER TABLE public.stack_paper ADD CONSTRAINT stack_paper_paper_fk
+FOREIGN KEY (uuid_paper)
+REFERENCES public.paper (uuid)
+ON DELETE CASCADE ON UPDATE CASCADE;
+
+COMMENT ON CONSTRAINT stack_paper_paper_fk ON public.stack_paper IS
+E'Deleting a paper removes only its stack associations; the stacks remain';
+
+CREATE INDEX stack_paper_uuid_paper_idx ON public.stack_paper (uuid_paper);
 
 CREATE TABLE public.pdf (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
