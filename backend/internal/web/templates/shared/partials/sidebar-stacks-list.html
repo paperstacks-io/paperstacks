@@ -3,8 +3,8 @@
 
 {{ range .Items}}
 <li
-  href="/app/stacks/detail"
-  hx-get="/app/stacks/detail"
+  href="/app/stacks/detail/{{ .UUID }}"
+  hx-get="/app/stacks/detail/{{ .UUID }}"
   hx-target="#page-shell"
   hx-select="#page-shell"
   hx-select-oob="#sidebar-menu:outerHTML"
