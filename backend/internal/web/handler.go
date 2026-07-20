@@ -95,6 +95,40 @@ func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	})
 }
 
+func handleSidebarStacks(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		opts := stackDomain.SearchOptions{
+			Query:    "",
+			SortBy:   "name",
+			Page:     1,
+			PageSize: 50,
+		}
+		result, err := stackService.SearchByOwner(r.Context(), session.UserID, opts)
+		if err != nil {
+			logger.Error("query stacks", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		templateName := "shared/partials/sidebar-stacks-list"
+		if err := tmpl.ExecuteTemplate(w, templateName, result); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
 func handleStacksPage(
 	logger *slog.Logger,
 	tmpl *template.Template,

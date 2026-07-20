@@ -1,0 +1,19 @@
+{{ define "shared/partials/sidebar-stacks-list" }}
+<span class="font-light">Stacks</span>
+
+{{ range .Items}}
+<li
+  href="/app/stacks/detail"
+  hx-get="/app/stacks/detail"
+  hx-target="#page-shell"
+  hx-select="#page-shell"
+  hx-select-oob="#sidebar-menu:outerHTML"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+>
+  <summary>
+    <a>{{ .Name }}</a>
+    <span class="badge badge-xs">{{ len .Papers }}</span>
+  </summary>
+</li>
+{{ end }} {{ end }}
