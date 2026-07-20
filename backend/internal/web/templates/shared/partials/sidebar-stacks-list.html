@@ -1,6 +1,8 @@
 {{ define "shared/partials/sidebar-stacks-list" }}
 <span class="font-light">Stacks</span>
 
+{{ $page := .PageName }}
+
 {{ range .Items}}
 <li
   href="/app/stacks/detail/{{ .UUID }}"
@@ -10,6 +12,7 @@
   hx-select-oob="#sidebar-menu:outerHTML"
   hx-swap="outerHTML"
   hx-push-url="true"
+  {{ if eq $page (printf "stacks/detail/%s" .UUID) }}class="menu-active"{{ end }}
 >
   <summary>
     <a>{{ .Name }}</a>

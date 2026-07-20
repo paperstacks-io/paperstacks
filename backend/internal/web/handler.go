@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -77,8 +78,23 @@ func handleSidebarStacks(
 			return
 		}
 
+		currentPath := r.URL.Path
+		if hxCurrentURL := r.Header.Get("HX-Current-URL"); hxCurrentURL != "" {
+			if u, err := url.Parse(hxCurrentURL); err == nil {
+				currentPath = strings.TrimPrefix(u.Path, "/app")
+			}
+		}
+
+		data := struct {
+			stackDomain.SearchResult
+			PageName string
+		}{
+			SearchResult: result,
+			PageName:     pageNameFromPath(currentPath),
+		}
+
 		templateName := "shared/partials/sidebar-stacks-list"
-		if err := tmpl.ExecuteTemplate(w, templateName, result); err != nil {
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
