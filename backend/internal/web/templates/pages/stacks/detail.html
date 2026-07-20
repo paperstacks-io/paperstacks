@@ -4,7 +4,20 @@
   <div class="grow">
     <div class="breadcrumbs text-xl">
       <ul>
-        <li>Stack Detail: Code Review</li>
+        <li>
+          <a
+            href="/app/stacks/my"
+            hx-get="/app/stacks/my"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar-menu:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            Stacks
+          </a>
+        </li>
+        <li>{{ .Stack.Name}}</li>
       </ul>
     </div>
   </div>
@@ -21,14 +34,22 @@
 </header>
 
 <!-- stats -->
-<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-3 shadow-xs">
+<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs">
   <div class="stat">
     <div class="stat-figure">
       <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
     </div>
     <div class="stat-title">Papers</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">50</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .Stack.Papers }}</div>
     <div class="stat-desc">in this stacks</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/clock.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Updated at</div>
+    <div class="stat-value text-sm font-semibold tabular-nums">{{ .UpdatedAt}}</div>
+    <div class="stat-desc">Created: {{ .CreatedAt }}</div>
   </div>
 </section>
 

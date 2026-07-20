@@ -93,6 +93,56 @@ func handleStacksPage(
 	})
 }
 
+func handleStacksDetailPage(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		ctx := r.Context()
+		id := r.PathValue("uuid")
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok {
+			session = &commonauth.Session{}
+		}
+
+		if id == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, id)
+		if err != nil {
+			logger.Error("get stack by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := struct {
+			pageData
+			Stack     stackDomain.Stack
+			CreatedAt string
+			UpdatedAt string
+		}{
+			pageData: pageData{
+				AppVersion:  build.Version,
+				AppGitHash:  build.GitHash,
+				PageName:    pageNameFromPath(r.URL.Path),
+				HankoAPIURL: hankoAPIURL,
+				Session:     *session,
+			},
+			Stack:     stack,
+			CreatedAt: stack.CreatedAt.Format("2006-01-02 15:04"),
+			UpdatedAt: stack.UpdatedAt.Format("2006-01-02 15:04"),
+		}
+
+		renderTemplate(w, r, tmpl, data)
+	})
+}
+
 func handleStacksMyPage(
 	logger *slog.Logger,
 	tmpl *template.Template,
