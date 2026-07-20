@@ -59,6 +59,7 @@ func AddRoute(
 	// Pages
 	homeTmpl := pageTemplate("home/page")
 	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handlePage(homeTmpl, cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /partials/sidebar-stacks-list", authenticated(handleSidebarStacks(logger, homeTmpl, stackService)))
 
 	papersTmpl := pageTemplate("papers/page")
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))

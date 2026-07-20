@@ -129,78 +129,14 @@
           {{ if .Session.IsValid }}
           <div class="divider"></div>
 
-          <span class="font-light">Stacks</span>
-
-          <li
-            href="/app/stacks/detail"
-            hx-get="/app/stacks/detail"
-            hx-target="#page-shell"
-            hx-select="#page-shell"
-            hx-select-oob="#sidebar-menu:outerHTML"
+          <div
+            hx-get="/app/partials/sidebar-stacks-list"
+            hx-trigger="load"
             hx-swap="outerHTML"
-            hx-push-url="true"
+            class="flex justify-center items-center"
           >
-            <summary>
-              <a>Code Review</a>
-              <span class="badge badge-xs">50</span>
-            </summary>
-          </li>
-          <li
-            href="/app/stacks/detail"
-            hx-get="/app/stacks/detail"
-            hx-target="#page-shell"
-            hx-select="#page-shell"
-            hx-select-oob="#sidebar-menu:outerHTML"
-            hx-swap="outerHTML"
-            hx-push-url="true"
-          >
-            <summary>
-              <a>Bayesian</a>
-              <span class="badge badge-xs">9</span>
-            </summary>
-          </li>
-          <li
-            href="/app/stacks/detail"
-            hx-get="/app/stacks/detail"
-            hx-target="#page-shell"
-            hx-select="#page-shell"
-            hx-select-oob="#sidebar-menu:outerHTML"
-            hx-swap="outerHTML"
-            hx-push-url="true"
-          >
-            <summary>
-              <a>Research Methodology</a>
-              <span class="badge badge-xs">32</span>
-            </summary>
-          </li>
-          <li
-            href="/app/stacks/detail"
-            hx-get="/app/stacks/detail"
-            hx-target="#page-shell"
-            hx-select="#page-shell"
-            hx-select-oob="#sidebar-menu:outerHTML"
-            hx-swap="outerHTML"
-            hx-push-url="true"
-          >
-            <summary>
-              <a>Secondary Studies</a>
-              <span class="badge badge-xs">18</span>
-            </summary>
-          </li>
-          <li
-            href="/app/stacks/detail"
-            hx-get="/app/stacks/detail"
-            hx-target="#page-shell"
-            hx-select="#page-shell"
-            hx-select-oob="#sidebar-menu:outerHTML"
-            hx-swap="outerHTML"
-            hx-push-url="true"
-          >
-            <summary>
-              <a>Testing</a>
-              <span class="badge badge-xs">68</span>
-            </summary>
-          </li>
+            <span class="loading loading-spinner loading-sm"></span>
+          </div>
           {{ end }}
         </ul>
 
