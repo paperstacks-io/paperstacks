@@ -28,12 +28,13 @@ type Author struct {
 	ORCID string
 }
 
-// FullName returns the author's full name assembled from
-// the available name components.
+// FullName returns the author's name assembled from the available name
+// components. Middle names are reduced to their first initial.
 func (a Author) FullName() string {
 	if a.NameMiddle != "" {
-		return a.NameFirst + " " + a.NameMiddle + " " + a.NameLast
+		return a.NameFirst + " " + a.NameMiddle[:1] + ". " + a.NameLast
 	}
+
 	return a.NameFirst + " " + a.NameLast
 }
 
