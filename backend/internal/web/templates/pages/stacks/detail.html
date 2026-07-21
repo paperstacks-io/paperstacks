@@ -59,13 +59,25 @@
       <div class="card-body">
         <h2 class="card-title">Papers</h2>
 
-        <form>
+        <form id="stack-paper-filter" data-stack-paper-filter autocomplete="off">
           <div class="flex flex-col gap-3 lg:flex-row">
             <label class="input input-sm w-full">
               <svg data-src="https://unpkg.com/heroicons/20/solid/funnel.svg" class="h-4 w-4 opacity-50"></svg>
-              <input type="search" name="search" placeholder="exploratory..." />
+              <input
+                id="stack-paper-search"
+                data-stack-paper-search
+                type="search"
+                name="search"
+                placeholder="exploratory..."
+              />
             </label>
-            <select aria-label="Select sort option" class="select select-sm w-full lg:max-w-sm" name="sortBy">
+            <select
+              id="stack-paper-sort"
+              data-stack-paper-sort
+              aria-label="Select sort option"
+              class="select select-sm w-full lg:max-w-sm"
+              name="sortBy"
+            >
               <option value="+title">Title (A-Z)</option>
               <option value="-title">Title (Z-A)</option>
               <option value="+year">Oldest</option>
@@ -74,7 +86,7 @@
           </div>
         </form>
         <div class="overflow-x-auto">
-          <table class="table">
+          <table class="table table-pin-rows">
             <thead>
               <tr>
                 <th>Article</th>
@@ -83,9 +95,14 @@
                 <th></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="stack-paper-results" data-stack-paper-results>
               {{ range .Stack.Papers }}
-              <tr>
+              <tr
+                data-stack-paper-row
+                data-title="{{ .Title }}"
+                data-year="{{ .PublicationYear }}"
+                data-uuid="{{ .UUID }}"
+              >
                 <td>
                   <div class="flex items-center gap-3">
                     <div>
@@ -105,14 +122,10 @@
           </table>
 
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <p class="text-base-content/60 text-sm">Showing 1-5 of 50 papers</p>
-            <div class="join lg:ml-auto">
-              <button class="join-item btn btn-sm btn-disabled">«</button>
-              <button type="button" class="join-item btn btn-sm btn-neutral">1</button>
-              <button type="button" class="join-item btn btn-sm">2</button>
-              <button type="button" class="join-item btn btn-sm">3</button>
-              <button class="join-item btn btn-sm">»</button>
-            </div>
+            <p class="text-base-content/60 text-sm">
+              Showing <span data-stack-paper-visible-count>{{ len .Stack.Papers }}</span> of
+              <span data-stack-paper-total-count>{{ len .Stack.Papers }}</span> papers
+            </p>
           </div>
         </div>
       </div>
@@ -162,4 +175,76 @@
     </div>
   </aside>
 </section>
+<script>
+  ;(() => {
+    const form = document.querySelector("[data-stack-paper-filter]")
+    const tbody = document.querySelector("[data-stack-paper-results]")
+    if (!form || !tbody || form.dataset.stackPaperFilterInitialized === "true") return
+
+    form.dataset.stackPaperFilterInitialized = "true"
+
+    const searchInput = form.querySelector("[data-stack-paper-search]")
+    const sortSelect = form.querySelector("[data-stack-paper-sort]")
+    const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
+    const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
+      const year = Number.parseInt(element.dataset.year || "0", 10)
+
+      return {
+        element,
+        searchText: element.textContent.toLocaleLowerCase(),
+        title: element.dataset.title || "",
+        uuid: element.dataset.uuid || "",
+        year: Number.isNaN(year) ? 0 : year,
+      }
+    })
+
+    function compareRows(a, b) {
+      const sortValue = sortSelect.value || "-year"
+      const desc = sortValue.startsWith("-")
+      const sortBy = sortValue.slice(1)
+
+      if (sortBy === "title") {
+        const titleOrder = collator.compare(a.title, b.title)
+        if (titleOrder !== 0) return desc ? -titleOrder : titleOrder
+      }
+
+      if (sortBy === "year") {
+        const yearOrder = a.year - b.year
+        if (yearOrder !== 0) return desc ? -yearOrder : yearOrder
+      }
+
+      const titleTieBreaker = collator.compare(a.title, b.title)
+      if (titleTieBreaker !== 0) return titleTieBreaker
+
+      return collator.compare(a.uuid, b.uuid)
+    }
+
+    function applyPaperFilter() {
+      const query = searchInput.value.trim().toLocaleLowerCase()
+      const fragment = document.createDocumentFragment()
+      let shown = 0
+
+      for (const row of rows.slice().sort(compareRows)) {
+        const matches = query === "" || row.searchText.includes(query)
+        row.element.hidden = !matches
+        if (matches) shown++
+        fragment.appendChild(row.element)
+      }
+
+      tbody.appendChild(fragment)
+      if (visibleCount) visibleCount.textContent = String(shown)
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault()
+      applyPaperFilter()
+    })
+    searchInput.addEventListener("input", applyPaperFilter)
+    sortSelect.addEventListener("change", applyPaperFilter)
+
+    applyPaperFilter()
+  })()
+</script>
+
 {{ end }}
