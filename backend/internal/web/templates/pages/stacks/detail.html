@@ -137,7 +137,18 @@
         <h2 class="card-title">Stack Settings</h2>
         <label class="label cursor-pointer justify-between">
           Public (visible to everyone)
-          <input type="checkbox" class="toggle toggle-success" name="is_public" {{ if .Stack.IsPublic }}checked="checked"{{ end }} />
+          <input
+            type="checkbox"
+            class="toggle toggle-success"
+            name="is_public"
+            {{
+            if
+            .Stack.IsPublic
+            }}checked="checked"
+            {{
+            end
+            }}
+          />
         </label>
       </div>
     </div>
