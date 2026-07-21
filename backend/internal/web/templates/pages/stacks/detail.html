@@ -102,6 +102,10 @@
                 data-title="{{ .Title }}"
                 data-year="{{ .PublicationYear }}"
                 data-uuid="{{ .UUID }}"
+                class="cursor-pointer hover:bg-base-200"
+                hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
+                hx-target="#stack-paper-info"
+                hx-swap="innerHTML"
               >
                 <td>
                   <div class="flex items-center gap-3">
@@ -153,37 +157,7 @@
       </div>
     </div>
     <div class="card bg-base-200 shadow-xs">
-      <div class="card-body">
-        <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div class="grow">
-            <h2 class="card-title">Paper Info</h2>
-          </div>
-          <a class="btn btn-sm">Save changes</a>
-        </div>
-
-        <fieldset class="fieldset">
-          <label class="label">Title</label>
-          <input
-            class="input w-full"
-            value="What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation"
-            aria-label="title"
-          />
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label">Authors</label>
-          <input class="input w-full" value="ASIF KAMAL TURZO; AMIANGSHU BOSU;" aria-label="authors" />
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label">Year</label>
-          <input class="input w-full" value="2024" aria-label="paper year" />
-        </fieldset>
-
-        <button class="btn btn-dash min-h-24">
-          <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
-          Add PDF
-        </button>
-        Metadata: TBA
-      </div>
+      <div id="stack-paper-info" class="card-body">{{ template "stacks/partials/paper-info" .SelectedPaper }}</div>
     </div>
   </aside>
 </section>

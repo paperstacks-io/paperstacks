@@ -7,6 +7,7 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -121,11 +122,17 @@ func handleStacksDetailPage(
 			return
 		}
 
+		selectedPaper := paperDomain.Paper{}
+		if len(stack.Papers) > 0 {
+			selectedPaper = stack.Papers[0]
+		}
+
 		data := struct {
 			pageData
-			Stack     stackDomain.Stack
-			CreatedAt string
-			UpdatedAt string
+			Stack         stackDomain.Stack
+			SelectedPaper paperDomain.Paper
+			CreatedAt     string
+			UpdatedAt     string
 		}{
 			pageData: pageData{
 				AppVersion:  build.Version,
@@ -134,12 +141,46 @@ func handleStacksDetailPage(
 				HankoAPIURL: hankoAPIURL,
 				Session:     *session,
 			},
-			Stack:     stack,
-			CreatedAt: stack.CreatedAt.Format("2006-01-02 15:04"),
-			UpdatedAt: stack.UpdatedAt.Format("2006-01-02 15:04"),
+			Stack:         stack,
+			SelectedPaper: selectedPaper,
+			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
+			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
 
 		renderTemplate(w, r, tmpl, data)
+	})
+}
+
+func handleStackPaperInfo(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		ctx := r.Context()
+		paperUUID := r.PathValue("paperUUID")
+
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			if err == paperDomain.ErrPaperNotFound {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get paper by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
 	})
 }
 
