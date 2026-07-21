@@ -84,74 +84,23 @@
               </tr>
             </thead>
             <tbody>
+              {{ range .Stack.Papers }}
               <tr>
                 <td>
                   <div class="flex items-center gap-3">
                     <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                      <div class="font-bold">{{ .Title }}</div>
+                      <div class="text-base-content/60 text-sm">{{ .Metadata.PublishedIn }}</div>
                     </div>
                   </div>
                 </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
+                <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+                <td>{{ .PublicationYear }}</td>
                 <td class="text-right">
                   <a class="btn btn-ghost btn-xs">PDF</a>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
-                    </div>
-                  </div>
-                </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
-                <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
-                    </div>
-                  </div>
-                </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
-                <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
-                    </div>
-                  </div>
-                </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
-                <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
-              </tr>
+              {{ end }}
             </tbody>
           </table>
 
