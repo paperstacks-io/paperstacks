@@ -1,0 +1,30 @@
+{{ define "stacks/partials/paper-info" }}
+<div class="flex flex-col gap-2 lg:flex-row lg:items-center">
+  <div class="grow">
+    <h2 class="card-title">Paper Info</h2>
+  </div>
+  <a class="btn btn-sm">Save changes</a>
+</div>
+
+<fieldset class="fieldset">
+  <label class="label">Title</label>
+  <input class="input w-full" value="{{ .Title }}" aria-label="title" />
+</fieldset>
+<fieldset class="fieldset">
+  <label class="label">Authors</label>
+  <input
+    class="input w-full"
+    value="{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}"
+    aria-label="authors"
+  />
+</fieldset>
+<fieldset class="fieldset">
+  <label class="label">Year</label>
+  <input class="input w-full" value="{{ .PublicationYear }}" aria-label="paper year" />
+</fieldset>
+
+<button class="btn btn-dash min-h-24">
+  <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
+  Add PDF
+</button>
+Metadata: TBA {{ end }}
