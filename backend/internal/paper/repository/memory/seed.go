@@ -2,6 +2,10 @@ package memory
 
 import "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 
+func SeedData() []domain.Paper {
+	return seedData()
+}
+
 func seedData() []domain.Paper {
 	return []domain.Paper{
 		{UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290", DOI: "10.48550/ARXIV.1709.08439", Title: "Agile Software Development Methods: Review and Analysis", TitleShort: "Agile Software Development Methods", Authors: []domain.Author{domain.Author{NameFirst: "Pekka", NameLast: "Abrahamsson"}, domain.Author{NameFirst: "Outi", NameLast: "Salo"}, domain.Author{NameFirst: "Jussi", NameLast: "Ronkainen"}, domain.Author{NameFirst: "Juhani", NameLast: "Warsta"}}, PublicationYear: "2017", PublicationStatus: "preprint", PublicationStatusTimestamp: "2017-01-01T00:00:00Z", Keywords: []string{"FOS: Computer and information sciences", "Software Engineering (cs.SE)"}, Type: "unpublished", PDFs: []string{"/Users/andi/Zotero/storage/77KPQCG6/Abrahamsson et al. - 2017 - Agile Software Development Methods Review and Ana.pdf"}, Metadata: domain.Metadata{Publisher: "arXiv", References: []string{"https://arxiv.org/abs/1709.08439"}, DataSource: "references.bib"}},

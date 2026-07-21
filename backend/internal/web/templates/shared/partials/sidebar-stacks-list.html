@@ -1,19 +1,22 @@
 {{ define "shared/partials/sidebar-stacks-list" }}
-<span class="font-light">Stacks</span>
+<li class="menu-title">
+  <span>Stacks</span>
+</li>
 
-{{ range .Items}}
-<li
-  href="/app/stacks/detail"
-  hx-get="/app/stacks/detail"
-  hx-target="#page-shell"
-  hx-select="#page-shell"
-  hx-select-oob="#sidebar-menu:outerHTML"
-  hx-swap="outerHTML"
-  hx-push-url="true"
->
-  <summary>
-    <a>{{ .Name }}</a>
+{{ $page := .PageName }} {{ range .Items}}
+<li>
+  <a
+    href="/app/stacks/detail/{{ .UUID }}"
+    hx-get="/app/stacks/detail/{{ .UUID }}"
+    hx-target="#page-shell"
+    hx-select="#page-shell"
+    hx-select-oob="#sidebar-menu:outerHTML"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+    class="justify-between {{ if eq $page (printf `stacks/detail/%s` .UUID) }}menu-active{{ end }}"
+  >
+    <span>{{ .Name }}</span>
     <span class="badge badge-xs">{{ len .Papers }}</span>
-  </summary>
+  </a>
 </li>
 {{ end }} {{ end }}

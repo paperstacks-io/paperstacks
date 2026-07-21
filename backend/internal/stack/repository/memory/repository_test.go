@@ -2,15 +2,38 @@ package memory
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 var user = userDomain.User{
 	ExternalID: "dbe3febc-ab91-486c-b51f-38ab0f59a4d9",
+}
+
+func TestSeedDataUsesPaperSeedData(t *testing.T) {
+	t.Parallel()
+
+	papersByUUID := make(map[string]paperDomain.Paper)
+	for _, paper := range paperMemory.SeedData() {
+		papersByUUID[paper.UUID] = paper
+	}
+
+	for _, stack := range seedData() {
+		for _, paper := range stack.Papers {
+			want, ok := papersByUUID[paper.UUID]
+			if !ok {
+				t.Fatalf("seedData() stack %s contains paper %s missing from paper seed data", stack.UUID, paper.UUID)
+			}
+			if !reflect.DeepEqual(paper, want) {
+				t.Fatalf("seedData() stack %s paper %s = %#v, want %#v", stack.UUID, paper.UUID, paper, want)
+			}
+		}
+	}
 }
 
 func TestRepositoryCreateReturnsAlreadyExists(t *testing.T) {
