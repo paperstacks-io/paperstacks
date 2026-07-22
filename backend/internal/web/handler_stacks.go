@@ -17,6 +17,8 @@ import (
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
 
+const stacksPageURL = "/app/stacks/page"
+
 type papersListData struct {
 	Items         []paperDomain.Paper
 	Total         int
@@ -77,15 +79,16 @@ func handleStacksDetailPage(
 			session = &commonauth.Session{}
 		}
 
-		if id == "" {
-			http.Error(w, "missing stack uuid", http.StatusBadRequest)
-			return
-		}
-
 		stack, err := stackService.GetByUUID(ctx, id)
 		if err != nil {
-			logger.Error("get stack by UUID", "error", err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Redirect", stacksPageURL)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			http.Redirect(w, r, stacksPageURL, http.StatusSeeOther)
+
 			return
 		}
 

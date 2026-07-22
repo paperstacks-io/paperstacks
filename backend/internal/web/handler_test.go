@@ -74,6 +74,51 @@ func TestPageNameFromPath(t *testing.T) {
 	}
 }
 
+func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFoundHTMX(t *testing.T) {
+	t.Parallel()
+
+	handler := handleStacksDetailPage(
+		testLogger(),
+		testWebTemplate(t),
+		"",
+		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
+	)
+	req := newStackDetailRequest(t, "00000000-0000-4000-8000-000000000000")
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	if got := rr.Header().Get("HX-Redirect"); got != stacksPageURL {
+		t.Fatalf("HX-Redirect = %q, want %q", got, stacksPageURL)
+	}
+}
+
+func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing.T) {
+	t.Parallel()
+
+	handler := handleStacksDetailPage(
+		testLogger(),
+		testWebTemplate(t),
+		"",
+		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
+	)
+	req := newStackDetailRequest(t, "00000000-0000-4000-8000-000000000001")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusSeeOther, rr.Body.String())
+	}
+	if got := rr.Header().Get("Location"); got != stacksPageURL {
+		t.Fatalf("Location = %q, want %q", got, stacksPageURL)
+	}
+}
+
 func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
@@ -168,6 +213,20 @@ func newSidebarStackCreateRequest(t *testing.T, userID string, email string, nam
 	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
 		UserID:  userID,
 		Email:   email,
+		IsValid: true,
+	}))
+
+	return req
+}
+
+func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/"+stackUUID, nil)
+	req.SetPathValue("uuid", stackUUID)
+	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
+		UserID:  "owner-detail",
+		Email:   "detail@example.com",
 		IsValid: true,
 	}))
 
