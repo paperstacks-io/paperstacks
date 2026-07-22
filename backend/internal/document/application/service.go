@@ -13,21 +13,21 @@ import (
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-type PaperService interface {
+type PaperGetter interface {
 	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
 
 type DocumentService struct {
-	repo         domain.Repository
-	storage      domain.Storage
-	paperService PaperService
+	repo        domain.Repository
+	storage     domain.Storage
+	paperGetter PaperGetter
 }
 
-func NewDocumentService(repo domain.Repository, storage domain.Storage, paperService PaperService) *DocumentService {
+func NewDocumentService(repo domain.Repository, storage domain.Storage, paperGetter PaperGetter) *DocumentService {
 	return &DocumentService{
-		repo:         repo,
-		storage:      storage,
-		paperService: paperService,
+		repo:        repo,
+		storage:     storage,
+		paperGetter: paperGetter,
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *DocumentService) Upload(
 	userID string,
 	r io.Reader,
 ) (domain.Document, error) {
-	if _, err := s.paperService.GetByUUID(ctx, paperUUID); err != nil {
+	if _, err := s.paperGetter.GetByUUID(ctx, paperUUID); err != nil {
 		return domain.Document{}, err
 	}
 
