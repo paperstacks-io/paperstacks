@@ -27,7 +27,7 @@ func (fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomain.
 }
 
 func newStackService() *stackApplication.StackService {
-	return stackApplication.NewStackService(stackMemory.NewRepository(), fakePaperGetter{})
+	return stackApplication.NewStackService(stackMemory.NewRepository(), nil, fakePaperGetter{})
 }
 
 func TestGetUserByID(t *testing.T) {

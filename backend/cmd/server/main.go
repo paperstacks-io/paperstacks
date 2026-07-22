@@ -45,7 +45,7 @@ func run(
 	paperService := paperApp.NewPaperService(paperMem.NewRepository())
 	doiService := doiApp.NewDOIService(nil)
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
+	stackService := stackApp.NewStackService(stackMem.NewRepository(), userService, paperService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()

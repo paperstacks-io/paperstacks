@@ -77,7 +77,7 @@ func TestPageNameFromPath(t *testing.T) {
 func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil)
+	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
 	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), stackService)
 
 	req := newSidebarStackCreateRequest(t, "owner-sidebar-create", "sidebar@example.com", "Sidebar Stack")
@@ -109,7 +109,7 @@ func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
 	handler := handleSidebarStackCreate(
 		testLogger(),
 		testWebTemplate(t),
-		stackApp.NewStackService(stackMemory.NewRepository(), nil),
+		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
 	)
 
 	req := newSidebarStackCreateRequest(t, "owner-empty-sidebar-create", "empty@example.com", "   ")
@@ -117,13 +117,13 @@ func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	assertSidebarStackCreateError(t, rr, http.StatusUnprocessableEntity, "Stack name cannot be empty.")
+	assertSidebarStackCreateError(t, rr, http.StatusUnprocessableEntity, "Stack name must be 1-80 characters")
 }
 
 func TestHandleSidebarStackCreateRendersToastOnDuplicateName(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil)
+	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
 	user := userDomain.NewUser("owner-duplicate-sidebar-create", "duplicate@example.com")
 	existing := stackDomain.NewStack("Duplicate Stack", user)
 	if err := stackService.Create(t.Context(), *existing); err != nil {
@@ -145,7 +145,7 @@ func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
 	handler := handleSidebarStackCreate(
 		testLogger(),
 		testWebTemplate(t),
-		stackApp.NewStackService(stackMemory.NewRepository(), nil),
+		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
 	)
 	req := httptest.NewRequest(http.MethodPost, "/app/stacks/sidebar/create", strings.NewReader(url.Values{
 		"name": {"Sidebar Stack"},

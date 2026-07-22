@@ -26,7 +26,7 @@ func (f fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomai
 }
 
 func newTestStackService() *StackService {
-	return NewStackService(memory.NewRepository(), fakePaperGetter{
+	return NewStackService(memory.NewRepository(), nil, fakePaperGetter{
 		papers: map[string]paperDomain.Paper{
 			existingPaperUUID: {
 				UUID:  existingPaperUUID,
@@ -148,7 +148,7 @@ func TestServiceCreateRejectsDuplicateStackNameForSameUser(t *testing.T) {
 	}
 }
 
-func TestServiceCreateInvalidStackError(t *testing.T) {
+func TestServiceCreateInvalidNameError(t *testing.T) {
 	t.Parallel()
 
 	service := newTestStackService()
@@ -156,20 +156,20 @@ func TestServiceCreateInvalidStackError(t *testing.T) {
 
 	err := service.Create(context.Background(), *stack)
 
-	if err != domain.ErrInvalidStack {
-		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidStack)
+	if err != domain.ErrInvalidName {
+		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidName)
 	}
 }
 
-func TestServiceUpdateInvalidStackError(t *testing.T) {
+func TestServiceUpdateInvalidNameError(t *testing.T) {
 	t.Parallel()
 
 	service := newTestStackService()
 	stack := domain.NewStack("", userDomain.User{})
 
 	_, err := service.Update(context.Background(), *stack)
-	if err != domain.ErrInvalidStack {
-		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidStack)
+	if err != domain.ErrInvalidName {
+		t.Fatalf("Update() error = %v, want %v", err, domain.ErrInvalidName)
 	}
 }
 
