@@ -103,7 +103,7 @@ func handleSidebarStacks(
 			PageName:     pageNameFromPath(currentPath),
 		}
 
-		templateName := "shared/partials/sidebar-stacks-list"
+		templateName := "shared/partials/sidebar/stacks-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return

@@ -1,8 +1,22 @@
-{{ define "shared/partials/sidebar-stacks-list" }}
+{{ define "shared/partials/sidebar/stacks-list" }}
 <li class="menu-title">
   <span>Stacks</span>
 </li>
 
+<form>
+  <fieldset class="fieldset">
+    <div class="join" hx-targt="this" hx-swap="outerHTML">
+      <input
+        type="text"
+        hx-post="app/stacks/create/name"
+        class="input validator input-sm join-item"
+        required
+        placeholder="new stack"
+      />
+      <button class="btn btn-sm join-item">Create</button>
+    </div>
+  </fieldset>
+</form>
 {{ $page := .PageName }} {{ range .Items}}
 <li>
   <a

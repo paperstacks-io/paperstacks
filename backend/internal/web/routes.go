@@ -84,7 +84,7 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
 
 	// Shared partials
-	mux.Handle(http.MethodGet+" /partials/sidebar-stacks-list", authenticated(handleSidebarStacks(logger, homeTmpl, stackService)))
+	mux.Handle(http.MethodGet+" /partials/sidebar/stacks-list", authenticated(handleSidebarStacks(logger, homeTmpl, stackService)))
 	mux.Handle(http.MethodGet+" /partials/toast/not-implemented", defaultMiddle(handlePartialWithoutData(tmpl, "shared/partials/toast/not-implemented")))
 	mux.Handle(http.MethodGet+" /partials/toast/changes-saved", defaultMiddle(handlePartialWithoutData(tmpl, "shared/partials/toast/changes-saved")))
 
