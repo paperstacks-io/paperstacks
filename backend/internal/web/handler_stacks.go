@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type papersListData struct {
@@ -302,5 +304,120 @@ func handleStacksStatsByOwner(
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
+	})
+}
+
+func handleStacksCreate(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		const (
+			createStackErrorTarget   = "#create_stack_error"
+			createStackSuccessTarget = "#create_stack_success"
+		)
+
+		render := func(status int, target string, templateName string, data alertData) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", target)
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+				logger.Error("render stack create", "error", err.Error())
+			}
+		}
+
+		renderError := func(status int, message string) {
+			render(status, createStackErrorTarget, "stacks/partials/alert-error", alertData{
+				Message: message,
+			})
+		}
+
+		renderSuccess := func(message string) {
+			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", alertData{
+				Message: message,
+			})
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+			return
+		}
+
+		name := r.FormValue("name")
+		isPublic := r.FormValue("is_public") == "on"
+
+		user := userDomain.NewUser(session.UserID, session.Email)
+
+		stack := stackDomain.NewStack(name, user)
+		stack.IsPublic = isPublic
+
+		if err := stackService.Create(ctx, *stack); err != nil {
+			logger.Error("create stack", "error", err.Error())
+
+			if err == stackDomain.ErrStackAlreadyExists {
+				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
+				return
+			}
+
+			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
+			return
+		}
+
+		renderSuccess("Stack '" + name + "' created successfully.")
+	})
+}
+
+func handleSidebarStackCreate(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		renderError := func(status int, message string) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", "#toast-host")
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, "shared/partials/toast/error", alertData{
+				Message: message,
+			}); err != nil {
+				logger.Error("render sidebar stack create error", "error", err.Error())
+			}
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+			return
+		}
+
+		user := userDomain.NewUser(session.UserID, session.Email)
+		stack := stackDomain.NewStack(r.FormValue("name"), user)
+
+		if err := stackService.Create(ctx, *stack); err != nil {
+			logger.Error("create sidebar stack", "error", err.Error())
+
+			switch {
+			case errors.Is(err, stackDomain.ErrInvalidStack):
+				renderError(http.StatusUnprocessableEntity, "Stack name cannot be empty.")
+			case errors.Is(err, stackDomain.ErrStackAlreadyExists):
+				renderError(http.StatusConflict, "A stack with this name already exists.")
+			default:
+				renderError(http.StatusInternalServerError, "Failed to create stack: "+err.Error())
+			}
+			return
+		}
+
+		w.Header().Set("HX-Redirect", "/app/stacks/detail/"+stack.UUID)
+		w.WriteHeader(http.StatusCreated)
 	})
 }

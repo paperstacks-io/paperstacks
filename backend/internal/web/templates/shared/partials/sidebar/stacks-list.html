@@ -1,8 +1,18 @@
-{{ define "shared/partials/sidebar-stacks-list" }}
+{{ define "shared/partials/sidebar/stacks-list" }}
 <li class="menu-title">
   <span>Stacks</span>
 </li>
 
+<li>
+  <form novalidate hx-post="/app/stacks/sidebar/create" hx-target="#toast-host" hx-swap="innerHTML">
+    <fieldset class="fieldset">
+      <div class="join">
+        <input type="text" name="name" class="input input-sm join-item" placeholder="new stack" />
+        <button type="submit" class="btn btn-sm join-item">Create</button>
+      </div>
+    </fieldset>
+  </form>
+</li>
 {{ $page := .PageName }} {{ range .Items}}
 <li>
   <a

@@ -15,7 +15,6 @@ import (
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 type pageData struct {
@@ -104,7 +103,7 @@ func handleSidebarStacks(
 			PageName:     pageNameFromPath(currentPath),
 		}
 
-		templateName := "shared/partials/sidebar-stacks-list"
+		templateName := "shared/partials/sidebar/stacks-list"
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -186,72 +185,6 @@ func searchOptionsFromRequest(r *http.Request) stackDomain.SearchOptions {
 		Desc:   desc,
 		Page:   page,
 	}
-}
-
-func handleStacksCreate(
-	logger *slog.Logger,
-	tmpl *template.Template,
-	stackService *stackApp.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		const (
-			createStackErrorTarget   = "#create_stack_error"
-			createStackSuccessTarget = "#create_stack_success"
-		)
-
-		render := func(status int, target string, templateName string, data alertData) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("HX-Retarget", target)
-			w.Header().Set("HX-Reswap", "innerHTML")
-			w.WriteHeader(status)
-
-			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-				logger.Error("render stack create", "error", err.Error())
-			}
-		}
-
-		renderError := func(status int, message string) {
-			render(status, createStackErrorTarget, "stacks/partials/alert-error", alertData{
-				Message: message,
-			})
-		}
-
-		renderSuccess := func(message string) {
-			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", alertData{
-				Message: message,
-			})
-		}
-
-		session, ok := commonauth.SessionFromContext(ctx)
-		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
-			return
-		}
-
-		name := r.FormValue("name")
-		isPublic := r.FormValue("is_public") == "on"
-
-		user := userDomain.NewUser(session.UserID, session.Email)
-
-		stack := stackDomain.NewStack(name, user)
-		stack.IsPublic = isPublic
-
-		if err := stackService.Create(ctx, *stack); err != nil {
-			logger.Error("create stack", "error", err.Error())
-
-			if err == stackDomain.ErrStackAlreadyExists {
-				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
-				return
-			}
-
-			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
-			return
-		}
-
-		renderSuccess("Stack '" + name + "' created successfully.")
-	})
 }
 
 func handleLogout(
