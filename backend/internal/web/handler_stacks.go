@@ -59,43 +59,6 @@ type stacksPageData struct {
 	StacksCountPublic int
 }
 
-func handleStacksPage(
-	logger *slog.Logger,
-	tmpl *template.Template,
-	hankoAPIURL string,
-	stackService *stackApp.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		session, ok := commonauth.SessionFromContext(r.Context())
-		if !ok {
-			session = &commonauth.Session{}
-		}
-
-		counter, err := stackService.CountPublic(r.Context())
-		if err != nil {
-			logger.Error("count public stacks", "error", err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		data := stacksPageData{
-			pageData: pageData{
-				AppVersion:  build.Version,
-				AppGitHash:  build.GitHash,
-				PageName:    pageNameFromPath(r.URL.Path),
-				HankoAPIURL: hankoAPIURL,
-				Session:     *session,
-			},
-			StacksCountTotal:  0,
-			StacksCountPublic: counter,
-		}
-
-		renderTemplate(w, r, tmpl, data)
-	})
-}
-
 func handleStacksDetailPage(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -186,7 +149,7 @@ func handleStackPaperInfo(
 	})
 }
 
-func handleStacksMyPage(
+func handleStacksPage(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	hankoAPIURL string,
@@ -220,32 +183,6 @@ func handleStacksMyPage(
 		}
 
 		renderTemplate(w, r, tmpl, data)
-	})
-}
-
-func handleStacksSearchPublic(
-	logger *slog.Logger,
-	tmpl *template.Template,
-	stackService *stackApp.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		opts := searchOptionsFromRequest(r)
-		result, err := stackService.Search(r.Context(), opts)
-		if err != nil {
-			logger.Error("read stacks", "error", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		data := NewStacksListData(result, opts)
-
-		templateName := "stacks/partials/stacks-list"
-		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
 	})
 }
 
