@@ -12,6 +12,7 @@ var (
 	ErrStackNotFound      = errors.New("stack not found")
 	ErrInvalidStack       = errors.New("invalid stack")
 	ErrInvalidSearch      = errors.New("invalid search options")
+	ErrInvalidName        = errors.New("invalid name")
 )
 
 type Repository interface {

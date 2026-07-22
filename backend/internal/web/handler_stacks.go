@@ -15,6 +15,8 @@ import (
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
+const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
+
 type papersListData struct {
 	Items         []paperDomain.Paper
 	Total         int
@@ -287,22 +289,19 @@ func handleStacksCreate(
 		}
 
 		name := r.FormValue("name")
-		isPublic := r.FormValue("is_public") == "on"
 
-		user := userDomain.NewUser(session.UserID, session.Email)
-
-		stack := stackDomain.NewStack(name, user)
-		stack.IsPublic = isPublic
-
-		if err := stackService.Create(ctx, *stack); err != nil {
+		if err := stackService.CreateByName(ctx, name, session.UserID); err != nil {
 			logger.Error("create stack", "error", err.Error())
 
-			if err == stackDomain.ErrStackAlreadyExists {
+			switch {
+			case errors.Is(err, stackDomain.ErrStackAlreadyExists):
 				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
-				return
+			case errors.Is(err, stackDomain.ErrInvalidName):
+				renderError(http.StatusUnprocessableEntity, invalidStackNameMessage)
+			default:
+				renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
 			}
 
-			renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
 			return
 		}
 
@@ -345,7 +344,9 @@ func handleSidebarStackCreate(
 
 			switch {
 			case errors.Is(err, stackDomain.ErrInvalidStack):
-				renderError(http.StatusUnprocessableEntity, "Stack name cannot be empty.")
+				renderError(http.StatusUnprocessableEntity, "Invalid stack.")
+			case errors.Is(err, stackDomain.ErrInvalidName):
+				renderError(http.StatusUnprocessableEntity, invalidStackNameMessage)
 			case errors.Is(err, stackDomain.ErrStackAlreadyExists):
 				renderError(http.StatusConflict, "A stack with this name already exists.")
 			default:
