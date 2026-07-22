@@ -119,6 +119,90 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 	}
 }
 
+func TestHandleStackPublicSettingUpdateSetsPublic(t *testing.T) {
+	t.Parallel()
+
+	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	user := userDomain.NewUser("owner-public-setting-true", "public-true@example.com")
+	stack := stackDomain.NewStack("Public Setting Stack", user)
+	stack.IsPublic = false
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStackPublicSettingUpdate(testLogger(), testWebTemplate(t), stackService)
+	req := newStackPublicSettingRequest(t, stack.UUID, user.ExternalID, user.Email, true)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	assertStackPublicSettingSuccess(t, rr)
+
+	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+	if !updated.IsPublic {
+		t.Fatalf("updated IsPublic = false, want true")
+	}
+}
+
+func TestHandleStackPublicSettingUpdateClearsPublic(t *testing.T) {
+	t.Parallel()
+
+	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	user := userDomain.NewUser("owner-public-setting-false", "public-false@example.com")
+	stack := stackDomain.NewStack("Private Setting Stack", user)
+	stack.IsPublic = true
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStackPublicSettingUpdate(testLogger(), testWebTemplate(t), stackService)
+	req := newStackPublicSettingRequest(t, stack.UUID, user.ExternalID, user.Email, false)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	assertStackPublicSettingSuccess(t, rr)
+
+	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+	if updated.IsPublic {
+		t.Fatalf("updated IsPublic = true, want false")
+	}
+}
+
+func TestHandleStackPublicSettingUpdateRejectsNonOwner(t *testing.T) {
+	t.Parallel()
+
+	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	owner := userDomain.NewUser("owner-public-setting-forbidden", "owner-public@example.com")
+	stack := stackDomain.NewStack("Forbidden Public Setting Stack", owner)
+	stack.IsPublic = false
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStackPublicSettingUpdate(testLogger(), testWebTemplate(t), stackService)
+	req := newStackPublicSettingRequest(t, stack.UUID, "other-public-setting-forbidden", "other-public@example.com", true)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	assertSidebarStackCreateError(t, rr, http.StatusForbidden, "You are not allowed to update this stack.")
+
+	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+	if updated.IsPublic {
+		t.Fatalf("updated IsPublic = true, want unchanged false")
+	}
+}
+
 func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
@@ -148,6 +232,7 @@ func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 		t.Fatalf("created stack name = %q, want %q", created.Name, "Sidebar Stack")
 	}
 }
+
 func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
 	t.Parallel()
 
@@ -233,6 +318,26 @@ func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
 	return req
 }
 
+func newStackPublicSettingRequest(t *testing.T, stackUUID string, userID string, email string, isPublic bool) *http.Request {
+	t.Helper()
+
+	values := url.Values{}
+	if isPublic {
+		values.Set("is_public", "on")
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/app/stacks/detail/"+stackUUID+"/settings/is-public", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetPathValue("uuid", stackUUID)
+	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
+		UserID:  userID,
+		Email:   email,
+		IsValid: true,
+	}))
+
+	return req
+}
+
 func assertSidebarStackCreateError(t *testing.T, rr *httptest.ResponseRecorder, status int, message string) {
 	t.Helper()
 
@@ -247,6 +352,17 @@ func assertSidebarStackCreateError(t *testing.T, rr *httptest.ResponseRecorder, 
 	}
 	if body := rr.Body.String(); !strings.Contains(body, message) {
 		t.Fatalf("body does not contain %q: %s", message, body)
+	}
+}
+
+func assertStackPublicSettingSuccess(t *testing.T, rr *httptest.ResponseRecorder) {
+	t.Helper()
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	if body := rr.Body.String(); !strings.Contains(body, "Changes saved.") {
+		t.Fatalf("body does not contain success toast: %s", body)
 	}
 }
 
