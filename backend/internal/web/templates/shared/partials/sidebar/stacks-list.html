@@ -4,12 +4,7 @@
 </li>
 
 <li>
-  <form
-    novalidate
-    hx-post="/app/stacks/sidebar/create"
-    hx-target="#toast-host"
-    hx-swap="innerHTML"
-  >
+  <form novalidate hx-post="/app/stacks/sidebar/create" hx-target="#toast-host" hx-swap="innerHTML">
     <fieldset class="fieldset">
       <div class="join">
         <input type="text" name="name" class="input input-sm join-item" placeholder="new stack" />
