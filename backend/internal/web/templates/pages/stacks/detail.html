@@ -32,18 +32,34 @@
       <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
       Export
     </button>
-    <button
-      class="btn btn-sm"
-      type="button"
-      hx-get="/app/partials/toast/not-implemented"
-      hx-target="#toast-host"
-      hx-swap="innerHTML"
-    >
+    <button class="btn btn-sm" type="button" onclick="modal_confirm_delete.showModal()">
       <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
       Delete
     </button>
   </div>
 </header>
+
+<dialog id="modal_confirm_delete" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Delete Stack</h3>
+    <p class="py-4">Are you sure you want to delete the stack "{{ .Stack.Name }}"? This action cannot be undone.</p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">Cancel</button>
+      </form>
+      <button
+        class="btn btn-error"
+        type="button"
+        hx-post="/app/stacks/detail/{{ .Stack.UUID }}/delete"
+        hx-target="#toast-host"
+        hx-swap="innerHTML"
+        hx-on::before-request="document.getElementById('modal_confirm_delete').close()"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</dialog>
 
 <!-- stats -->
 <section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs">

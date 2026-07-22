@@ -362,3 +362,59 @@ func handleSidebarStackCreate(
 		w.WriteHeader(http.StatusCreated)
 	})
 }
+
+func handleStackDelete(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		renderError := func(status int, message string) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", "#toast-host")
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, "shared/partials/toast/error", alertData{
+				Message: message,
+			}); err != nil {
+				logger.Error("render stack delete error", "error", err.Error())
+			}
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to delete this stack.")
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack before delete", "error", err.Error())
+			renderError(http.StatusInternalServerError, "Failed to delete stack: "+err.Error())
+			return
+		}
+
+		if stack.Owner.ExternalID != session.UserID {
+			renderError(http.StatusForbidden, "You are not allowed to delete this stack.")
+			return
+		}
+
+		if err := stackService.Delete(ctx, stackUUID); err != nil {
+			logger.Error("delete stack", "error", err.Error())
+			renderError(http.StatusInternalServerError, "Failed to delete stack: "+err.Error())
+			return
+		}
+
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", stacksPageURL)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		http.Redirect(w, r, stacksPageURL, http.StatusSeeOther)
+	})
+}
