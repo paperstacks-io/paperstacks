@@ -59,7 +59,6 @@ func AddRoute(
 	// Pages
 	homeTmpl := pageTemplate("home/page")
 	mux.Handle(http.MethodGet+" /{$}", defaultMiddle(handlePage(homeTmpl, cfg.HankoAPIURL)))
-	mux.Handle(http.MethodGet+" /partials/sidebar-stacks-list", authenticated(handleSidebarStacks(logger, homeTmpl, stackService)))
 
 	papersTmpl := pageTemplate("papers/page")
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
@@ -83,6 +82,10 @@ func AddRoute(
 	authTmpl := pageTemplate("auth/page")
 	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
+
+	// Shared partials
+	mux.Handle(http.MethodGet+" /partials/sidebar-stacks-list", authenticated(handleSidebarStacks(logger, homeTmpl, stackService)))
+	mux.Handle(http.MethodGet+" /partials/toast/not-implemented", defaultMiddle(handlePartialWithoutData(tmpl, "shared/partials/toast/not-implemented")))
 
 	// Static content
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))
