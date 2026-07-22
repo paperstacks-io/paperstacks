@@ -8,11 +8,16 @@
     </div>
   </div>
   <div class="flex flex-wrap gap-2">
-    <button class="btn btn-sm btn-primary" onClick="alert('Not implemented yet!')">
+    <button
+      class="btn btn-sm btn-primary"
+      hx-get="/app/partials/toast/not-implemented"
+      hx-target="#toast-host"
+      hx-swap="innerHTML"
+    >
       <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-4"></svg>
       Create stack
     </button>
-    <button class="btn btn-sm btn-disabled">
+    <button class="btn btn-sm" hx-get="/app/partials/toast/not-implemented" hx-target="#toast-host" hx-swap="innerHTML">
       <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
       Export
     </button>
