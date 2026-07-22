@@ -76,8 +76,8 @@
 
           <li>
             <a
-              href="/app/stacks/my"
-              hx-get="/app/stacks/my"
+              href="/app/stacks/page"
+              hx-get="/app/stacks/page"
               hx-target="#page-shell"
               hx-select="#page-shell"
               hx-select-oob="#sidebar-menu:outerHTML"
@@ -107,19 +107,6 @@
                     hx-push-url="true"
                     class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
                     >Papers</a
-                  >
-                </li>
-                <li>
-                  <a
-                    href="/app/stacks"
-                    hx-get="/app/stacks"
-                    hx-target="#page-shell"
-                    hx-select="#page-shell"
-                    hx-select-oob="#sidebar-menu:outerHTML"
-                    hx-swap="outerHTML"
-                    hx-push-url="true"
-                    class="{{ if eq .PageName `stacks` }}menu-active{{ end }}"
-                    >Stacks</a
                   >
                 </li>
               </ul>
