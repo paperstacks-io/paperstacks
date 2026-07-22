@@ -52,6 +52,17 @@ func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	})
 }
 
+func handlePartialWithoutData(tmpl *template.Template, templateName string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		if err := tmpl.ExecuteTemplate(w, templateName, nil); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
 func handleSidebarStacks(
 	logger *slog.Logger,
 	tmpl *template.Template,

@@ -1,0 +1,10 @@
+{{ define "shared/partials/toast/not-implemented" }}
+<div
+  class="toast toast-top toast-end animate-[ping_50ms_linear_2s_1_forwards]"
+  onanimationend="if (event.target === this) this.remove()"
+>
+  <div class="alert alert-info alert-soft" role="status" aria-live="polite">
+    <span>🚧 This feature is coming soon and isn't available yet.</span>
+  </div>
+</div>
+{{ end }}
