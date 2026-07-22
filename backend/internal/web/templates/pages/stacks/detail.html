@@ -173,6 +173,12 @@
             type="checkbox"
             class="toggle toggle-success"
             name="is_public"
+            hx-post="/app/stacks/detail/{{ .Stack.UUID }}/settings/is-public"
+            hx-trigger="change"
+            hx-target="#toast-host"
+            hx-swap="innerHTML"
+            hx-disabled-elt="this"
+            hx-on::after-request="if (!event.detail.successful) this.checked = !this.checked"
             {{
             if
             .Stack.IsPublic

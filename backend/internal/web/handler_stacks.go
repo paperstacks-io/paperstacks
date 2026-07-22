@@ -418,3 +418,60 @@ func handleStackDelete(
 		http.Redirect(w, r, stacksPageURL, http.StatusSeeOther)
 	})
 }
+
+func handleStackPublicSettingUpdate(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		renderToast := func(status int, templateName string, data alertData) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", "#toast-host")
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+				logger.Error("render stack public setting toast", "error", err.Error())
+			}
+		}
+		renderError := func(status int, message string) {
+			renderToast(status, "shared/partials/toast/error", alertData{Message: message})
+		}
+		renderSuccess := func() {
+			renderToast(http.StatusOK, "shared/partials/toast/changes-saved", alertData{})
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to update this stack.")
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack before public setting update", "error", err.Error())
+			renderError(http.StatusInternalServerError, "Failed to update stack setting: "+err.Error())
+			return
+		}
+
+		if stack.Owner.ExternalID != session.UserID {
+			renderError(http.StatusForbidden, "You are not allowed to update this stack.")
+			return
+		}
+
+		stack.IsPublic = r.FormValue("is_public") == "on"
+		if _, err := stackService.Update(ctx, stack); err != nil {
+			logger.Error("update stack public setting", "error", err.Error())
+
+			renderError(http.StatusInternalServerError, "Failed to update stack setting: "+err.Error())
+			return
+		}
+
+		renderSuccess()
+	})
+}
