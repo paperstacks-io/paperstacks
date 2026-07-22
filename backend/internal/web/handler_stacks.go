@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -369,5 +370,54 @@ func handleStacksCreate(
 		}
 
 		renderSuccess("Stack '" + name + "' created successfully.")
+	})
+}
+
+func handleSidebarStackCreate(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		renderError := func(status int, message string) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", "#toast-host")
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+
+			if err := tmpl.ExecuteTemplate(w, "shared/partials/toast/error", alertData{
+				Message: message,
+			}); err != nil {
+				logger.Error("render sidebar stack create error", "error", err.Error())
+			}
+		}
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+			return
+		}
+
+		user := userDomain.NewUser(session.UserID, session.Email)
+		stack := stackDomain.NewStack(r.FormValue("name"), user)
+
+		if err := stackService.Create(ctx, *stack); err != nil {
+			logger.Error("create sidebar stack", "error", err.Error())
+
+			switch {
+			case errors.Is(err, stackDomain.ErrInvalidStack):
+				renderError(http.StatusUnprocessableEntity, "Stack name cannot be empty.")
+			case errors.Is(err, stackDomain.ErrStackAlreadyExists):
+				renderError(http.StatusConflict, "A stack with this name already exists.")
+			default:
+				renderError(http.StatusInternalServerError, "Failed to create stack: "+err.Error())
+			}
+			return
+		}
+
+		w.Header().Set("HX-Redirect", "/app/stacks/detail/"+stack.UUID)
+		w.WriteHeader(http.StatusCreated)
 	})
 }

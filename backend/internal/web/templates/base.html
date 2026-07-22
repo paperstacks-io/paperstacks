@@ -200,6 +200,10 @@
       </nav>
     </aside>
   </div>
-  <div id="toast-host" class="relative z-50"></div>
+  <div
+    id="toast-host"
+    class="relative z-50"
+    hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"
+  ></div>
 </body>
 {{ end }}

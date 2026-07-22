@@ -1,0 +1,10 @@
+{{ define "shared/partials/toast/error" }}
+<div
+  class="toast toast-top toast-end z-50 animate-[ping_50ms_linear_2s_1_forwards]"
+  onanimationend="if (event.target === this) this.remove()"
+>
+  <div class="alert alert-error alert-soft" role="status" aria-live="polite">
+    <span>{{ .Message }}</span>
+  </div>
+</div>
+{{ end }}
