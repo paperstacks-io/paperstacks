@@ -1,0 +1,10 @@
+{{ define "shared/partials/toast/changes-saved" }}
+<div
+  class="toast toast-top toast-end animate-[ping_50ms_linear_2s_1_forwards]"
+  onanimationend="if (event.target === this) this.remove()"
+>
+  <div class="alert alert-success alert-soft" role="status" aria-live="polite">
+    <span>Changes saved.</span>
+  </div>
+</div>
+{{ end }}
