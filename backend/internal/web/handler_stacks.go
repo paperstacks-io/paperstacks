@@ -74,9 +74,8 @@ func handleStacksDetailPage(
 
 		stack, err := stackService.GetByUUID(ctx, id)
 		if err != nil {
-			if r.Header.Get("HX-Request") == "true" {
-				w.Header().Set("HX-Redirect", stacksPageURL)
-				w.WriteHeader(http.StatusOK)
+			if isHTMX(r) {
+				hxRedirect(w, stacksPageURL, http.StatusOK)
 				return
 			}
 
@@ -255,8 +254,7 @@ func handleSidebarStackCreate(
 			return
 		}
 
-		w.Header().Set("HX-Redirect", "/app/stacks/detail/"+stack.UUID)
-		w.WriteHeader(http.StatusCreated)
+		hxRedirect(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
 	})
 }
 
@@ -293,9 +291,8 @@ func handleStackDelete(
 			return
 		}
 
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", stacksPageURL)
-			w.WriteHeader(http.StatusOK)
+		if isHTMX(r) {
+			hxRedirect(w, stacksPageURL, http.StatusOK)
 			return
 		}
 

@@ -4,7 +4,6 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -87,12 +86,7 @@ func handleSidebarStacks(
 			return
 		}
 
-		currentPath := r.URL.Path
-		if hxCurrentURL := r.Header.Get("HX-Current-URL"); hxCurrentURL != "" {
-			if u, err := url.Parse(hxCurrentURL); err == nil {
-				currentPath = strings.TrimPrefix(u.Path, "/app")
-			}
-		}
+		currentPath := currentHTMXPath(r)
 
 		data := struct {
 			stackDomain.SearchResult
@@ -192,9 +186,8 @@ func handleLogout(
 			return
 		}
 
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/app/")
-			w.WriteHeader(http.StatusOK)
+		if isHTMX(r) {
+			hxRedirect(w, "/app/", http.StatusOK)
 			return
 		}
 
