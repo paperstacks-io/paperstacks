@@ -1,11 +1,9 @@
 package web
 
 import (
-	"context"
 	"html/template"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -26,26 +24,26 @@ type pageData struct {
 	Session     commonauth.Session
 }
 
-type alertData struct {
-	Message string
+func newPageData(r *http.Request, hankoAPIURL string) pageData {
+	session, ok := commonauth.SessionFromContext(r.Context())
+	if !ok || session == nil {
+		session = &commonauth.Session{}
+	}
+
+	return pageData{
+		AppVersion:  build.Version,
+		AppGitHash:  build.GitHash,
+		PageName:    pageNameFromPath(r.URL.Path),
+		HankoAPIURL: hankoAPIURL,
+		Session:     *session,
+	}
 }
 
 func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		session, ok := commonauth.SessionFromContext(r.Context())
-		if !ok {
-			session = &commonauth.Session{}
-		}
-
-		data := pageData{
-			AppVersion:  build.Version,
-			AppGitHash:  build.GitHash,
-			PageName:    pageNameFromPath(r.URL.Path),
-			HankoAPIURL: hankoAPIURL,
-			Session:     *session,
-		}
+		data := newPageData(r, hankoAPIURL)
 
 		renderTemplate(w, r, tmpl, data)
 	})
@@ -88,12 +86,7 @@ func handleSidebarStacks(
 			return
 		}
 
-		currentPath := r.URL.Path
-		if hxCurrentURL := r.Header.Get("HX-Current-URL"); hxCurrentURL != "" {
-			if u, err := url.Parse(hxCurrentURL); err == nil {
-				currentPath = strings.TrimPrefix(u.Path, "/app")
-			}
-		}
+		currentPath := currentHTMXPath(r)
 
 		data := struct {
 			stackDomain.SearchResult
@@ -109,17 +102,6 @@ func handleSidebarStacks(
 			return
 		}
 	})
-}
-
-func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
-	templateName := "base"
-	if r.Header.Get("HX-Request") == "true" {
-		templateName = "app"
-	}
-
-	if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-	}
 }
 
 func handlePapersSearch(
@@ -144,7 +126,7 @@ func handlePapersSearch(
 			Desc:   desc,
 			Page:   page,
 		}
-		result, err := paperService.Search(context.Background(), opts)
+		result, err := paperService.Search(r.Context(), opts)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -204,27 +186,11 @@ func handleLogout(
 			return
 		}
 
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/app/")
-			w.WriteHeader(http.StatusOK)
+		if isHTMX(r) {
+			hxRedirect(w, "/app/", http.StatusOK)
 			return
 		}
 
 		http.Redirect(w, r, "/app/", http.StatusSeeOther)
 	})
-}
-
-func pageNameFromPath(path string) string {
-	path = strings.Trim(path, "/")
-	if path == "" {
-		return "home"
-	}
-
-	pageName, _, _ := strings.Cut(path, "?")
-
-	return pageName
-}
-
-func normalizeFormParam(s string) string {
-	return strings.ToLower(strings.TrimSpace(s))
 }

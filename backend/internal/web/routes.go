@@ -73,7 +73,6 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
 	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", defaultMiddle(handleStacksStatsByOwner(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/sidebar/create", authenticated(handleSidebarStackCreate(logger, tmpl, stackService)))
 
 	settingsTmpl := pageTemplate("settings/page")
