@@ -12,7 +12,6 @@ import (
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
-	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
@@ -249,69 +248,6 @@ func handleStacksStatsByOwner(
 	})
 }
 
-func handleStacksCreate(
-	logger *slog.Logger,
-	tmpl *template.Template,
-	stackService *stackApp.StackService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		const (
-			createStackErrorTarget   = "#create_stack_error"
-			createStackSuccessTarget = "#create_stack_success"
-		)
-
-		render := func(status int, target string, templateName string, data alertData) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("HX-Retarget", target)
-			w.Header().Set("HX-Reswap", "innerHTML")
-			w.WriteHeader(status)
-
-			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-				logger.Error("render stack create", "error", err.Error())
-			}
-		}
-
-		renderError := func(status int, message string) {
-			render(status, createStackErrorTarget, "stacks/partials/alert-error", alertData{
-				Message: message,
-			})
-		}
-
-		renderSuccess := func(message string) {
-			render(http.StatusCreated, createStackSuccessTarget, "stacks/partials/toast-success", alertData{
-				Message: message,
-			})
-		}
-
-		session, ok := commonauth.SessionFromContext(ctx)
-		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
-			return
-		}
-
-		name := r.FormValue("name")
-
-		if err := stackService.CreateByName(ctx, name, session.UserID); err != nil {
-			logger.Error("create stack", "error", err.Error())
-
-			switch {
-			case errors.Is(err, stackDomain.ErrStackAlreadyExists):
-				renderError(http.StatusConflict, "A stack with the name '"+name+"' already exists.")
-			case errors.Is(err, stackDomain.ErrInvalidName):
-				renderError(http.StatusUnprocessableEntity, invalidStackNameMessage)
-			default:
-				renderError(http.StatusUnprocessableEntity, "Failed to create stack. Please try again.")
-			}
-
-			return
-		}
-
-		renderSuccess("Stack '" + name + "' created successfully.")
-	})
-}
-
 func handleSidebarStackCreate(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -320,40 +256,24 @@ func handleSidebarStackCreate(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		renderError := func(status int, message string) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("HX-Retarget", "#toast-host")
-			w.Header().Set("HX-Reswap", "innerHTML")
-			w.WriteHeader(status)
-
-			if err := tmpl.ExecuteTemplate(w, "shared/partials/toast/error", alertData{
-				Message: message,
-			}); err != nil {
-				logger.Error("render sidebar stack create error", "error", err.Error())
-			}
-		}
-
 		session, ok := commonauth.SessionFromContext(ctx)
 		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+			renderErrorToast(w, tmpl, "Unauthorized. Please log in to create a stack.")
 			return
 		}
 
-		user := userDomain.NewUser(session.UserID, session.Email)
-		stack := stackDomain.NewStack(r.FormValue("name"), user)
-
-		if err := stackService.Create(ctx, *stack); err != nil {
+		name := r.FormValue("name")
+		stack, err := stackService.CreateByName(ctx, name, session.UserID)
+		if err != nil {
 			logger.Error("create sidebar stack", "error", err.Error())
 
 			switch {
-			case errors.Is(err, stackDomain.ErrInvalidStack):
-				renderError(http.StatusUnprocessableEntity, "Invalid stack.")
-			case errors.Is(err, stackDomain.ErrInvalidName):
-				renderError(http.StatusUnprocessableEntity, invalidStackNameMessage)
 			case errors.Is(err, stackDomain.ErrStackAlreadyExists):
-				renderError(http.StatusConflict, "A stack with this name already exists.")
+				renderErrorToast(w, tmpl, "A stack with this name already exists.")
+			case errors.Is(err, stackDomain.ErrInvalidName):
+				renderErrorToast(w, tmpl, invalidStackNameMessage)
 			default:
-				renderError(http.StatusInternalServerError, "Failed to create stack: "+err.Error())
+				renderErrorToast(w, tmpl, "Failed to create stack: "+err.Error())
 			}
 			return
 		}
@@ -371,22 +291,9 @@ func handleStackDelete(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		renderError := func(status int, message string) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("HX-Retarget", "#toast-host")
-			w.Header().Set("HX-Reswap", "innerHTML")
-			w.WriteHeader(status)
-
-			if err := tmpl.ExecuteTemplate(w, "shared/partials/toast/error", alertData{
-				Message: message,
-			}); err != nil {
-				logger.Error("render stack delete error", "error", err.Error())
-			}
-		}
-
 		session, ok := commonauth.SessionFromContext(ctx)
 		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to delete this stack.")
+			renderErrorToast(w, tmpl, "Unauthorized. Please log in to delete this stack.")
 			return
 		}
 
@@ -394,18 +301,18 @@ func handleStackDelete(
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("get stack before delete", "error", err.Error())
-			renderError(http.StatusInternalServerError, "Failed to delete stack: "+err.Error())
+			renderErrorToast(w, tmpl, "Failed to delete stack: "+err.Error())
 			return
 		}
 
 		if stack.Owner.ExternalID != session.UserID {
-			renderError(http.StatusForbidden, "You are not allowed to delete this stack.")
+			renderErrorToast(w, tmpl, "You are not allowed to delete this stack.")
 			return
 		}
 
 		if err := stackService.Delete(ctx, stackUUID); err != nil {
 			logger.Error("delete stack", "error", err.Error())
-			renderError(http.StatusInternalServerError, "Failed to delete stack: "+err.Error())
+			renderErrorToast(w, tmpl, "Failed to delete stack: "+err.Error())
 			return
 		}
 
@@ -427,26 +334,9 @@ func handleStackPublicSettingUpdate(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		renderToast := func(status int, templateName string, data alertData) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("HX-Retarget", "#toast-host")
-			w.Header().Set("HX-Reswap", "innerHTML")
-			w.WriteHeader(status)
-
-			if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-				logger.Error("render stack public setting toast", "error", err.Error())
-			}
-		}
-		renderError := func(status int, message string) {
-			renderToast(status, "shared/partials/toast/error", alertData{Message: message})
-		}
-		renderSuccess := func() {
-			renderToast(http.StatusOK, "shared/partials/toast/changes-saved", alertData{})
-		}
-
 		session, ok := commonauth.SessionFromContext(ctx)
 		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Unauthorized. Please log in to update this stack.")
+			renderErrorToast(w, tmpl, "Unauthorized. Please log in to update this stack.")
 			return
 		}
 
@@ -455,23 +345,22 @@ func handleStackPublicSettingUpdate(
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("get stack before public setting update", "error", err.Error())
-			renderError(http.StatusInternalServerError, "Failed to update stack setting: "+err.Error())
+			renderErrorToast(w, tmpl, "Failed to stack setting: "+err.Error())
 			return
 		}
 
 		if stack.Owner.ExternalID != session.UserID {
-			renderError(http.StatusForbidden, "You are not allowed to update this stack.")
+			renderErrorToast(w, tmpl, "You are not allowed to update this stack.")
 			return
 		}
 
 		stack.IsPublic = r.FormValue("is_public") == "on"
 		if _, err := stackService.Update(ctx, stack); err != nil {
 			logger.Error("update stack public setting", "error", err.Error())
-
-			renderError(http.StatusInternalServerError, "Failed to update stack setting: "+err.Error())
+			renderErrorToast(w, tmpl, "Failed to stack setting: "+err.Error())
 			return
 		}
 
-		renderSuccess()
+		renderSuccessToast(w, tmpl, "Stack changes saved")
 	})
 }

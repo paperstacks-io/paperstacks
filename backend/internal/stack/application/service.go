@@ -68,18 +68,18 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 // It initializes missing timestamps and generates a UUID if necessary.
 //
 // It returns an error if the stack is invalid or could not be stored.
-func (s *StackService) CreateByName(ctx context.Context, name string, userID string) error {
+func (s *StackService) CreateByName(ctx context.Context, name string, userID string) (domain.Stack, error) {
 	user, err := s.userGetter.GetByExternalID(ctx, userID)
 	if err != nil {
-		return err
+		return domain.Stack{}, err
 	}
 
 	stack := domain.NewStack(name, user)
 	if err := stack.Validate(); err != nil {
-		return err
+		return domain.Stack{}, err
 	}
 
-	return s.repo.Create(ctx, *stack)
+	return *stack, s.repo.Create(ctx, *stack)
 }
 
 // Update validates and updates an existing stack.

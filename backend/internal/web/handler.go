@@ -111,17 +111,6 @@ func handleSidebarStacks(
 	})
 }
 
-func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
-	templateName := "base"
-	if r.Header.Get("HX-Request") == "true" {
-		templateName = "app"
-	}
-
-	if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-	}
-}
-
 func handlePapersSearch(
 	logger *slog.Logger,
 	tmpl *template.Template,
