@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -133,7 +132,7 @@ func handlePapersSearch(
 			Desc:   desc,
 			Page:   page,
 		}
-		result, err := paperService.Search(context.Background(), opts)
+		result, err := paperService.Search(r.Context(), opts)
 		if err != nil {
 			logger.Error("read papers", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
