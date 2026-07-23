@@ -3,6 +3,7 @@ package web
 import (
 	"html/template"
 	"net/http"
+	"strings"
 )
 
 type toastData struct {
@@ -46,4 +47,19 @@ func renderToast(w http.ResponseWriter, tmpl *template.Template, templateName st
 	w.Header().Set("HX-Reswap", "innerHTML")
 
 	return tmpl.ExecuteTemplate(w, templateName, data)
+}
+
+func pageNameFromPath(path string) string {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "home"
+	}
+
+	pageName, _, _ := strings.Cut(path, "?")
+
+	return pageName
+}
+
+func normalizeFormParam(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }

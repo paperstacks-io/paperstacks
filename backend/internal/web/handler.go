@@ -198,18 +198,3 @@ func handleLogout(
 		http.Redirect(w, r, "/app/", http.StatusSeeOther)
 	})
 }
-
-func pageNameFromPath(path string) string {
-	path = strings.Trim(path, "/")
-	if path == "" {
-		return "home"
-	}
-
-	pageName, _, _ := strings.Cut(path, "?")
-
-	return pageName
-}
-
-func normalizeFormParam(s string) string {
-	return strings.ToLower(strings.TrimSpace(s))
-}
