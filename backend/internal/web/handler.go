@@ -26,10 +26,6 @@ type pageData struct {
 	Session     commonauth.Session
 }
 
-type alertData struct {
-	Message string
-}
-
 func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
