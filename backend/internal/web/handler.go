@@ -26,22 +26,26 @@ type pageData struct {
 	Session     commonauth.Session
 }
 
+func newPageData(r *http.Request, hankoAPIURL string) pageData {
+	session, ok := commonauth.SessionFromContext(r.Context())
+	if !ok || session == nil {
+		session = &commonauth.Session{}
+	}
+
+	return pageData{
+		AppVersion:  build.Version,
+		AppGitHash:  build.GitHash,
+		PageName:    pageNameFromPath(r.URL.Path),
+		HankoAPIURL: hankoAPIURL,
+		Session:     *session,
+	}
+}
+
 func handlePage(tmpl *template.Template, hankoAPIURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		session, ok := commonauth.SessionFromContext(r.Context())
-		if !ok {
-			session = &commonauth.Session{}
-		}
-
-		data := pageData{
-			AppVersion:  build.Version,
-			AppGitHash:  build.GitHash,
-			PageName:    pageNameFromPath(r.URL.Path),
-			HankoAPIURL: hankoAPIURL,
-			Session:     *session,
-		}
+		data := newPageData(r, hankoAPIURL)
 
 		renderTemplate(w, r, tmpl, data)
 	})

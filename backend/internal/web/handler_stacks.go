@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -73,11 +72,6 @@ func handleStacksDetailPage(
 		ctx := r.Context()
 		id := r.PathValue("uuid")
 
-		session, ok := commonauth.SessionFromContext(ctx)
-		if !ok {
-			session = &commonauth.Session{}
-		}
-
 		stack, err := stackService.GetByUUID(ctx, id)
 		if err != nil {
 			if r.Header.Get("HX-Request") == "true" {
@@ -103,13 +97,7 @@ func handleStacksDetailPage(
 			CreatedAt     string
 			UpdatedAt     string
 		}{
-			pageData: pageData{
-				AppVersion:  build.Version,
-				AppGitHash:  build.GitHash,
-				PageName:    pageNameFromPath(r.URL.Path),
-				HankoAPIURL: hankoAPIURL,
-				Session:     *session,
-			},
+			pageData:      newPageData(r, hankoAPIURL),
 			Stack:         stack,
 			SelectedPaper: selectedPaper,
 			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
@@ -162,11 +150,6 @@ func handleStacksPage(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		session, ok := commonauth.SessionFromContext(r.Context())
-		if !ok {
-			session = &commonauth.Session{}
-		}
-
 		counter, err := stackService.CountPublic(r.Context())
 		if err != nil {
 			logger.Error("count public stacks", "error", err.Error())
@@ -175,13 +158,7 @@ func handleStacksPage(
 		}
 
 		data := stacksPageData{
-			pageData: pageData{
-				AppVersion:  build.Version,
-				AppGitHash:  build.GitHash,
-				PageName:    pageNameFromPath(r.URL.Path),
-				HankoAPIURL: hankoAPIURL,
-				Session:     *session,
-			},
+			pageData:          newPageData(r, hankoAPIURL),
 			StacksCountTotal:  0,
 			StacksCountPublic: counter,
 		}
