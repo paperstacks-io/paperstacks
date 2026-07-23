@@ -6,8 +6,8 @@
       <ul>
         <li>
           <a
-            href="/app/stacks/my"
-            hx-get="/app/stacks/my"
+            href="/app/stacks/page"
+            hx-get="/app/stacks/page"
             hx-target="#page-shell"
             hx-select="#page-shell"
             hx-select-oob="#sidebar-menu:outerHTML"
@@ -146,7 +146,20 @@
                 <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
                 <td>{{ .PublicationYear }}</td>
                 <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
+                  <div class="flex">
+                    <a class="btn btn-ghost btn-xs">PDF</a>
+                    <button
+                      class="btn btn-ghost btn-xs"
+                      type="button"
+                      hx-post="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/remove"
+                      hx-target="#toast-host"
+                      hx-swap="innerHTML"
+                      hx-disabled-elt="this"
+                      hx-on::click="event.stopPropagation()"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </td>
               </tr>
               {{ end }}

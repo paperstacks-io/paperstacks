@@ -300,6 +300,51 @@ func handleStackDelete(
 	})
 }
 
+func handleStackPaperRemove(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			renderErrorToast(w, tmpl, "Unauthorized. Please log in to remove papers from this stack.")
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		paperUUID := r.PathValue("paperUUID")
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			logger.Error("get stack before paper removal", "stackUUID", stackUUID, "error", err.Error())
+			renderErrorToast(w, tmpl, "Failed to remove paper from stack: "+err.Error())
+			return
+		}
+
+		if stack.Owner.ExternalID != session.UserID {
+			renderErrorToast(w, tmpl, "You are not allowed to remove papers from this stack.")
+			return
+		}
+
+		if err := stackService.RemovePaper(ctx, stackUUID, paperUUID); err != nil {
+			logger.Error("remove paper from stack", "stackUUID", stackUUID, "paperUUID", paperUUID, "error", err.Error())
+			renderErrorToast(w, tmpl, "Failed to remove paper from stack: "+err.Error())
+			return
+		}
+
+		detailURL := "/app/stacks/detail/" + stackUUID
+		if isHTMX(r) {
+			hxRedirect(w, detailURL, http.StatusOK)
+			return
+		}
+
+		http.Redirect(w, r, detailURL, http.StatusSeeOther)
+	})
+}
+
 func handleStackPublicSettingUpdate(
 	logger *slog.Logger,
 	tmpl *template.Template,
