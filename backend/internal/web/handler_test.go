@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -224,6 +225,76 @@ func TestHandleStackPublicSettingUpdateRejectsNonOwner(t *testing.T) {
 	}
 }
 
+func TestHandleStackPaperRemoveRemovesPaperAndRedirectsToDetail(t *testing.T) {
+	t.Parallel()
+
+	stackService := newTestStackService()
+	user := userDomain.NewUser("owner-paper-remove", "paper-remove@example.com")
+	stack := stackDomain.NewStack("Paper Remove Stack", user)
+	removedPaperUUID := "11111111-1111-4111-8111-111111111111"
+	retainedPaperUUID := "22222222-2222-4222-8222-222222222222"
+	stack.Papers = []paperDomain.Paper{
+		{UUID: removedPaperUUID, Title: "Removed Paper"},
+		{UUID: retainedPaperUUID, Title: "Retained Paper"},
+	}
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStackPaperRemove(testLogger(), testWebTemplate(t), stackService)
+	req := newStackPaperRemoveRequest(t, stack.UUID, removedPaperUUID, user.ExternalID, user.Email)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	if got := rr.Header().Get("HX-Redirect"); got != "/app/stacks/detail/"+stack.UUID {
+		t.Fatalf("HX-Redirect = %q, want detail page redirect", got)
+	}
+
+	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+	if len(updated.Papers) != 1 {
+		t.Fatalf("updated papers length = %d, want 1", len(updated.Papers))
+	}
+	if updated.Papers[0].UUID != retainedPaperUUID {
+		t.Fatalf("remaining paper UUID = %q, want %q", updated.Papers[0].UUID, retainedPaperUUID)
+	}
+}
+
+func TestHandleStackPaperRemoveRejectsNonOwner(t *testing.T) {
+	t.Parallel()
+
+	stackService := newTestStackService()
+	owner := userDomain.NewUser("owner-paper-remove-forbidden", "owner-remove@example.com")
+	stack := stackDomain.NewStack("Forbidden Paper Remove Stack", owner)
+	paperUUID := "33333333-3333-4333-8333-333333333333"
+	stack.Papers = []paperDomain.Paper{{UUID: paperUUID, Title: "Kept Paper"}}
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStackPaperRemove(testLogger(), testWebTemplate(t), stackService)
+	req := newStackPaperRemoveRequest(t, stack.UUID, paperUUID, "other-paper-remove-forbidden", "other-remove@example.com")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	assertSidebarStackCreateError(t, rr, http.StatusOK, "You are not allowed to remove papers from this stack.")
+
+	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
+	if err != nil {
+		t.Fatalf("GetByUUID() error = %v", err)
+	}
+	if len(updated.Papers) != 1 {
+		t.Fatalf("updated papers length = %d, want unchanged 1", len(updated.Papers))
+	}
+}
+
 func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
@@ -352,6 +423,22 @@ func newStackPublicSettingRequest(t *testing.T, stackUUID string, userID string,
 	req := httptest.NewRequest(http.MethodPost, "/app/stacks/detail/"+stackUUID+"/settings/is-public", strings.NewReader(values.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.SetPathValue("uuid", stackUUID)
+	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
+		UserID:  userID,
+		Email:   email,
+		IsValid: true,
+	}))
+
+	return req
+}
+
+func newStackPaperRemoveRequest(t *testing.T, stackUUID string, paperUUID string, userID string, email string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, "/app/stacks/detail/"+stackUUID+"/papers/"+paperUUID+"/remove", nil)
+	req.Header.Set("HX-Request", "true")
+	req.SetPathValue("uuid", stackUUID)
+	req.SetPathValue("paperUUID", paperUUID)
 	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
 		UserID:  userID,
 		Email:   email,
