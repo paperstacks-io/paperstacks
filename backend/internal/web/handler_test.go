@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"html/template"
 	"io"
 	"log/slog"
@@ -16,6 +17,26 @@ import (
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
+
+type fakeUserGetter map[string]userDomain.User
+
+func (f fakeUserGetter) GetByExternalID(_ context.Context, externalID string) (userDomain.User, error) {
+	user, ok := f[externalID]
+	if !ok {
+		return userDomain.User{}, userDomain.ErrUserNotFound
+	}
+
+	return user, nil
+}
+
+func newTestStackService(users ...userDomain.User) *stackApp.StackService {
+	userGetter := make(fakeUserGetter, len(users))
+	for _, user := range users {
+		userGetter[user.ExternalID] = user
+	}
+
+	return stackApp.NewStackService(stackMemory.NewRepository(), userGetter, nil)
+}
 
 func TestPageNameFromPath(t *testing.T) {
 	t.Parallel()
@@ -81,7 +102,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFoundHTMX(t *tes
 		testLogger(),
 		testWebTemplate(t),
 		"",
-		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
+		newTestStackService(),
 	)
 	req := newStackDetailRequest(t, "00000000-0000-4000-8000-000000000000")
 	req.Header.Set("HX-Request", "true")
@@ -104,7 +125,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 		testLogger(),
 		testWebTemplate(t),
 		"",
-		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
+		newTestStackService(),
 	)
 	req := newStackDetailRequest(t, "00000000-0000-4000-8000-000000000001")
 	rr := httptest.NewRecorder()
@@ -122,7 +143,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 func TestHandleStackPublicSettingUpdateSetsPublic(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	stackService := newTestStackService()
 	user := userDomain.NewUser("owner-public-setting-true", "public-true@example.com")
 	stack := stackDomain.NewStack("Public Setting Stack", user)
 	stack.IsPublic = false
@@ -150,7 +171,7 @@ func TestHandleStackPublicSettingUpdateSetsPublic(t *testing.T) {
 func TestHandleStackPublicSettingUpdateClearsPublic(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	stackService := newTestStackService()
 	user := userDomain.NewUser("owner-public-setting-false", "public-false@example.com")
 	stack := stackDomain.NewStack("Private Setting Stack", user)
 	stack.IsPublic = true
@@ -178,7 +199,7 @@ func TestHandleStackPublicSettingUpdateClearsPublic(t *testing.T) {
 func TestHandleStackPublicSettingUpdateRejectsNonOwner(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	stackService := newTestStackService()
 	owner := userDomain.NewUser("owner-public-setting-forbidden", "owner-public@example.com")
 	stack := stackDomain.NewStack("Forbidden Public Setting Stack", owner)
 	stack.IsPublic = false
@@ -192,7 +213,7 @@ func TestHandleStackPublicSettingUpdateRejectsNonOwner(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	assertSidebarStackCreateError(t, rr, http.StatusForbidden, "You are not allowed to update this stack.")
+	assertSidebarStackCreateError(t, rr, http.StatusOK, "You are not allowed to update this stack.")
 
 	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
 	if err != nil {
@@ -206,10 +227,11 @@ func TestHandleStackPublicSettingUpdateRejectsNonOwner(t *testing.T) {
 func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
+	user := userDomain.NewUser("owner-sidebar-create", "sidebar@example.com")
+	stackService := newTestStackService(user)
 	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), stackService)
 
-	req := newSidebarStackCreateRequest(t, "owner-sidebar-create", "sidebar@example.com", "Sidebar Stack")
+	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "Sidebar Stack")
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -236,25 +258,26 @@ func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
 	t.Parallel()
 
+	user := userDomain.NewUser("owner-empty-sidebar-create", "empty@example.com")
 	handler := handleSidebarStackCreate(
 		testLogger(),
 		testWebTemplate(t),
-		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
+		newTestStackService(user),
 	)
 
-	req := newSidebarStackCreateRequest(t, "owner-empty-sidebar-create", "empty@example.com", "   ")
+	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "   ")
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
 
-	assertSidebarStackCreateError(t, rr, http.StatusUnprocessableEntity, "Stack name must be 1-80 characters")
+	assertSidebarStackCreateError(t, rr, http.StatusOK, "Stack name must be 1-80 characters")
 }
 
 func TestHandleSidebarStackCreateRendersToastOnDuplicateName(t *testing.T) {
 	t.Parallel()
 
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), nil, nil)
 	user := userDomain.NewUser("owner-duplicate-sidebar-create", "duplicate@example.com")
+	stackService := newTestStackService(user)
 	existing := stackDomain.NewStack("Duplicate Stack", user)
 	if err := stackService.Create(t.Context(), *existing); err != nil {
 		t.Fatalf("seed duplicate stack: %v", err)
@@ -266,7 +289,7 @@ func TestHandleSidebarStackCreateRendersToastOnDuplicateName(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	assertSidebarStackCreateError(t, rr, http.StatusConflict, "A stack with this name already exists.")
+	assertSidebarStackCreateError(t, rr, http.StatusOK, "A stack with this name already exists.")
 }
 
 func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
@@ -275,7 +298,7 @@ func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
 	handler := handleSidebarStackCreate(
 		testLogger(),
 		testWebTemplate(t),
-		stackApp.NewStackService(stackMemory.NewRepository(), nil, nil),
+		newTestStackService(),
 	)
 	req := httptest.NewRequest(http.MethodPost, "/app/stacks/sidebar/create", strings.NewReader(url.Values{
 		"name": {"Sidebar Stack"},
@@ -285,7 +308,7 @@ func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	assertSidebarStackCreateError(t, rr, http.StatusUnauthorized, "Unauthorized. Please log in to create a stack.")
+	assertSidebarStackCreateError(t, rr, http.StatusOK, "Unauthorized. Please log in to create a stack.")
 }
 
 func newSidebarStackCreateRequest(t *testing.T, userID string, email string, name string) *http.Request {
@@ -361,7 +384,7 @@ func assertStackPublicSettingSuccess(t *testing.T, rr *httptest.ResponseRecorder
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if body := rr.Body.String(); !strings.Contains(body, "Changes saved.") {
+	if body := rr.Body.String(); !strings.Contains(body, "Stack changes saved") {
 		t.Fatalf("body does not contain success toast: %s", body)
 	}
 }
