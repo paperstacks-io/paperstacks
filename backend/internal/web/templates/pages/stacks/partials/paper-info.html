@@ -1,9 +1,11 @@
 {{ define "stacks/partials/paper-info" }}
 <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
   <div class="grow">
-    <h2 class="card-title">Paper Info</h2>
+    <h2 class="card-title">Paper Metadata</h2>
   </div>
-  <a class="btn btn-sm">Save changes</a>
+  <a class="btn btn-sm" hx-get="/app/partials/toast/not-implemented" hx-target="#toast-host" hx-swap="innerHTML"
+    >Save changes</a
+  >
 </div>
 
 <fieldset class="fieldset">
@@ -23,8 +25,41 @@
   <input class="input w-full" value="{{ .PublicationYear }}" aria-label="paper year" />
 </fieldset>
 
-<button class="btn btn-dash min-h-24">
+<fieldset class="fieldset">
+  <label class="label">DOI</label>
+  <div class="join">
+    <input type="text" name="doi" class="input input-sm join-item" value="{{ .DOI }}" />
+    <a href="https://doi.org/{{ .DOI }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm join-item">Open</a>
+  </div>
+</fieldset>
+
+<fieldset class="fieldset">
+  <label class="label">Published in</label>
+  <input class="input w-full" value="{{ .Metadata.PublishedIn }}" aria-label="metadata published in" />
+</fieldset>
+
+<div class="grid gap-2 sm:grid-cols-2">
+  <fieldset class="fieldset">
+    <label class="label">Volume</label>
+    <input class="input w-full" value="{{ .Metadata.Volume }}" aria-label="metadata volume" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Issue</label>
+    <input class="input w-full" value="{{ .Metadata.Issue }}" aria-label="metadata issue" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Pages</label>
+    <input class="input w-full" value="{{ .Metadata.Pages }}" aria-label="metadata pages" />
+  </fieldset>
+</div>
+
+<button
+  class="btn btn-dash min-h-24"
+  hx-get="/app/partials/toast/not-implemented"
+  hx-target="#toast-host"
+  hx-swap="innerHTML"
+>
   <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
   Add PDF
 </button>
-Metadata: TBA {{ end }}
+{{ end }}

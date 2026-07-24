@@ -96,6 +96,37 @@ func TestPageNameFromPath(t *testing.T) {
 	}
 }
 
+func TestStackPaperInfoTemplateRendersPaperMetadata(t *testing.T) {
+	t.Parallel()
+
+	var body strings.Builder
+	err := testWebTemplate(t).ExecuteTemplate(&body, "stacks/partials/paper-info", paperDomain.Paper{
+		DOI: "10.1000/182",
+		Metadata: paperDomain.Metadata{
+			PublishedIn: "Proceedings of the Example Conference",
+			Pages:       "42-53",
+			Volume:      "7",
+			Issue:       "2",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	rendered := body.String()
+	for _, want := range []string{
+		`href="https://doi.org/10.1000/182" target="_blank" rel="noopener noreferrer"`,
+		`value="Proceedings of the Example Conference" aria-label="metadata published in"`,
+		`value="42-53" aria-label="metadata pages"`,
+		`value="7" aria-label="metadata volume"`,
+		`value="2" aria-label="metadata issue"`,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered paper metadata missing %q: %s", want, rendered)
+		}
+	}
+}
+
 func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFoundHTMX(t *testing.T) {
 	t.Parallel()
 
