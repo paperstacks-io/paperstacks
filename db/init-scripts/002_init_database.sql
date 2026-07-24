@@ -86,7 +86,7 @@ CREATE TABLE public.paper (
 	CONSTRAINT paper_pk PRIMARY KEY (uuid)
 );
 
-COMMENT ON TABLE public.paper IS E'represents a paper with multiple possible pdfs';
+COMMENT ON TABLE public.paper IS E'Represents a paper with multiple possible PDFs';
 
 CREATE TABLE public.stack (
 	uuid uuid NOT NULL,
@@ -106,9 +106,6 @@ ALTER TABLE public.stack ADD CONSTRAINT stack_owner_fk
 FOREIGN KEY (owner_external_id)
 REFERENCES public.app_user (external_id)
 ON DELETE RESTRICT ON UPDATE CASCADE;
-
-COMMENT ON CONSTRAINT stack_owner_fk ON public.stack IS
-E'Prevents deleting a user while that user still owns one or more stacks';
 
 CREATE TABLE public.paper_author (
 	uuid_paper uuid NOT NULL,
@@ -143,7 +140,7 @@ REFERENCES public.stack (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 COMMENT ON CONSTRAINT stack_paper_stack_fk ON public.stack_paper IS
-E'Deleting a stack removes only its paper associations; the papers remain';
+E'Deleting a stack removes its relationships to papers; the papers remain';
 
 ALTER TABLE public.stack_paper ADD CONSTRAINT stack_paper_paper_fk
 FOREIGN KEY (uuid_paper)
@@ -151,7 +148,7 @@ REFERENCES public.paper (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 COMMENT ON CONSTRAINT stack_paper_paper_fk ON public.stack_paper IS
-E'Deleting a paper removes only its stack associations; the stacks remain';
+E'Deleting a paper removes its relationships to stacks; the stacks remain';
 
 CREATE INDEX stack_paper_uuid_paper_idx ON public.stack_paper (uuid_paper);
 
