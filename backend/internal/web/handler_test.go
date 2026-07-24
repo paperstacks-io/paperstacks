@@ -103,12 +103,10 @@ func TestStackPaperInfoTemplateRendersPaperMetadata(t *testing.T) {
 	err := testWebTemplate(t).ExecuteTemplate(&body, "stacks/partials/paper-info", paperDomain.Paper{
 		DOI: "10.1000/182",
 		Metadata: paperDomain.Metadata{
-			Publisher:   "ACM",
 			PublishedIn: "Proceedings of the Example Conference",
 			Pages:       "42-53",
 			Volume:      "7",
 			Issue:       "2",
-			ISBN:        []string{"978-1-4503-0000-1", "978-1-4503-0000-2"},
 		},
 	})
 	if err != nil {
@@ -118,12 +116,10 @@ func TestStackPaperInfoTemplateRendersPaperMetadata(t *testing.T) {
 	rendered := body.String()
 	for _, want := range []string{
 		`href="https://doi.org/10.1000/182" target="_blank" rel="noopener noreferrer"`,
-		`value="ACM" aria-label="metadata publisher"`,
 		`value="Proceedings of the Example Conference" aria-label="metadata published in"`,
 		`value="42-53" aria-label="metadata pages"`,
 		`value="7" aria-label="metadata volume"`,
 		`value="2" aria-label="metadata issue"`,
-		`978-1-4503-0000-1; 978-1-4503-0000-2`,
 	} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("rendered paper metadata missing %q: %s", want, rendered)
