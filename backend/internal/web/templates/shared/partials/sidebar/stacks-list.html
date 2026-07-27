@@ -20,7 +20,7 @@
     hx-get="/app/stacks/detail/{{ .UUID }}"
     hx-target="#page-shell"
     hx-select="#page-shell"
-    hx-select-oob="#sidebar-menu:outerHTML"
+    hx-select-oob="#sidebar:outerHTML"
     hx-swap="outerHTML"
     hx-push-url="true"
     class="justify-between {{ if eq $page (printf `stacks/detail/%s` .UUID) }}menu-active{{ end }}"
