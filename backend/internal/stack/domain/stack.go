@@ -3,10 +3,17 @@ package domain
 import (
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
+)
+
+const (
+	minStackNameRunes = 1
+	maxStackNameRunes = 80
 )
 
 type Stack struct {
@@ -55,8 +62,30 @@ func (s Stack) Validate() error {
 		return ErrInvalidStack
 	}
 
-	if s.Name == "" {
-		return ErrInvalidStack
+	if err := validateStackName(s.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateStackName(name string) error {
+	length := utf8.RuneCountInString(name)
+	if length < minStackNameRunes || length > maxStackNameRunes {
+		return ErrInvalidName
+	}
+
+	for _, r := range name {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			continue
+		}
+
+		switch r {
+		case ' ', '-', '_', '.', ',', ':', '\'', '&', '/', '(', ')', '+', '#':
+			continue
+		default:
+			return ErrInvalidName
+		}
 	}
 
 	return nil

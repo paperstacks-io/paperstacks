@@ -15,6 +15,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
@@ -27,6 +28,7 @@ func AddRoute(
 	logger *slog.Logger,
 	paperService *paperApp.PaperService,
 	stackService *stackApp.StackService,
+	userService *userApp.UserService,
 	sessionService commonauth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
@@ -64,23 +66,30 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
 
-	stacksTmpl := pageTemplate("stacks/page")
-	mux.Handle(http.MethodGet+" /stacks", defaultMiddle(handleStacksPage(logger, stacksTmpl, cfg.HankoAPIURL, stackService)))
-	stacksMyTmpl := pageTemplate("stacks/my")
-	mux.Handle(http.MethodGet+" /stacks/my", defaultMiddle(handleStacksMyPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
+	stacksMyTmpl := pageTemplate("stacks/page")
+	mux.Handle(http.MethodGet+" /stacks/page", authenticated(handleStacksPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
 	stacksDetailTmpl := pageTemplate("stacks/detail")
-	mux.Handle(http.MethodGet+" /stacks/detail", defaultMiddle(handlePage(stacksDetailTmpl, cfg.HankoAPIURL)))
-	mux.Handle(http.MethodPost+" /stacks/search", defaultMiddle(handleStacksSearchPublic(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/my/search", defaultMiddle(handleStacksSearchByOwner(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/my/stats", defaultMiddle(handleStacksStatsByOwner(logger, tmpl, stackService)))
-	mux.Handle(http.MethodPost+" /stacks/create", defaultMiddle(handleStacksCreate(logger, tmpl, stackService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}", authenticated(handleStacksDetailPage(logger, stacksDetailTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/papers/{paperUUID}/remove", authenticated(handleStackPaperRemove(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/sidebar/create", authenticated(handleSidebarStackCreate(logger, tmpl, stackService)))
 
 	settingsTmpl := pageTemplate("settings/page")
-	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /settings", authenticated(handleSettingsPage(logger, settingsTmpl, cfg.HankoAPIURL, userService)))
+	mux.Handle(http.MethodPost+" /settings/user", authenticated(handleUserSettingsUpdate(logger, tmpl, userService)))
 
 	authTmpl := pageTemplate("auth/page")
 	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
 	mux.Handle(http.MethodPost+" /auth/logout", defaultMiddle(handleLogout(logger, sessionService)))
+
+	// Shared partials
+	mux.Handle(http.MethodGet+" /partials/sidebar/stacks-list", authenticated(handleSidebarStacks(logger, homeTmpl, stackService)))
+	mux.Handle(http.MethodGet+" /partials/toast/not-implemented", defaultMiddle(handlePartialWithoutData(tmpl, "shared/partials/toast/not-implemented")))
+	mux.Handle(http.MethodGet+" /partials/toast/changes-saved", defaultMiddle(handlePartialWithoutData(tmpl, "shared/partials/toast/changes-saved")))
 
 	// Static content
 	mux.Handle(http.MethodGet+" /assets/", defaultMiddle(http.StripPrefix("/assets/", http.FileServerFS(assets))))

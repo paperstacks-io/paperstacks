@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 const (
@@ -22,14 +23,20 @@ type PaperGetter interface {
 	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
 
+type UserGetter interface {
+	GetByExternalID(ctx context.Context, externalID string) (userDomain.User, error)
+}
+
 type StackService struct {
 	repo        domain.Repository
+	userGetter  UserGetter
 	paperGetter PaperGetter
 }
 
-func NewStackService(repo domain.Repository, paperGetter PaperGetter) *StackService {
+func NewStackService(repo domain.Repository, userGetter UserGetter, paperGetter PaperGetter) *StackService {
 	return &StackService{
 		repo:        repo,
+		userGetter:  userGetter,
 		paperGetter: paperGetter,
 	}
 }
@@ -55,6 +62,24 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 	}
 
 	return s.repo.Create(ctx, stack)
+}
+
+// CreateByName validates and stores a new stack.
+// It initializes missing timestamps and generates a UUID if necessary.
+//
+// It returns an error if the stack is invalid or could not be stored.
+func (s *StackService) CreateByName(ctx context.Context, name string, userID string) (domain.Stack, error) {
+	user, err := s.userGetter.GetByExternalID(ctx, userID)
+	if err != nil {
+		return domain.Stack{}, err
+	}
+
+	stack := domain.NewStack(name, user)
+	if err := stack.Validate(); err != nil {
+		return domain.Stack{}, err
+	}
+
+	return *stack, s.repo.Create(ctx, *stack)
 }
 
 // Update validates and updates an existing stack.

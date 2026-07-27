@@ -15,6 +15,9 @@ type User struct {
 	// Email is the user's email address as provided by the authentication system.
 	Email string
 
+	// ORCID is a unique, persistent identifier free of charge to researchers
+	ORCID string
+
 	// CreatedAt records when the user was initially created.
 	CreatedAt time.Time
 
@@ -44,6 +47,11 @@ func (u User) Validate() error {
 
 	addr, err := mail.ParseAddress(email)
 	if err != nil || addr.Address != email {
+		return ErrInvalidUser
+	}
+
+	orcid := strings.TrimSpace(u.ORCID)
+	if orcid != "" && len(orcid) != len("0000-0000-0000-0000") {
 		return ErrInvalidUser
 	}
 

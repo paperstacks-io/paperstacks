@@ -4,31 +4,80 @@
   <div class="grow">
     <div class="breadcrumbs text-xl">
       <ul>
-        <li>Stack Detail: Code Review</li>
+        <li>
+          <a
+            href="/app/stacks/page"
+            hx-get="/app/stacks/page"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            Stacks
+          </a>
+        </li>
+        <li>{{ .Stack.Name}}</li>
       </ul>
     </div>
   </div>
   <div class="flex flex-wrap gap-2">
-    <button class="btn btn-sm">
+    <button
+      class="btn btn-sm"
+      type="button"
+      hx-get="/app/partials/toast/not-implemented"
+      hx-target="#toast-host"
+      hx-swap="innerHTML"
+    >
       <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
       Export
     </button>
-    <button class="btn btn-sm">
+    <button class="btn btn-sm" type="button" onclick="modal_confirm_delete.showModal()">
       <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
       Delete
     </button>
   </div>
 </header>
 
+<dialog id="modal_confirm_delete" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Delete Stack</h3>
+    <p class="py-4">Are you sure you want to delete the stack "{{ .Stack.Name }}"? This action cannot be undone.</p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">Cancel</button>
+      </form>
+      <button
+        class="btn btn-error"
+        type="button"
+        hx-post="/app/stacks/detail/{{ .Stack.UUID }}/delete"
+        hx-target="#toast-host"
+        hx-swap="innerHTML"
+        hx-on::before-request="document.getElementById('modal_confirm_delete').close()"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</dialog>
+
 <!-- stats -->
-<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-3 shadow-xs">
+<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs">
   <div class="stat">
     <div class="stat-figure">
       <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
     </div>
     <div class="stat-title">Papers</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">50</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .Stack.Papers }}</div>
     <div class="stat-desc">in this stacks</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/clock.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Updated at</div>
+    <div class="stat-value text-sm font-semibold tabular-nums">{{ .UpdatedAt}}</div>
+    <div class="stat-desc">Created: {{ .CreatedAt }}</div>
   </div>
 </section>
 
@@ -38,13 +87,25 @@
       <div class="card-body">
         <h2 class="card-title">Papers</h2>
 
-        <form>
+        <form id="stack-paper-filter" data-stack-paper-filter autocomplete="off">
           <div class="flex flex-col gap-3 lg:flex-row">
             <label class="input input-sm w-full">
               <svg data-src="https://unpkg.com/heroicons/20/solid/funnel.svg" class="h-4 w-4 opacity-50"></svg>
-              <input type="search" name="search" placeholder="exploratory..." />
+              <input
+                id="stack-paper-search"
+                data-stack-paper-search
+                type="search"
+                name="search"
+                placeholder="exploratory..."
+              />
             </label>
-            <select aria-label="Select sort option" class="select select-sm w-full lg:max-w-sm" name="sortBy">
+            <select
+              id="stack-paper-sort"
+              data-stack-paper-sort
+              aria-label="Select sort option"
+              class="select select-sm w-full lg:max-w-sm"
+              name="sortBy"
+            >
               <option value="+title">Title (A-Z)</option>
               <option value="-title">Title (Z-A)</option>
               <option value="+year">Oldest</option>
@@ -53,7 +114,7 @@
           </div>
         </form>
         <div class="overflow-x-auto">
-          <table class="table">
+          <table class="table table-pin-rows">
             <thead>
               <tr>
                 <th>Article</th>
@@ -62,87 +123,54 @@
                 <th></th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
+            <tbody id="stack-paper-results" data-stack-paper-results>
+              {{ range .Stack.Papers }}
+              <tr
+                data-stack-paper-row
+                data-title="{{ .Title }}"
+                data-year="{{ .PublicationYear }}"
+                data-uuid="{{ .UUID }}"
+                class="cursor-pointer hover:bg-base-200"
+                hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
+                hx-target="#stack-paper-info"
+                hx-swap="innerHTML"
+              >
                 <td>
                   <div class="flex items-center gap-3">
                     <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
+                      <div class="font-bold">{{ .Title }}</div>
+                      <div class="text-base-content/60 text-sm">{{ .Metadata.PublishedIn }}</div>
                     </div>
                   </div>
                 </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
+                <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+                <td>{{ .PublicationYear }}</td>
                 <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
-                    </div>
+                  <div class="flex">
+                    <a class="btn btn-ghost btn-xs">PDF</a>
+                    <button
+                      class="btn btn-ghost btn-xs"
+                      type="button"
+                      hx-post="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/remove"
+                      hx-target="#toast-host"
+                      hx-swap="innerHTML"
+                      hx-disabled-elt="this"
+                      hx-on::click="event.stopPropagation()"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
-                <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
               </tr>
-              <tr>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
-                    </div>
-                  </div>
-                </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
-                <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div>
-                      <div class="font-bold">
-                        What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation
-                      </div>
-                      <div class="text-base-content/60 text-sm">Empirical Software Engineering</div>
-                    </div>
-                  </div>
-                </td>
-                <td>ASIF KAMAL TURZO; AMIANGSHU BOSU;</td>
-                <td>2024</td>
-                <td class="text-right">
-                  <a class="btn btn-ghost btn-xs">PDF</a>
-                </td>
-              </tr>
+              {{ end }}
             </tbody>
           </table>
 
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <p class="text-base-content/60 text-sm">Showing 1-5 of 50 papers</p>
-            <div class="join lg:ml-auto">
-              <button class="join-item btn btn-sm btn-disabled">«</button>
-              <button type="button" class="join-item btn btn-sm btn-neutral">1</button>
-              <button type="button" class="join-item btn btn-sm">2</button>
-              <button type="button" class="join-item btn btn-sm">3</button>
-              <button class="join-item btn btn-sm">»</button>
-            </div>
+            <p class="text-base-content/60 text-sm">
+              Showing <span data-stack-paper-visible-count>{{ len .Stack.Papers }}</span> of
+              <span data-stack-paper-total-count>{{ len .Stack.Papers }}</span> papers
+            </p>
           </div>
         </div>
       </div>
@@ -151,45 +179,105 @@
   <aside class="grid content-start gap-6">
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
-        <h2 class="card-title">Settings</h2>
+        <h2 class="card-title">Stack Settings</h2>
         <label class="label cursor-pointer justify-between">
           Public (visible to everyone)
-          <input type="checkbox" class="toggle toggle-success" name="is_public" checked="checked" />
+          <input
+            type="checkbox"
+            class="toggle toggle-success"
+            name="is_public"
+            hx-post="/app/stacks/detail/{{ .Stack.UUID }}/settings/is-public"
+            hx-trigger="change"
+            hx-target="#toast-host"
+            hx-swap="innerHTML"
+            hx-disabled-elt="this"
+            hx-on::after-request="if (!event.detail.successful) this.checked = !this.checked"
+            {{
+            if
+            .Stack.IsPublic
+            }}checked="checked"
+            {{
+            end
+            }}
+          />
         </label>
       </div>
     </div>
     <div class="card bg-base-200 shadow-xs">
-      <div class="card-body">
-        <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div class="grow">
-            <h2 class="card-title">Info</h2>
-          </div>
-          <a class="btn btn-sm">Save changes</a>
-        </div>
-
-        <fieldset class="fieldset">
-          <label class="label">Title</label>
-          <input
-            class="input w-full"
-            value="What Makes a Code Review Useful to OpenDev Developers? An Empirical Investigation"
-            aria-label="title"
-          />
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label">Authors</label>
-          <input class="input w-full" value="ASIF KAMAL TURZO; AMIANGSHU BOSU;" aria-label="authors" />
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label">Year</label>
-          <input class="input w-full" value="2024" aria-label="paper year" />
-        </fieldset>
-
-        <button class="btn btn-dash min-h-24">
-          <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
-          Add PDF
-        </button>
-      </div>
+      <div id="stack-paper-info" class="card-body">{{ template "stacks/partials/paper-info" .SelectedPaper }}</div>
     </div>
   </aside>
 </section>
+<script>
+  ;(() => {
+    const form = document.querySelector("[data-stack-paper-filter]")
+    const tbody = document.querySelector("[data-stack-paper-results]")
+    if (!form || !tbody || form.dataset.stackPaperFilterInitialized === "true") return
+
+    form.dataset.stackPaperFilterInitialized = "true"
+
+    const searchInput = form.querySelector("[data-stack-paper-search]")
+    const sortSelect = form.querySelector("[data-stack-paper-sort]")
+    const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
+    const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
+      const year = Number.parseInt(element.dataset.year || "0", 10)
+
+      return {
+        element,
+        searchText: element.textContent.toLocaleLowerCase(),
+        title: element.dataset.title || "",
+        uuid: element.dataset.uuid || "",
+        year: Number.isNaN(year) ? 0 : year,
+      }
+    })
+
+    function compareRows(a, b) {
+      const sortValue = sortSelect.value || "-year"
+      const desc = sortValue.startsWith("-")
+      const sortBy = sortValue.slice(1)
+
+      if (sortBy === "title") {
+        const titleOrder = collator.compare(a.title, b.title)
+        if (titleOrder !== 0) return desc ? -titleOrder : titleOrder
+      }
+
+      if (sortBy === "year") {
+        const yearOrder = a.year - b.year
+        if (yearOrder !== 0) return desc ? -yearOrder : yearOrder
+      }
+
+      const titleTieBreaker = collator.compare(a.title, b.title)
+      if (titleTieBreaker !== 0) return titleTieBreaker
+
+      return collator.compare(a.uuid, b.uuid)
+    }
+
+    function applyPaperFilter() {
+      const query = searchInput.value.trim().toLocaleLowerCase()
+      const fragment = document.createDocumentFragment()
+      let shown = 0
+
+      for (const row of rows.slice().sort(compareRows)) {
+        const matches = query === "" || row.searchText.includes(query)
+        row.element.hidden = !matches
+        if (matches) shown++
+        fragment.appendChild(row.element)
+      }
+
+      tbody.appendChild(fragment)
+      if (visibleCount) visibleCount.textContent = String(shown)
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault()
+      applyPaperFilter()
+    })
+    searchInput.addEventListener("input", applyPaperFilter)
+    sortSelect.addEventListener("change", applyPaperFilter)
+
+    applyPaperFilter()
+  })()
+</script>
+
 {{ end }}
