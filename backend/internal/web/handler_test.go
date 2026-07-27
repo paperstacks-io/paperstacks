@@ -16,7 +16,9 @@ import (
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
+	userApplication "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
+	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
 type fakeUserGetter map[string]userDomain.User
@@ -413,6 +415,98 @@ func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
 	assertSidebarStackCreateError(t, rr, http.StatusOK, "Unauthorized. Please log in to create a stack.")
 }
 
+func TestHandleSettingsPageRendersUserORCID(t *testing.T) {
+	t.Parallel()
+
+	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
+	user, err := userService.CreateIfNotExist(t.Context(), "settings-page-user", "settings-page@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v", err)
+	}
+	user.ORCID = "0000-0002-1825-0097"
+	if err := userService.Update(t.Context(), user.ExternalID, user); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	handler := handleSettingsPage(testLogger(), testPageTemplate(t, "settings/page"), "", userService)
+	req := newSettingsRequest(t, user.ExternalID, user.Email)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, want := range []string{
+		`value="0000-0002-1825-0097"`,
+		`data-initial-value="0000-0002-1825-0097"`,
+		`data-user-settings-actions`,
+		`hidden`,
+		`hx-post="/app/settings/user"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("settings page missing %q: %s", want, body)
+		}
+	}
+}
+
+func TestHandleUserSettingsUpdateRendersToastOnInvalidORCID(t *testing.T) {
+	t.Parallel()
+
+	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
+	user, err := userService.CreateIfNotExist(t.Context(), "settings-invalid-user", "settings-invalid@example.com")
+	if err != nil {
+		t.Fatalf("CreateIfNotExist() error = %v", err)
+	}
+
+	handler := handleUserSettingsUpdate(testLogger(), testWebTemplate(t), userService)
+	req := newUserSettingsUpdateRequest(t, user.ExternalID, user.Email, "invalid")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	assertSidebarStackCreateError(t, rr, http.StatusOK, "ORCID must use the 0000-0000-0000-0000 format.")
+
+	stored, err := userService.GetByExternalID(t.Context(), user.ExternalID)
+	if err != nil {
+		t.Fatalf("GetByExternalID() error = %v", err)
+	}
+	if stored.ORCID != "" {
+		t.Fatalf("stored ORCID = %q, want unchanged empty", stored.ORCID)
+	}
+}
+
+func newSettingsRequest(t *testing.T, userID string, email string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/settings", nil)
+	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
+		UserID:  userID,
+		Email:   email,
+		IsValid: true,
+	}))
+
+	return req
+}
+
+func newUserSettingsUpdateRequest(t *testing.T, userID string, email string, orcid string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/user", strings.NewReader(url.Values{
+		"orcid": {orcid},
+	}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
+		UserID:  userID,
+		Email:   email,
+		IsValid: true,
+	}))
+
+	return req
+}
+
 func newSidebarStackCreateRequest(t *testing.T, userID string, email string, name string) *http.Request {
 	t.Helper()
 
@@ -505,6 +599,17 @@ func assertStackPublicSettingSuccess(t *testing.T, rr *httptest.ResponseRecorder
 	if body := rr.Body.String(); !strings.Contains(body, "Stack changes saved") {
 		t.Fatalf("body does not contain success toast: %s", body)
 	}
+}
+
+func testPageTemplate(t *testing.T, pageTemplate string) *template.Template {
+	t.Helper()
+
+	tmpl, err := pageTemplateSet(testWebTemplate(t), pageTemplate)
+	if err != nil {
+		t.Fatalf("pageTemplateSet(%q) error = %v", pageTemplate, err)
+	}
+
+	return tmpl
 }
 
 func testWebTemplate(t *testing.T) *template.Template {

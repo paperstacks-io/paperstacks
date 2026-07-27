@@ -10,7 +10,7 @@
   </div>
 </header>
 
-<section class="card bg-base-200 col-span-12 shadow-xs">
+<section class="card bg-base-200 col-span-12 shadow-xs xl:col-span-7">
   <div class="card-body pb-0">
     <div class="flex flex-col gap-2">
       <div class="grow">
@@ -22,7 +22,9 @@
   <div class="px-6 pt-4 pb-6">No application specific setting yet.</div>
 </section>
 
-<section class="card bg-base-200 col-span-12 shadow-xs">
+{{ template "settings/partials/user" . }}
+
+<section class="card bg-base-200 col-span-12 shadow-xs xl:col-span-7">
   <div class="card-body pb-0">
     <div class="flex flex-col gap-2">
       <div class="grow">

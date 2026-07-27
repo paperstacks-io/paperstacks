@@ -15,6 +15,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"
 )
 
@@ -27,6 +28,7 @@ func AddRoute(
 	logger *slog.Logger,
 	paperService *paperApp.PaperService,
 	stackService *stackApp.StackService,
+	userService *userApp.UserService,
 	sessionService commonauth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
@@ -77,7 +79,8 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/sidebar/create", authenticated(handleSidebarStackCreate(logger, tmpl, stackService)))
 
 	settingsTmpl := pageTemplate("settings/page")
-	mux.Handle(http.MethodGet+" /settings", authenticated(handlePage(settingsTmpl, cfg.HankoAPIURL)))
+	mux.Handle(http.MethodGet+" /settings", authenticated(handleSettingsPage(logger, settingsTmpl, cfg.HankoAPIURL, userService)))
+	mux.Handle(http.MethodPost+" /settings/user", authenticated(handleUserSettingsUpdate(logger, tmpl, userService)))
 
 	authTmpl := pageTemplate("auth/page")
 	mux.Handle(http.MethodGet+" /auth", defaultMiddle(handlePage(authTmpl, cfg.HankoAPIURL)))
