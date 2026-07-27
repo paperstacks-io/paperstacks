@@ -62,6 +62,7 @@ CREATE TYPE public.publication_status AS ENUM (
 CREATE TABLE public.app_user (
 	external_id text NOT NULL,
 	email text NOT NULL,
+	orcid text,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now(),
 	CONSTRAINT app_user_pk PRIMARY KEY (external_id),
@@ -95,8 +96,7 @@ CREATE TABLE public.stack (
 	is_public boolean NOT NULL DEFAULT false,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now(),
-	CONSTRAINT stack_pk PRIMARY KEY (uuid),
-	CONSTRAINT stack_owner_name_uq UNIQUE (owner_external_id, name)
+	CONSTRAINT stack_pk PRIMARY KEY (uuid)
 );
 
 COMMENT ON TABLE public.stack IS
@@ -106,6 +106,9 @@ ALTER TABLE public.stack ADD CONSTRAINT stack_owner_fk
 FOREIGN KEY (owner_external_id)
 REFERENCES public.app_user (external_id)
 ON DELETE RESTRICT ON UPDATE CASCADE;
+
+CREATE UNIQUE INDEX stack_owner_name_uq
+ON public.stack (owner_external_id, lower(name));
 
 CREATE TABLE public.paper_author (
 	uuid_paper uuid NOT NULL,
