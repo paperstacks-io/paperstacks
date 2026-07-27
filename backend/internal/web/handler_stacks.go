@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"html/template"
+	"log"
 	"log/slog"
 	"net/http"
 
@@ -137,6 +138,40 @@ func handleStackPaperInfo(
 		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+	})
+}
+
+func handleStacksPaperCitation(
+	logger *slog.Logger,
+	paperService *paperApp.PaperService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		log.Println("handleStacksPaperCitation called")
+		ctx := r.Context()
+		paperUUID := r.PathValue("paperUUID")
+
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			if err == paperDomain.ErrPaperNotFound {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get paper by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte(paper.APACitation()))
+
 	})
 }
 

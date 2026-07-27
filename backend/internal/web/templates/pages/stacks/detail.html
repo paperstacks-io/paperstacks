@@ -159,6 +159,34 @@
                     >
                       Remove
                     </button>
+
+                    <div class="dropdown dropdown-left">
+                      <button
+                        tabindex="0"
+                        type="button"
+                        class="btn btn-square btn-ghost btn-sm"
+                        hx-on::click="event.stopPropagation()"
+                      >
+                        <svg
+                          data-src="https://unpkg.com/heroicons/24/outline/ellipsis-vertical.svg"
+                          class="h-6 w-6"
+                        ></svg>
+                      </button>
+
+                      <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow">
+                        <li>
+                          <button
+                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
+                            hx-swap="none"
+                            hx-on::after-request="
+        navigator.clipboard.writeText(event.detail.xhr.responseText);
+    "
+                          >
+                            Copy APA Citation
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -168,8 +196,11 @@
 
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
             <p class="text-base-content/60 text-sm">
-              Showing <span data-stack-paper-visible-count>{{ len .Stack.Papers }}</span> of
-              <span data-stack-paper-total-count>{{ len .Stack.Papers }}</span> papers
+              Showing
+              <span data-stack-paper-visible-count>{{ len .Stack.Papers }}</span>
+              of
+              <span data-stack-paper-total-count>{{ len .Stack.Papers }}</span>
+              papers
             </p>
           </div>
         </div>
@@ -219,7 +250,10 @@
     const searchInput = form.querySelector("[data-stack-paper-search]")
     const sortSelect = form.querySelector("[data-stack-paper-sort]")
     const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
-    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: "base",
+    })
     const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
       const year = Number.parseInt(element.dataset.year || "0", 10)
 
