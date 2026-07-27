@@ -45,6 +45,14 @@ jobs:
       - name: Integration Test
         run: make test-integration
 
+  db-init-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Smoke test fresh Postgres init scripts
+        run: make db-init-smoke
+
   format-frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -66,7 +74,7 @@ jobs:
 
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, format-frontend]
+    needs: [build, format-frontend, db-init-smoke]
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
