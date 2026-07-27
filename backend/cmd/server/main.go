@@ -73,7 +73,7 @@ func run(
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, stackService, sessionService)
+	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
