@@ -52,19 +52,19 @@
     </main>
 
     <!-- Sidebar -->
-    <aside class="drawer-side -z10">
+    <aside id="sidebar" class="drawer-side -z10">
       <label for="my-drawer" class="drawer-overlay"></label>
       <!-- sidebar menu -->
       <nav class="bg-base-200 flex min-h-screen w-64 flex-col gap-2 px-2 pt-10">
         <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
-        <ul id="sidebar-menu" class="menu w-full overflow-y-auto">
+        <ul class="menu w-full overflow-y-auto">
           <li>
             <a
               href="/app/"
               hx-get="/app/"
               hx-target="#page-shell"
               hx-select="#page-shell"
-              hx-select-oob="#sidebar-menu:outerHTML"
+              hx-select-oob="#sidebar:outerHTML"
               hx-swap="outerHTML"
               hx-push-url="true"
               class="{{ if eq .PageName `home` }}menu-active{{ end }}"
@@ -80,10 +80,10 @@
               hx-get="/app/stacks/page"
               hx-target="#page-shell"
               hx-select="#page-shell"
-              hx-select-oob="#sidebar-menu:outerHTML"
+              hx-select-oob="#sidebar:outerHTML"
               hx-swap="outerHTML"
               hx-push-url="true"
-              class="{{ if eq .PageName `stacks/my` }}menu-active{{ end }}"
+              class="{{ if eq .PageName `stacks/page` }}menu-active{{ end }}"
             >
               <svg data-src="https://unpkg.com/heroicons/20/solid/rectangle-stack.svg" class="size-4"></svg>
               Stacks Overview
@@ -102,7 +102,7 @@
                     hx-get="/app/papers"
                     hx-target="#page-shell"
                     hx-select="#page-shell"
-                    hx-select-oob="#sidebar-menu:outerHTML"
+                    hx-select-oob="#sidebar:outerHTML"
                     hx-swap="outerHTML"
                     hx-push-url="true"
                     class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
@@ -144,13 +144,14 @@
             <div class="divider">{{.Session.Email}}</div>
             {{ if .Session.IsValid }}
 
+            <li>PageName: {{ .PageName }}</li>
             <li>
               <a
                 href="/app/settings"
                 hx-get="/app/settings"
                 hx-target="#page-shell"
                 hx-select="#page-shell"
-                hx-select-oob="#sidebar-menu:outerHTML"
+                hx-select-oob="#sidebar:outerHTML"
                 hx-swap="outerHTML"
                 hx-push-url="true"
                 class="{{ if eq .PageName `settings` }}menu-active{{ end }}"
