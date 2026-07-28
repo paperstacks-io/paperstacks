@@ -3,9 +3,9 @@ package web
 import (
 	"errors"
 	"html/template"
-	"log"
 	"log/slog"
 	"net/http"
+	"net/url"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -143,12 +143,10 @@ func handleStackPaperInfo(
 
 func handleStacksPaperCitation(
 	logger *slog.Logger,
+	tmpl *template.Template,
 	paperService *paperApp.PaperService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		log.Println("handleStacksPaperCitation called")
 		ctx := r.Context()
 		paperUUID := r.PathValue("paperUUID")
 
@@ -169,9 +167,9 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte(paper.APACitation()))
-
+		encodedCitation := url.QueryEscape(paper.APACitation())
+		w.Header().Set("X-Citation", encodedCitation)
+		renderSuccessToast(w, tmpl, "Citation copied to clipboard")
 	})
 }
 

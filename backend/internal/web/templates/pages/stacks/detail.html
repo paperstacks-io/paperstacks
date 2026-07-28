@@ -179,8 +179,20 @@
                             hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
                             hx-swap="none"
                             hx-on::after-request="
-        navigator.clipboard.writeText(event.detail.xhr.responseText);
-    "
+    const encodedCitation =
+      event.detail.xhr.getResponseHeader('X-Citation');
+
+    if (!encodedCitation) {
+      return;
+    }
+
+    const citation = decodeURIComponent(
+      encodedCitation.replace(/\+/g, ' ')
+    );
+
+    navigator.clipboard.writeText(citation);
+    document.activeElement.blur(); 
+  "
                           >
                             Copy APA Citation
                           </button>
