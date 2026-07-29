@@ -8,35 +8,26 @@ import (
 func (p Paper) APACitation() string {
 	paper := p.Normalize()
 
-	return joinCitationParts(
-		formatAPAAuthors(paper.Authors),
-		formatAPAYear(paper.PublicationYear),
-		formatAPATitle(paper.Title),
-		formatAPASource(paper),
-		formatAPADOI(paper.DOI),
-	)
+	authors := formatAPAAuthors(paper.Authors)
+	year := formatAPAYear(paper.PublicationYear)
+	title := formatAPATitle(paper.Title)
+	source := formatAPASource(paper.Metadata)
+	doi := formatAPADOI(paper.DOI)
+
+	if authors == "" {
+		return joinCitationParts(title, year, source, doi)
+	}
+
+	return joinCitationParts(authors, year, title, source, doi)
 }
 
 func formatAPAAuthors(authors []Author) string {
 	formatted := make([]string, 0, len(authors))
 
 	for _, author := range authors {
-		author = author.Normalize()
-
-		if author.NameLast == "" {
-			continue
+		if name := formatAPAAuthor(author); name != "" {
+			formatted = append(formatted, name)
 		}
-
-		name := author.NameLast
-
-		if initials := formatInitials(
-			author.NameFirst,
-			author.NameMiddle,
-		); initials != "" {
-			name += ", " + initials
-		}
-
-		formatted = append(formatted, name)
 	}
 
 	switch len(formatted) {
@@ -50,7 +41,7 @@ func formatAPAAuthors(authors []Author) string {
 
 	if len(formatted) > 20 {
 		return strings.Join(formatted[:19], ", ") +
-			", ... " +
+			", … " +
 			formatted[len(formatted)-1]
 	}
 
@@ -59,30 +50,58 @@ func formatAPAAuthors(authors []Author) string {
 		formatted[len(formatted)-1]
 }
 
+func formatAPAAuthor(author Author) string {
+	if author.NameLast == "" {
+		return ""
+	}
+
+	initials := formatInitials(
+		author.NameFirst,
+		author.NameMiddle,
+	)
+
+	if initials == "" {
+		return author.NameLast
+	}
+
+	return author.NameLast + ", " + initials
+}
+
 func formatInitials(names ...string) string {
 	var initials []string
 
 	for _, name := range names {
 		for part := range strings.FieldsSeq(name) {
-			nameParts := strings.Split(part, "-")
-
-			for i, namePart := range nameParts {
-				for _, letter := range namePart {
-					if unicode.IsLetter(letter) {
-						nameParts[i] = strings.ToUpper(string(letter)) + "."
-						break
-					}
-				}
+			if initial := formatNameInitial(part); initial != "" {
+				initials = append(initials, initial)
 			}
-
-			initials = append(
-				initials,
-				strings.Join(nameParts, "-"),
-			)
 		}
 	}
 
 	return strings.Join(initials, " ")
+}
+
+func formatNameInitial(name string) string {
+	parts := strings.Split(name, "-")
+	initials := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		if initial := firstLetterInitial(part); initial != "" {
+			initials = append(initials, initial)
+		}
+	}
+
+	return strings.Join(initials, "-")
+}
+
+func firstLetterInitial(name string) string {
+	for _, letter := range name {
+		if unicode.IsLetter(letter) {
+			return strings.ToUpper(string(letter)) + "."
+		}
+	}
+
+	return ""
 }
 
 func formatAPAYear(year string) string {
@@ -96,16 +115,20 @@ func formatAPAYear(year string) string {
 func formatAPATitle(title string) string {
 	title = strings.TrimSpace(title)
 
-	if title == "" || strings.ContainsAny(title[len(title)-1:], ".?!") {
+	if title == "" {
+		return ""
+	}
+
+	if strings.HasSuffix(title, ".") ||
+		strings.HasSuffix(title, "?") ||
+		strings.HasSuffix(title, "!") {
 		return title
 	}
 
 	return title + "."
 }
 
-func formatAPASource(paper Paper) string {
-	metadata := paper.Metadata
-
+func formatAPASource(metadata Metadata) string {
 	publishedIn := strings.TrimSpace(metadata.PublishedIn)
 	volume := strings.TrimSpace(metadata.Volume)
 	issue := strings.TrimSpace(metadata.Issue)
