@@ -138,11 +138,23 @@ func formatAPASource(metadata Metadata) string {
 		"–",
 	)
 
-	if volume != "" && issue != "" {
-		volume += "(" + issue + ")"
+	var publicationInfo string
+
+	switch {
+	case volume != "" && issue != "":
+		publicationInfo = volume + "(" + issue + ")"
+	case volume != "":
+		publicationInfo = volume
+	case issue != "":
+		publicationInfo = "(" + issue + ")"
 	}
 
-	source := joinNonEmpty(", ", publishedIn, volume, pages)
+	source := joinNonEmpty(
+		", ",
+		publishedIn,
+		publicationInfo,
+		pages,
+	)
 
 	if source == "" {
 		return ""
