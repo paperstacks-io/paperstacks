@@ -26,6 +26,7 @@ Visit our [landing page](https://paperstacks.io/) for more information.
 
 Passwords and credentials for the database are stored in the `secrets` directory that is ignored by git.
 Run `make secrets` to create the necessary files with random passwords.
+The `paperstacks` service loads runtime configuration, including `HANKO_API_URL`, from `backend/.env`.
 
 Run `docker compose up` from the repository root to start the application, database, Adminer, and local S3-compatible object storage.
 
