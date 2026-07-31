@@ -30,6 +30,19 @@ The `paperstacks` service loads runtime configuration, including `HANKO_API_URL`
 
 Run `docker compose up` from the repository root to start the application, database, Adminer, and local S3-compatible object storage.
 
+## Production deployment
+
+Arcane deploys this application with `compose.yaml` and `compose.prod.yaml`; Traefik is provisioned independently by the platform stack. Configure these deployment variables in Arcane before deploying:
+
+- `PAPERSTACKS_IMAGE_TAG`: a published Paperstacks image tag, for example `v0.2.0`.
+- `PAPERSTACKS_HOST`: the public hostname for Paperstacks.
+- `RUSTFS_HOST`: the public hostname for the RustFS S3 API; the management console remains private.
+- `TRAEFIK_CERT_RESOLVER`: the configured Traefik certificate resolver.
+- `TRAEFIK_NETWORK`: optional external Traefik network name; defaults to `edge`.
+- `RUSTFS_ACCESS_KEY` and `RUSTFS_SECRET_KEY`: private RustFS credentials.
+
+The platform stack must create the external Traefik network and its certificate resolver before deployment. Provision the untracked `backend/.env` file on the deployment host with `HANKO_API_URL`.
+
 ## License
 
 This work (source code) is licensed under [MIT](./LICENSE).

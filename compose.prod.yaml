@@ -1,0 +1,59 @@
+# Production overlay for `compose.yaml`.
+# Arcane deploys this project; Traefik and the external `edge` network are
+# provisioned by the separate platform stack.
+services:
+  paperstacks:
+    # Production deploys published images and never build from the host checkout.
+    build: !reset null
+    image: ghcr.io/paperstacks-io/paperstacks:latest
+    ports: !reset []
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+    networks:
+      - default
+      - edge
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "${TRAEFIK_NETWORK:-edge}"
+      traefik.http.routers.paperstacks.rule: "Host(`${PAPERSTACKS_HOST:?PAPERSTACKS_HOST must be set to the public hostname}`)"
+      traefik.http.routers.paperstacks.entrypoints: "websecure"
+      traefik.http.routers.paperstacks.tls: "true"
+      traefik.http.routers.paperstacks.tls.certresolver: "${TRAEFIK_CERT_RESOLVER:?TRAEFIK_CERT_RESOLVER must name the Traefik certificate resolver}"
+      traefik.http.services.paperstacks.loadbalancer.server.port: "8080"
+
+  db:
+    ports: !reset []
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    ports: !reset []
+    profiles:
+      - debug
+
+  rustfs:
+    ports: !reset []
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?RUSTFS_ACCESS_KEY must be set for production}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?RUSTFS_SECRET_KEY must be set for production}
+    networks:
+      - rustfs-network
+      - edge
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "${TRAEFIK_NETWORK:-edge}"
+      traefik.http.routers.rustfs.rule: "Host(`${RUSTFS_HOST:?RUSTFS_HOST must be set to the public RustFS hostname}`)"
+      traefik.http.routers.rustfs.entrypoints: "websecure"
+      traefik.http.routers.rustfs.tls: "true"
+      traefik.http.routers.rustfs.tls.certresolver: "${TRAEFIK_CERT_RESOLVER:?TRAEFIK_CERT_RESOLVER must name the Traefik certificate resolver}"
+      traefik.http.services.rustfs.loadbalancer.server.port: "9000"
+
+networks:
+  edge:
+    name: ${TRAEFIK_NETWORK:-edge}
+    external: true
+
+volumes:
+  postgres_data:
+    driver: local
