@@ -1,0 +1,133 @@
+services:
+  paperstacks:
+    build:
+      context: ./backend
+      args:
+        GO_VERSION: ${GO_VERSION:-1}
+        APP_VERSION: ${APP_VERSION:-development}
+        APP_GIT_HASH: ${APP_GIT_HASH}
+      labels:
+        org.opencontainers.image.source: https://github.com/paperstacks-io/paperstacks
+        org.opencontainers.image.description: paperstacks-io
+        org.opencontainers.image.licenses: MIT
+    image: ghcr.io/paperstacks-io/paperstacks:latest
+    ports:
+      - "8080:8080"
+    environment:
+      HANKO_API_URL: "TODO"
+
+  db:
+    image: postgres:18-alpine
+    restart: always
+    # Set shared memory limit when using Docker Compose.
+    shm_size: 128mb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init-scripts:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_super_password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    secrets:
+      - db_super_password
+      - db_app_rw_password
+      - db_app_ro_password
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8090:8080"
+
+  # RustFS main service
+  rustfs:
+    security_opt:
+      - "no-new-privileges:true"
+    image: rustfs/rustfs:latest
+    ports:
+      - "9000:9000" # S3 API port
+      - "9001:9001" # Console port
+    environment:
+      - RUSTFS_VOLUMES=/data/rustfs0
+      - RUSTFS_ADDRESS=0.0.0.0:9000
+      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS=*
+      # SECURITY: these defaults are public and well-known.
+      # Override via env vars before exposing the listener beyond localhost.
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-rustfsadmin}
+      - RUSTFS_OBS_LOGGER_LEVEL=info
+      # - RUSTFS_TLS_PATH=/opt/tls
+      # - RUSTFS_OBS_ENDPOINT=http://otel-collector:4318
+    volumes:
+      - rustfs_dev_data:/data
+      - logs:/app/logs
+      # TLS configuration directory.
+      # Place at least:
+      # - /opt/tls/ca.crt
+      # - /opt/tls/rustfs_cert.pem
+      # - /opt/tls/rustfs_key.pem
+      # - ./objectstorage/data/certs/:/opt/tls
+      # Permission baseline:
+      # - default RustFS runtime user is 10001:10001
+      # - ensure host mounts are writable by that user, or run with host-matched user
+    networks:
+      - rustfs-network
+    restart: unless-stopped
+    healthcheck:
+      # Default behavior:
+      # - HTTP when RUSTFS_TLS_PATH is unset
+      # - HTTPS when RUSTFS_TLS_PATH is set
+      # - loopback TLS uses `-k` unless strict host+CA values are provided
+      #
+      # Strict TLS example:
+      # - set RUSTFS_HEALTHCHECK_HOST to a SAN-covered hostname
+      # - optionally set RUSTFS_HEALTHCHECK_CA (defaults to /opt/tls/ca.crt when present)
+      test:
+        [
+          "CMD",
+          "sh", "-ec",
+          "host=\"$${RUSTFS_HEALTHCHECK_HOST:-127.0.0.1}\"; scheme=\"http\"; set -- -fsS; \\
+          if [ -n \"$${RUSTFS_TLS_PATH:-}\" ]; then \\
+            scheme=\"https\"; \\
+            ca_path=\"$${RUSTFS_HEALTHCHECK_CA:-}\"; \\
+            if [ -z \"$${ca_path}\" ] && [ -f /opt/tls/ca.crt ]; then ca_path=/opt/tls/ca.crt; fi; \\
+            case \"$${host}\" in 127.0.0.1|localhost) strict_host=false ;; *) strict_host=true ;; esac; \\
+            if [ \"$${strict_host}\" = true ] && [ -n \"$${ca_path}\" ]; then \\
+              set -- \"$${@}\" --cacert \"$${ca_path}\" --resolve \"$${host}:9000:127.0.0.1\" --resolve \"$${host}:9001:127.0.0.1\"; \\
+            else \\
+              set -- \"$${@}\" -k; \\
+            fi; \\
+          fi; \\
+          curl \"$${@}\" \"$${scheme}://$${host}:9000/health\" && \\
+          curl \"$${@}\" \"$${scheme}://$${host}:9001/rustfs/console/health\""
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+secrets:
+  db_super_password:
+    file: ./secrets/db_super_password.txt
+  db_app_rw_password:
+    file: ./secrets/db_app_rw_password.txt
+  db_app_ro_password:
+    file: ./secrets/db_app_ro_password.txt
+
+networks:
+  rustfs-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  rustfs_prod_data:
+    driver: local
+  rustfs_dev_data:
+    driver: local
+  logs:
+    driver: local

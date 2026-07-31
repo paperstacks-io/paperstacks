@@ -43,7 +43,7 @@ build-docker: ## Build Docker image for server
 	GO_VERSION=$(GO_VERSION) \
 	APP_VERSION=$(VERSION) \
 	APP_GIT_HASH=$(GIT_HASH) \
-	$$COMPOSE_CMD build paperstacks
+	$$COMPOSE_CMD -f ../compose.yaml build paperstacks
 
 .PHONY: build-github-output
 build-github-output: ## Print build values as GitHub Actions outputs

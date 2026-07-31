@@ -27,6 +27,8 @@ Visit our [landing page](https://paperstacks.io/) for more information.
 Passwords and credentials for the database are stored in the `secrets` directory that is ignored by git.
 Run `make secrets` to create the necessary files with random passwords.
 
+Run `docker compose up` from the repository root to start the application, database, Adminer, and local S3-compatible object storage.
+
 ## License
 
 This work (source code) is licensed under [MIT](./LICENSE).
