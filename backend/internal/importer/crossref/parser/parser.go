@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paperstacks.io/paperstacks/cmd/crawler/domain"
+	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/domain"
 )
 
 // Parse decodes a single JSON-encoded Crossref work record and converts

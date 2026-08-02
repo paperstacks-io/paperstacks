@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/paperstacks.io/paperstacks/cmd/crawler/domain"
-	"github.com/paperstacks.io/paperstacks/cmd/crawler/parser"
+	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/domain"
+	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/parser"
 )
 
 // Record wraps either a successfully parsed Paper or an error for one

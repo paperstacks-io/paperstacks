@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/paperstacks.io/paperstacks/cmd/crawler/reader"
+	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/reader"
 )
 
 func main() {
