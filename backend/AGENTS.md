@@ -31,3 +31,7 @@ Long term maintainability is a core priority. Domain-driven design is encouraged
 - `internal/stack`: All packages relevant to the domain Stack.
 - `internal/doi`: All packages relevant to the domain DOI.
 - `internal/integration`: Integration tests that run against the HTTP API.
+
+## Instructions for Claude/Codex
+
+- Always plan before you start coding.
