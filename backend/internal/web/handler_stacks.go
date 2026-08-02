@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -145,6 +146,7 @@ func handleStacksPaperCitation(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
+	citationService citationApp.CitationService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -167,7 +169,22 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		encodedCitation := url.QueryEscape(paper.APACitation())
+		citation, err := citationService.Format(
+			paper,
+			citationApp.CitationStyleAPA,
+		)
+		if err != nil {
+			if errors.Is(err, citationApp.ErrUnsupportedCitationStyle) {
+				http.Error(w, "unsupported citation style", http.StatusBadRequest)
+				return
+			}
+
+			logger.Error("format citation", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		encodedCitation := url.QueryEscape(citation)
 		w.Header().Set("X-Citation", encodedCitation)
 		renderSuccessToast(w, tmpl, "Citation copied to clipboard")
 	})

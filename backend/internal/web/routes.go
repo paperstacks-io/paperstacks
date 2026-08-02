@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
@@ -29,6 +30,7 @@ func AddRoute(
 	paperService *paperApp.PaperService,
 	stackService *stackApp.StackService,
 	userService *userApp.UserService,
+	citationService citationApp.CitationService,
 	sessionService commonauth.SessionService,
 ) error {
 	templateFiles, err := templateFiles(content)
@@ -73,7 +75,7 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
-	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}/citation", authenticated(handleStacksPaperCitation(logger, tmpl, paperService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}/citation", authenticated(handleStacksPaperCitation(logger, tmpl, paperService, citationService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/papers/{paperUUID}/remove", authenticated(handleStackPaperRemove(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))

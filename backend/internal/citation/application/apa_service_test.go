@@ -1,17 +1,19 @@
-package domain
+package application
 
 import (
 	"testing"
+
+	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 func TestPaperAPACitationWithoutAuthors(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		DOI:             "10.1000/example",
 		Title:           "A paper without authors",
 		PublicationYear: "2024",
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Journal of Software Testing",
 			Volume:      "10",
 			Issue:       "2",
@@ -21,7 +23,7 @@ func TestPaperAPACitationWithoutAuthors(t *testing.T) {
 
 	want := "A paper without authors. (2024). Journal of Software Testing, 10(2), 100–110. https://doi.org/10.1000/example"
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -31,11 +33,11 @@ func TestPaperAPACitationWithoutAuthors(t *testing.T) {
 func TestPaperAPACitationWithMultipleAuthors(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		DOI:             "10.1016/j.infsof.2023.107299",
 		Title:           "Code Review Guidelines for GUI-based Testing Artifacts",
 		PublicationYear: "2023",
-		Authors: []Author{
+		Authors: []domain.Author{
 			{
 				NameFirst: "Alexander",
 				NameLast:  "Bauer",
@@ -53,7 +55,7 @@ func TestPaperAPACitationWithMultipleAuthors(t *testing.T) {
 				NameLast:  "Gorschek",
 			},
 		},
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Information and Software Technology",
 			Volume:      "163",
 			Pages:       "107299",
@@ -62,7 +64,7 @@ func TestPaperAPACitationWithMultipleAuthors(t *testing.T) {
 
 	want := "Bauer, A., Coppola, R., Alégroth, E., & Gorschek, T. (2023). Code Review Guidelines for GUI-based Testing Artifacts. Information and Software Technology, 163, 107299. https://doi.org/10.1016/j.infsof.2023.107299"
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -72,11 +74,11 @@ func TestPaperAPACitationWithMultipleAuthors(t *testing.T) {
 func TestPaperAPACitationWithTwoAuthors(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		DOI:             "10.1111/j.2517-6161.1995.tb02031.x",
 		Title:           "Controlling the false discovery Rate: A practical and powerful approach to multiple testing",
 		PublicationYear: "1995",
-		Authors: []Author{
+		Authors: []domain.Author{
 			{
 				NameFirst: "Yoav",
 				NameLast:  "Benjamini",
@@ -86,7 +88,7 @@ func TestPaperAPACitationWithTwoAuthors(t *testing.T) {
 				NameLast:  "Hochberg",
 			},
 		},
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Journal of the Royal Statistical Society Series B (Statistical Methodology)",
 			Volume:      "57",
 			Issue:       "1",
@@ -96,7 +98,7 @@ func TestPaperAPACitationWithTwoAuthors(t *testing.T) {
 
 	want := "Benjamini, Y., & Hochberg, Y. (1995). Controlling the false discovery Rate: A practical and powerful approach to multiple testing. Journal of the Royal Statistical Society Series B (Statistical Methodology), 57(1), 289–300. https://doi.org/10.1111/j.2517-6161.1995.tb02031.x"
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -106,7 +108,7 @@ func TestPaperAPACitationWithTwoAuthors(t *testing.T) {
 func TestFormatAPAAuthorsWithMoreThanTwentyAuthors(t *testing.T) {
 	t.Parallel()
 
-	authors := []Author{
+	authors := []domain.Author{
 		{NameFirst: "Alice", NameLast: "Anderson"},
 		{NameFirst: "Benjamin", NameLast: "Brown"},
 		{NameFirst: "Clara", NameLast: "Clark"},
@@ -142,16 +144,16 @@ func TestFormatAPAAuthorsWithMoreThanTwentyAuthors(t *testing.T) {
 func TestPaperAPACitationWithoutPublicationYear(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		DOI:   "10.1000/example",
 		Title: "An example paper without a publication year",
-		Authors: []Author{
+		Authors: []domain.Author{
 			{
 				NameFirst: "Alice",
 				NameLast:  "Miller",
 			},
 		},
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Example Journal",
 			Volume:      "12",
 			Issue:       "3",
@@ -161,7 +163,7 @@ func TestPaperAPACitationWithoutPublicationYear(t *testing.T) {
 
 	want := "Miller, A. (n.d.). An example paper without a publication year. Example Journal, 12(3), 10–20. https://doi.org/10.1000/example"
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -171,17 +173,17 @@ func TestPaperAPACitationWithoutPublicationYear(t *testing.T) {
 func TestPaperAPACitationWithHyphenatedFirstName(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		DOI:             "10.1000/example",
 		Title:           "Testing hyphenated author names",
 		PublicationYear: "2024",
-		Authors: []Author{
+		Authors: []domain.Author{
 			{
 				NameFirst: "Jean-Pierre",
 				NameLast:  "Dupont",
 			},
 		},
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Journal of Software Testing",
 			Volume:      "10",
 			Issue:       "2",
@@ -191,7 +193,7 @@ func TestPaperAPACitationWithHyphenatedFirstName(t *testing.T) {
 
 	want := "Dupont, J.-P. (2024). Testing hyphenated author names. Journal of Software Testing, 10(2), 100–110. https://doi.org/10.1000/example"
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -201,16 +203,16 @@ func TestPaperAPACitationWithHyphenatedFirstName(t *testing.T) {
 func TestPaperAPACitationWithoutDOI(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		Title:           "A paper without a DOI",
 		PublicationYear: "2024",
-		Authors: []Author{
+		Authors: []domain.Author{
 			{
 				NameFirst: "Alice",
 				NameLast:  "Miller",
 			},
 		},
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Journal of Software Testing",
 			Volume:      "10",
 			Issue:       "2",
@@ -220,7 +222,7 @@ func TestPaperAPACitationWithoutDOI(t *testing.T) {
 
 	want := "Miller, A. (2024). A paper without a DOI. Journal of Software Testing, 10(2), 100–110."
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -230,17 +232,17 @@ func TestPaperAPACitationWithoutDOI(t *testing.T) {
 func TestPaperAPACitationWithoutIssue(t *testing.T) {
 	t.Parallel()
 
-	paper := Paper{
+	paper := domain.Paper{
 		DOI:             "10.1000/example",
 		Title:           "A paper without an issue",
 		PublicationYear: "2024",
-		Authors: []Author{
+		Authors: []domain.Author{
 			{
 				NameFirst: "Alice",
 				NameLast:  "Miller",
 			},
 		},
-		Metadata: Metadata{
+		Metadata: domain.Metadata{
 			PublishedIn: "Journal of Software Testing",
 			Volume:      "10",
 			Pages:       "100-110",
@@ -249,7 +251,7 @@ func TestPaperAPACitationWithoutIssue(t *testing.T) {
 
 	want := "Miller, A. (2024). A paper without an issue. Journal of Software Testing, 10, 100–110. https://doi.org/10.1000/example"
 
-	got := paper.APACitation()
+	got := FormatAPA(paper)
 
 	if got != want {
 		t.Fatalf("APACitation() = %q, want %q", got, want)
@@ -261,12 +263,12 @@ func TestFormatAPASourceWithVolumeAndIssue(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		metadata Metadata
+		metadata domain.Metadata
 		want     string
 	}{
 		{
 			name: "volume and issue",
-			metadata: Metadata{
+			metadata: domain.Metadata{
 				PublishedIn: "Journal of Software Testing",
 				Volume:      "10",
 				Issue:       "2",
@@ -276,7 +278,7 @@ func TestFormatAPASourceWithVolumeAndIssue(t *testing.T) {
 		},
 		{
 			name: "volume without issue",
-			metadata: Metadata{
+			metadata: domain.Metadata{
 				PublishedIn: "Journal of Software Testing",
 				Volume:      "10",
 				Pages:       "100-110",
@@ -285,7 +287,7 @@ func TestFormatAPASourceWithVolumeAndIssue(t *testing.T) {
 		},
 		{
 			name: "issue without volume",
-			metadata: Metadata{
+			metadata: domain.Metadata{
 				PublishedIn: "Journal of Software Testing",
 				Issue:       "2",
 				Pages:       "100-110",
@@ -294,7 +296,7 @@ func TestFormatAPASourceWithVolumeAndIssue(t *testing.T) {
 		},
 		{
 			name: "without volume and issue",
-			metadata: Metadata{
+			metadata: domain.Metadata{
 				PublishedIn: "Journal of Software Testing",
 				Pages:       "100-110",
 			},

@@ -1,13 +1,13 @@
-package domain
+package application
 
 import (
 	"strings"
 	"unicode"
+
+	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-func (p Paper) APACitation() string {
-	paper := p.Normalize()
-
+func FormatAPA(paper domain.Paper) string {
 	authors := formatAPAAuthors(paper.Authors)
 	year := formatAPAYear(paper.PublicationYear)
 	title := formatAPATitle(paper.Title)
@@ -21,7 +21,7 @@ func (p Paper) APACitation() string {
 	return joinCitationParts(authors, year, title, source, doi)
 }
 
-func formatAPAAuthors(authors []Author) string {
+func formatAPAAuthors(authors []domain.Author) string {
 	formatted := make([]string, 0, len(authors))
 
 	for _, author := range authors {
@@ -50,7 +50,7 @@ func formatAPAAuthors(authors []Author) string {
 		formatted[len(formatted)-1]
 }
 
-func formatAPAAuthor(author Author) string {
+func formatAPAAuthor(author domain.Author) string {
 	if author.NameLast == "" {
 		return ""
 	}
@@ -128,7 +128,7 @@ func formatAPATitle(title string) string {
 	return title + "."
 }
 
-func formatAPASource(metadata Metadata) string {
+func formatAPASource(metadata domain.Metadata) string {
 	publishedIn := strings.TrimSpace(metadata.PublishedIn)
 	volume := strings.TrimSpace(metadata.Volume)
 	issue := strings.TrimSpace(metadata.Issue)

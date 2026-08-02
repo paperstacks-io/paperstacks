@@ -15,6 +15,7 @@ import (
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
+	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
@@ -47,6 +48,9 @@ func run(
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), userService, paperService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
+	citationService := citationApp.CitationService{
+		citationApp.CitationStyleAPA: citationApp.FormatAPA,
+	}
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
 	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)
@@ -73,7 +77,7 @@ func run(
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
+	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, citationService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
