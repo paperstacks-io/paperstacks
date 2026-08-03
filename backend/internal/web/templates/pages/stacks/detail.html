@@ -29,11 +29,21 @@
       hx-target="#toast-host"
       hx-swap="innerHTML"
     >
-      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
+      <svg
+        data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg"
+        class="size-4"
+      ></svg>
       Export
     </button>
-    <button class="btn btn-sm" type="button" onclick="modal_confirm_delete.showModal()">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
+    <button
+      class="btn btn-sm"
+      type="button"
+      onclick="modal_confirm_delete.showModal()"
+    >
+      <svg
+        data-src="https://unpkg.com/heroicons/20/solid/trash.svg"
+        class="size-4"
+      ></svg>
       Delete
     </button>
   </div>
@@ -42,7 +52,10 @@
 <dialog id="modal_confirm_delete" class="modal">
   <div class="modal-box">
     <h3 class="text-lg font-bold">Delete Stack</h3>
-    <p class="py-4">Are you sure you want to delete the stack "{{ .Stack.Name }}"? This action cannot be undone.</p>
+    <p class="py-4">
+      Are you sure you want to delete the stack "{{ .Stack.Name }}"? This action
+      cannot be undone.
+    </p>
     <div class="modal-action">
       <form method="dialog">
         <button class="btn">Cancel</button>
@@ -62,21 +75,33 @@
 </dialog>
 
 <!-- stats -->
-<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs">
+<section
+  class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs"
+>
   <div class="stat">
     <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
+      <svg
+        data-src="https://unpkg.com/heroicons/24/outline/document.svg"
+        class="size-7 opacity-40"
+      ></svg>
     </div>
     <div class="stat-title">Papers</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .Stack.Papers }}</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">
+      {{ len .Stack.Papers }}
+    </div>
     <div class="stat-desc">in this stacks</div>
   </div>
   <div class="stat">
     <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/24/outline/clock.svg" class="size-7 opacity-40"></svg>
+      <svg
+        data-src="https://unpkg.com/heroicons/24/outline/clock.svg"
+        class="size-7 opacity-40"
+      ></svg>
     </div>
     <div class="stat-title">Updated at</div>
-    <div class="stat-value text-sm font-semibold tabular-nums">{{ .UpdatedAt}}</div>
+    <div class="stat-value text-sm font-semibold tabular-nums">
+      {{ .UpdatedAt}}
+    </div>
     <div class="stat-desc">Created: {{ .CreatedAt }}</div>
   </div>
 </section>
@@ -87,10 +112,17 @@
       <div class="card-body">
         <h2 class="card-title">Papers</h2>
 
-        <form id="stack-paper-filter" data-stack-paper-filter autocomplete="off">
+        <form
+          id="stack-paper-filter"
+          data-stack-paper-filter
+          autocomplete="off"
+        >
           <div class="flex flex-col gap-3 lg:flex-row">
             <label class="input input-sm w-full">
-              <svg data-src="https://unpkg.com/heroicons/20/solid/funnel.svg" class="h-4 w-4 opacity-50"></svg>
+              <svg
+                data-src="https://unpkg.com/heroicons/20/solid/funnel.svg"
+                class="h-4 w-4 opacity-50"
+              ></svg>
               <input
                 id="stack-paper-search"
                 data-stack-paper-search
@@ -139,11 +171,16 @@
                   <div class="flex items-center gap-3">
                     <div>
                       <div class="font-bold">{{ .Title }}</div>
-                      <div class="text-base-content/60 text-sm">{{ .Metadata.PublishedIn }}</div>
+                      <div class="text-base-content/60 text-sm">
+                        {{ .Metadata.PublishedIn }}
+                      </div>
                     </div>
                   </div>
                 </td>
-                <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+                <td>
+                  {{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{
+                  $author.FullName }}{{ end }}
+                </td>
                 <td>{{ .PublicationYear }}</td>
                 <td class="text-right">
                   <div class="flex">
@@ -172,29 +209,27 @@
                           class="h-6 w-6"
                         ></svg>
                       </button>
-
-                      <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow">
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                      >
                         <li>
                           <button
-                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
+                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation?style=apa"
                             hx-swap="none"
-                            hx-on::after-request="
-    const encodedCitation =
-      event.detail.xhr.getResponseHeader('X-Citation');
-
-    if (!encodedCitation) {
-      return;
-    }
-
-    const citation = decodeURIComponent(
-      encodedCitation.replace(/\+/g, ' ')
-    );
-
-    navigator.clipboard.writeText(citation);
-    document.activeElement.blur(); 
-  "
+                            hx-on::after-request="copyCitation(event)"
                           >
                             Copy APA Citation
+                          </button>
+                        </li>
+
+                        <li>
+                          <button
+                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation?style=ieee"
+                            hx-swap="none"
+                            hx-on::after-request="copyCitation(event)"
+                          >
+                            Copy IEEE Citation
                           </button>
                         </li>
                       </ul>
@@ -209,7 +244,9 @@
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
             <p class="text-base-content/60 text-sm">
               Showing
-              <span data-stack-paper-visible-count>{{ len .Stack.Papers }}</span>
+              <span data-stack-paper-visible-count
+                >{{ len .Stack.Papers }}</span
+              >
               of
               <span data-stack-paper-total-count>{{ len .Stack.Papers }}</span>
               papers
@@ -247,27 +284,47 @@
       </div>
     </div>
     <div class="card bg-base-200 shadow-xs">
-      <div id="stack-paper-info" class="card-body">{{ template "stacks/partials/paper-info" .SelectedPaper }}</div>
+      <div id="stack-paper-info" class="card-body">
+        {{ template "stacks/partials/paper-info" .SelectedPaper }}
+      </div>
     </div>
   </aside>
 </section>
 <script>
-  ;(() => {
-    const form = document.querySelector("[data-stack-paper-filter]")
-    const tbody = document.querySelector("[data-stack-paper-results]")
-    if (!form || !tbody || form.dataset.stackPaperFilterInitialized === "true") return
+  window.copyCitation = function (event) {
+    const encodedCitation = event.detail.xhr.getResponseHeader("X-Citation");
 
-    form.dataset.stackPaperFilterInitialized = "true"
+    if (!encodedCitation) {
+      return;
+    }
 
-    const searchInput = form.querySelector("[data-stack-paper-search]")
-    const sortSelect = form.querySelector("[data-stack-paper-sort]")
-    const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
+    //const citation = decodeURIComponent(encodedCitation.replace(/\+/g, " "));
+
+    navigator.clipboard.writeText(citation);
+    document.activeElement?.blur();
+  };
+
+  (() => {
+    const form = document.querySelector("[data-stack-paper-filter]");
+    const tbody = document.querySelector("[data-stack-paper-results]");
+    if (!form || !tbody || form.dataset.stackPaperFilterInitialized === "true")
+      return;
+
+    form.dataset.stackPaperFilterInitialized = "true";
+
+    const searchInput = form.querySelector("[data-stack-paper-search]");
+    const sortSelect = form.querySelector("[data-stack-paper-sort]");
+    const visibleCount = document.querySelector(
+      "[data-stack-paper-visible-count]",
+    );
     const collator = new Intl.Collator(undefined, {
       numeric: true,
       sensitivity: "base",
-    })
-    const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
-      const year = Number.parseInt(element.dataset.year || "0", 10)
+    });
+    const rows = Array.from(
+      tbody.querySelectorAll("[data-stack-paper-row]"),
+    ).map((element) => {
+      const year = Number.parseInt(element.dataset.year || "0", 10);
 
       return {
         element,
@@ -275,55 +332,55 @@
         title: element.dataset.title || "",
         uuid: element.dataset.uuid || "",
         year: Number.isNaN(year) ? 0 : year,
-      }
-    })
+      };
+    });
 
     function compareRows(a, b) {
-      const sortValue = sortSelect.value || "-year"
-      const desc = sortValue.startsWith("-")
-      const sortBy = sortValue.slice(1)
+      const sortValue = sortSelect.value || "-year";
+      const desc = sortValue.startsWith("-");
+      const sortBy = sortValue.slice(1);
 
       if (sortBy === "title") {
-        const titleOrder = collator.compare(a.title, b.title)
-        if (titleOrder !== 0) return desc ? -titleOrder : titleOrder
+        const titleOrder = collator.compare(a.title, b.title);
+        if (titleOrder !== 0) return desc ? -titleOrder : titleOrder;
       }
 
       if (sortBy === "year") {
-        const yearOrder = a.year - b.year
-        if (yearOrder !== 0) return desc ? -yearOrder : yearOrder
+        const yearOrder = a.year - b.year;
+        if (yearOrder !== 0) return desc ? -yearOrder : yearOrder;
       }
 
-      const titleTieBreaker = collator.compare(a.title, b.title)
-      if (titleTieBreaker !== 0) return titleTieBreaker
+      const titleTieBreaker = collator.compare(a.title, b.title);
+      if (titleTieBreaker !== 0) return titleTieBreaker;
 
-      return collator.compare(a.uuid, b.uuid)
+      return collator.compare(a.uuid, b.uuid);
     }
 
     function applyPaperFilter() {
-      const query = searchInput.value.trim().toLocaleLowerCase()
-      const fragment = document.createDocumentFragment()
-      let shown = 0
+      const query = searchInput.value.trim().toLocaleLowerCase();
+      const fragment = document.createDocumentFragment();
+      let shown = 0;
 
       for (const row of rows.slice().sort(compareRows)) {
-        const matches = query === "" || row.searchText.includes(query)
-        row.element.hidden = !matches
-        if (matches) shown++
-        fragment.appendChild(row.element)
+        const matches = query === "" || row.searchText.includes(query);
+        row.element.hidden = !matches;
+        if (matches) shown++;
+        fragment.appendChild(row.element);
       }
 
-      tbody.appendChild(fragment)
-      if (visibleCount) visibleCount.textContent = String(shown)
+      tbody.appendChild(fragment);
+      if (visibleCount) visibleCount.textContent = String(shown);
     }
 
     form.addEventListener("submit", (event) => {
-      event.preventDefault()
-      applyPaperFilter()
-    })
-    searchInput.addEventListener("input", applyPaperFilter)
-    sortSelect.addEventListener("change", applyPaperFilter)
+      event.preventDefault();
+      applyPaperFilter();
+    });
+    searchInput.addEventListener("input", applyPaperFilter);
+    sortSelect.addEventListener("change", applyPaperFilter);
 
-    applyPaperFilter()
-  })()
+    applyPaperFilter();
+  })();
 </script>
 
 {{ end }}

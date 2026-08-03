@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"net/url"
 
 	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
@@ -149,6 +148,7 @@ func handleStacksPaperCitation(
 	citationService citationApp.CitationService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		ctx := r.Context()
 		paperUUID := r.PathValue("paperUUID")
 
@@ -184,8 +184,9 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		encodedCitation := url.QueryEscape(citation)
-		w.Header().Set("X-Citation", encodedCitation)
+		//encodedCitation := url.QueryEscape(citation)
+		//w.Header().Set("X-Citation", encodedCitation)
+		w.Header().Set("X-Citation", citation)
 		renderSuccessToast(w, tmpl, "Citation copied to clipboard")
 	})
 }
