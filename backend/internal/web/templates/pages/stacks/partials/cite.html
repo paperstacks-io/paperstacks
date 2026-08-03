@@ -1,0 +1,33 @@
+{{ define "stacks/partials/cite" }}
+
+<section class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="grid gap-6">
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <h2 class="card-title">Cite</h2>
+
+        <div class="overflow-x-auto">
+          <fieldset class="fieldset">
+            <label class="label">APA</label>
+
+            <div class="join">
+              <input
+                class="input w-full"
+                value="Pascarella, L., Spadini, D., Palomba, F., Bruntink, M., & Bacchelli, A. (2018). Information needs in contemporary code review. Proceedings of the ACM on human-computer interaction, 2(CSCW), 1-27."
+                aria-label="title"
+              />
+              <a target="_blank" rel="noopener noreferrer" class="btn join-item">Copy</a>
+            </div>
+          </fieldset>
+          <fieldset class="fieldset">
+            <label class="label">IEEE</label>
+            <textarea class="textarea w-full" rows="3">
+Pascarella L, Spadini D, Palomba F, Bruntink M, Bacchelli A. Information needs in contemporary code review. Proceedings of the ACM on human-computer interaction. 2018 Nov 1;2(CSCW):1-27.</textarea>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{ end }}
