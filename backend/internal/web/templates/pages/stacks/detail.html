@@ -81,8 +81,6 @@
   </div>
 </section>
 
-{{ template "stacks/partials/cite" }}
-
 <section class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
   <div class="grid gap-6">
     <div class="card bg-base-200 shadow-xs">
@@ -178,20 +176,14 @@
                         <li>
                           <button
                             hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation?style=apa"
-                            hx-swap="none"
-                            hx-on::after-request="copyCitation(event)"
+                            hx-swap="innerHTML"
+                            hx-target="#citation-modal-content"
+                            onclick="
+                              event.stopPropagation()
+                              citationModal.showModal()
+                            "
                           >
-                            Copy APA Citation
-                          </button>
-                        </li>
-
-                        <li>
-                          <button
-                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation?style=ieee"
-                            hx-swap="none"
-                            hx-on::after-request="copyCitation(event)"
-                          >
-                            Copy IEEE Citation
+                            Cite
                           </button>
                         </li>
                       </ul>
@@ -202,6 +194,22 @@
               {{ end }}
             </tbody>
           </table>
+
+          <dialog id="citationModal" class="modal">
+            <div class="modal-box w-full">
+              <div id="citation-modal-content"></div>
+
+              <div class="modal-action">
+                <form method="dialog">
+                  <button class="btn">Close</button>
+                </form>
+              </div>
+            </div>
+
+            <form method="dialog" class="modal-backdrop">
+              <button>Close</button>
+            </form>
+          </dialog>
 
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
             <p class="text-base-content/60 text-sm">
@@ -249,19 +257,6 @@
   </aside>
 </section>
 <script>
-  window.copyCitation = function (event) {
-    const encodedCitation = event.detail.xhr.getResponseHeader("X-Citation")
-
-    if (!encodedCitation) {
-      return
-    }
-
-    const citation = decodeURIComponent(encodedCitation.replace(/\+/g, " "))
-
-    navigator.clipboard.writeText(citation)
-    document.activeElement?.blur()
-  }
-
   ;(() => {
     const form = document.querySelector("[data-stack-paper-filter]")
     const tbody = document.querySelector("[data-stack-paper-results]")

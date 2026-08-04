@@ -6,11 +6,22 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
+type apaSourceFormatter func(domain.Metadata) string
+
+var apaSourceFormatters = map[string]apaSourceFormatter{
+	"article":       formatAPAJournalSource,
+	"inproceedings": formatAPAJournalSource,
+	"":              formatAPAJournalSource,
+}
+
 func FormatAPA(paper domain.Paper) string {
 	authors := formatAPAAuthors(paper.Authors)
 	year := formatAPAYear(paper.PublicationYear)
 	title := formatAPATitle(paper.Title)
-	source := formatAPASource(paper.Metadata)
+	source := formatAPASource(
+		paper.Type,
+		paper.Metadata,
+	)
 	doi := formatAPADOI(paper.DOI)
 
 	if authors == "" {
@@ -90,15 +101,20 @@ func formatAPATitle(title string) string {
 	return title + "."
 }
 
-func formatAPASource(metadata domain.Metadata) string {
+func formatAPASource(paperType string, metadata domain.Metadata) string {
+	formatter, ok := apaSourceFormatters[paperType]
+	if !ok {
+		return ""
+	}
+
+	return formatter(metadata)
+}
+
+func formatAPAJournalSource(metadata domain.Metadata) string {
 	publishedIn := strings.TrimSpace(metadata.PublishedIn)
 	volume := strings.TrimSpace(metadata.Volume)
 	issue := strings.TrimSpace(metadata.Issue)
-	pages := strings.ReplaceAll(
-		strings.TrimSpace(metadata.Pages),
-		"-",
-		"–",
-	)
+	pages := formatAPAPages(metadata.Pages)
 
 	var publicationInfo string
 
@@ -118,11 +134,24 @@ func formatAPASource(metadata domain.Metadata) string {
 		pages,
 	)
 
+	return finishAPASource(source)
+}
+
+func finishAPASource(source string) string {
+	source = strings.TrimSpace(source)
+
 	if source == "" {
 		return ""
 	}
 
 	return source + "."
+}
+
+func formatAPAPages(pages string) string {
+	pages = strings.TrimSpace(pages)
+	pages = strings.ReplaceAll(pages, "--", "–")
+
+	return strings.ReplaceAll(pages, "-", "–")
 }
 
 func formatAPADOI(doi string) string {

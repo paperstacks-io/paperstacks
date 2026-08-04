@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"slices"
 
-	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	citationApp "github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	webauth "github.com/paperstacks.io/paperstacks/internal/web/auth"

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
-	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
@@ -26,6 +25,7 @@ import (
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	citationApp "github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"

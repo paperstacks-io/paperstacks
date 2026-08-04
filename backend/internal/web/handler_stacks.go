@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	citationApp "github.com/paperstacks.io/paperstacks/internal/citation/application"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	citationApp "github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -184,10 +184,13 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		//encodedCitation := url.QueryEscape(citation)
-		//w.Header().Set("X-Citation", encodedCitation)
-		w.Header().Set("X-Citation", citation)
-		renderSuccessToast(w, tmpl, "Citation copied to clipboard")
+		//data := NewStacksListData(result, opts)
+		templateName := "stacks/partials/cite"
+		if err := tmpl.ExecuteTemplate(w, templateName, citation); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		//renderSuccessToast(w, tmpl, "Citation copied to clipboard")
 	})
 }
 
