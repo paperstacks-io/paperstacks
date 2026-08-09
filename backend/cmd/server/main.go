@@ -25,7 +25,7 @@ import (
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	citationApp "github.com/paperstacks.io/paperstacks/internal/paper/citation"
+	citation "github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
@@ -48,9 +48,7 @@ func run(
 	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), userService, paperService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
-	citationService := citationApp.CitationService{
-		citationApp.CitationStyleAPA: citationApp.FormatAPA,
-	}
+	citationService := citation.NewCitationService()
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
 	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)

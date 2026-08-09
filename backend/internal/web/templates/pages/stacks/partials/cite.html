@@ -7,19 +7,23 @@
         <h2 class="card-title">Cite</h2>
 
         <div class="overflow-x-auto">
+          {{ range .Citations }}
           <fieldset class="fieldset">
-            <label class="label">APA</label>
+            <label class="label">{{ .Style }}</label>
 
-            <textarea class="textarea w-full resize-none" rows="3" readonly>{{ . }}</textarea>
+            <div class="flex items-center gap-3">
+              <textarea class="textarea min-w-0 flex-1 resize-none" rows="3" readonly>{{ .Citation }}</textarea>
 
-            <button
-              type="button"
-              class="btn"
-              onclick="navigator.clipboard.writeText(this.previousElementSibling.value)"
-            >
-              Copy
-            </button>
+              <button
+                type="button"
+                class="btn shrink-0"
+                onclick="navigator.clipboard.writeText(this.previousElementSibling.value)"
+              >
+                Copy
+              </button>
+            </div>
           </fieldset>
+          {{ end }}
         </div>
       </div>
     </div>

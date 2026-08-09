@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -40,6 +41,15 @@ type stacksListData struct {
 	NextPage      int
 	SearchOptions stackDomain.SearchOptions
 	Pagination    []PaginationItem
+}
+
+type CitationView struct {
+	Style    string
+	Citation string
+}
+
+type CiteViewData struct {
+	Citations []CitationView
 }
 
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
@@ -169,28 +179,35 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		citation, err := citationService.Format(
-			paper,
+		styles := []citationApp.CitationStyle{
 			citationApp.CitationStyleAPA,
-		)
-		if err != nil {
-			if errors.Is(err, citationApp.ErrUnsupportedCitationStyle) {
-				http.Error(w, "unsupported citation style", http.StatusBadRequest)
+			citationApp.CitationStyleIEEE,
+			citationApp.CitationStyleACM,
+		}
+
+		data := CiteViewData{
+			Citations: make([]CitationView, 0, len(styles)),
+		}
+
+		for _, style := range styles {
+			formattedCitation, err := citationService.Format(paper, style)
+			if err != nil {
+				logger.Error("generate citation", "error", err.Error())
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 
-			logger.Error("format citation", "error", err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+			data.Citations = append(data.Citations, CitationView{
+				Style:    strings.ToUpper(string(style)),
+				Citation: formattedCitation,
+			})
 		}
 
-		//data := NewStacksListData(result, opts)
 		templateName := "stacks/partials/cite"
-		if err := tmpl.ExecuteTemplate(w, templateName, citation); err != nil {
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		//renderSuccessToast(w, tmpl, "Citation copied to clipboard")
 	})
 }
 
