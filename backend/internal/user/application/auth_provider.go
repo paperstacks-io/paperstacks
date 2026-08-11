@@ -10,12 +10,12 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
-func (s *UserService) fetchUserFromAuthProvider(ctx context.Context, token string) (domain.User, error) {
-	if s.authAPIURL == "" {
+func (p *UserProvisioner) fetchUserFromAuthProvider(ctx context.Context, token string) (domain.User, error) {
+	if p.authAPIURL == "" {
 		return domain.User{}, fmt.Errorf("validate session: %w", domain.ErrInvalidAuthToken)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.authAPIURL+"/me", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.authAPIURL+"/me", nil)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("create session request: %w", err)
 	}
@@ -23,7 +23,7 @@ func (s *UserService) fetchUserFromAuthProvider(ctx context.Context, token strin
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	res, err := s.httpClient.Do(req)
+	res, err := p.httpClient.Do(req)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("send session request: %w", err)
 	}

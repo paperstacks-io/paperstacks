@@ -53,12 +53,14 @@ func startApplication() bool {
 	api := http.NewServeMux()
 	testRepo = memory.NewRepository()
 	paperService := application.NewPaperService(testRepo)
-	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), userService, paperService)
+	userRepo := userMemory.NewRepository()
+	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
+	userService := userApplication.NewUserService(userRepo)
+	userProvisioner := userApplication.NewUserProvisioner(userService, stackService, "", nil)
 	sessionService := noopSessionService{}
 	server.AddRoute(root, context.Background(), logger, sessionService)
 	paperHttp.AddPaperRoute(api, logger, paperService, sessionService)
-	userHttp.AddUserRoute(api, logger, userService, stackService, sessionService)
+	userHttp.AddUserRoute(api, logger, userService, userProvisioner, stackService, sessionService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
 	httpServer := &http.Server{

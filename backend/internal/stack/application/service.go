@@ -17,26 +17,21 @@ const (
 	defaultSearchPage     = 1
 	defaultSearchPageSize = 10
 	maxSearchPageSize     = 100
+	defaultStackName      = "Default"
 )
 
 type PaperGetter interface {
 	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
 }
 
-type UserGetter interface {
-	GetByExternalID(ctx context.Context, externalID string) (userDomain.User, error)
-}
-
 type StackService struct {
 	repo        domain.Repository
-	userGetter  UserGetter
 	paperGetter PaperGetter
 }
 
-func NewStackService(repo domain.Repository, userGetter UserGetter, paperGetter PaperGetter) *StackService {
+func NewStackService(repo domain.Repository, paperGetter PaperGetter) *StackService {
 	return &StackService{
 		repo:        repo,
-		userGetter:  userGetter,
 		paperGetter: paperGetter,
 	}
 }
@@ -64,22 +59,37 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 	return s.repo.Create(ctx, stack)
 }
 
-// CreateByName validates and stores a new stack.
-// It initializes missing timestamps and generates a UUID if necessary.
-//
+// CreateByName validates and stores a new stack for owner.
 // It returns an error if the stack is invalid or could not be stored.
-func (s *StackService) CreateByName(ctx context.Context, name string, userID string) (domain.Stack, error) {
-	user, err := s.userGetter.GetByExternalID(ctx, userID)
-	if err != nil {
-		return domain.Stack{}, err
-	}
-
-	stack := domain.NewStack(name, user)
+func (s *StackService) CreateByName(ctx context.Context, name string, owner userDomain.User) (domain.Stack, error) {
+	stack := domain.NewStack(name, owner)
 	if err := stack.Validate(); err != nil {
 		return domain.Stack{}, err
 	}
 
 	return *stack, s.repo.Create(ctx, *stack)
+}
+
+// EnsureDefault creates the user's default stack when it does not already exist.
+func (s *StackService) EnsureDefault(ctx context.Context, user userDomain.User) error {
+	stacks, err := s.List(ctx, user.ExternalID)
+	if err != nil {
+		return err
+	}
+
+	for _, stack := range stacks {
+		if strings.EqualFold(stack.Name, defaultStackName) {
+			return nil
+		}
+	}
+
+	stack := domain.NewStack(defaultStackName, user)
+	err = s.Create(ctx, *stack)
+	if errors.Is(err, domain.ErrStackAlreadyExists) {
+		return nil
+	}
+
+	return err
 }
 
 // Update validates and updates an existing stack.

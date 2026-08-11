@@ -13,10 +13,20 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
+type recordingDefaultStackEnsurer struct {
+	users []domain.User
+	err   error
+}
+
+func (e *recordingDefaultStackEnsurer) EnsureDefault(_ context.Context, user domain.User) error {
+	e.users = append(e.users, user)
+	return e.err
+}
+
 func TestUserServiceCreateIfNotExistNormalizesUser(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 
 	user, err := service.CreateIfNotExist(context.Background(), " external-1 ", " ONE@EXAMPLE.COM ")
 	if err != nil {
@@ -36,10 +46,50 @@ func TestUserServiceCreateIfNotExistNormalizesUser(t *testing.T) {
 	}
 }
 
+func TestUserProvisionerEnsuresDefaultStackForExistingUser(t *testing.T) {
+	t.Parallel()
+
+	ensurer := &recordingDefaultStackEnsurer{}
+	provisioner := application.NewUserProvisioner(
+		application.NewUserService(memory.NewRepository()),
+		ensurer,
+		"",
+		nil,
+	)
+
+	if _, err := provisioner.Provision(context.Background(), "external-1", "one@example.com"); err != nil {
+		t.Fatalf("first Provision() error = %v", err)
+	}
+	if _, err := provisioner.Provision(context.Background(), "external-1", "changed@example.com"); err != nil {
+		t.Fatalf("second Provision() error = %v", err)
+	}
+
+	if len(ensurer.users) != 2 {
+		t.Fatalf("EnsureDefault() calls = %d, want 2", len(ensurer.users))
+	}
+}
+
+func TestUserProvisionerReturnsDefaultStackError(t *testing.T) {
+	t.Parallel()
+
+	wantErr := errors.New("ensure default stack")
+	provisioner := application.NewUserProvisioner(
+		application.NewUserService(memory.NewRepository()),
+		&recordingDefaultStackEnsurer{err: wantErr},
+		"",
+		nil,
+	)
+
+	_, err := provisioner.Provision(context.Background(), "external-1", "one@example.com")
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("Provision() error = %v, want %v", err, wantErr)
+	}
+}
+
 func TestUserServiceCreateIfNotExistReturnsInvalidUser(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 
 	_, err := service.CreateIfNotExist(context.Background(), "external-1", "invalid-email")
 	if err != domain.ErrInvalidUser {
@@ -50,7 +100,7 @@ func TestUserServiceCreateIfNotExistReturnsInvalidUser(t *testing.T) {
 func TestUserServiceCreateIfNotExistReturnsExistingUser(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 
 	existing, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
 	if err != nil {
@@ -69,7 +119,7 @@ func TestUserServiceCreateIfNotExistReturnsExistingUser(t *testing.T) {
 func TestUserServiceGetByExternalIDTrimsInput(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	created, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
 	if err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
@@ -87,7 +137,7 @@ func TestUserServiceGetByExternalIDTrimsInput(t *testing.T) {
 func TestUserServiceGetByEmailNormalizesInput(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	created, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
 	if err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
@@ -105,7 +155,7 @@ func TestUserServiceGetByEmailNormalizesInput(t *testing.T) {
 func TestUserServiceListReturnsUsers(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	if _, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com"); err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
@@ -125,7 +175,7 @@ func TestUserServiceListReturnsUsers(t *testing.T) {
 func TestUserServiceUpdate(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	created, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com")
 	if err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
@@ -155,7 +205,7 @@ func TestUserServiceUpdate(t *testing.T) {
 func TestUserServiceUpdateReturnsExternalIDMismatch(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	user := domain.NewUser("external-2", "two@example.com")
 
 	err := service.Update(context.Background(), "external-1", user)
@@ -167,7 +217,7 @@ func TestUserServiceUpdateReturnsExternalIDMismatch(t *testing.T) {
 func TestUserServiceUpdateReturnsInvalidUser(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	user := domain.User{ExternalID: "external-1", Email: "invalid-email"}
 
 	err := service.Update(context.Background(), "external-1", user)
@@ -179,7 +229,7 @@ func TestUserServiceUpdateReturnsInvalidUser(t *testing.T) {
 func TestUserServiceDeleteTrimsInput(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	service := application.NewUserService(memory.NewRepository())
 	if _, err := service.CreateIfNotExist(context.Background(), "external-1", "one@example.com"); err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v, want nil", err)
 	}
@@ -195,7 +245,7 @@ func TestUserServiceDeleteTrimsInput(t *testing.T) {
 	}
 }
 
-func TestUserServiceGetByAuthTokenFetchesAndPersistsUser(t *testing.T) {
+func TestUserProvisionerResolvesAndProvisionsUser(t *testing.T) {
 	t.Parallel()
 
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -211,17 +261,18 @@ func TestUserServiceGetByAuthTokenFetchesAndPersistsUser(t *testing.T) {
 	}))
 	t.Cleanup(authServer.Close)
 
-	service := application.NewUserService(memory.NewRepository(), authServer.URL, authServer.Client())
+	service := application.NewUserService(memory.NewRepository())
+	provisioner := application.NewUserProvisioner(service, &recordingDefaultStackEnsurer{}, authServer.URL, authServer.Client())
 
-	user, err := service.ResolveByAuthToken(context.Background(), " session-token ")
+	user, err := provisioner.ResolveByAuthToken(context.Background(), " session-token ")
 	if err != nil {
-		t.Fatalf("GetByAuthToken() error = %v, want nil", err)
+		t.Fatalf("ResolveByAuthToken() error = %v, want nil", err)
 	}
 	if user.ExternalID != "external-1" {
-		t.Fatalf("GetByAuthToken() externalID = %q, want %q", user.ExternalID, "external-1")
+		t.Fatalf("ResolveByAuthToken() externalID = %q, want %q", user.ExternalID, "external-1")
 	}
 	if user.Email != "one@example.com" {
-		t.Fatalf("GetByAuthToken() email = %q, want %q", user.Email, "one@example.com")
+		t.Fatalf("ResolveByAuthToken() email = %q, want %q", user.Email, "one@example.com")
 	}
 
 	stored, err := service.GetByExternalID(context.Background(), "external-1")
@@ -233,13 +284,18 @@ func TestUserServiceGetByAuthTokenFetchesAndPersistsUser(t *testing.T) {
 	}
 }
 
-func TestUserServiceGetByAuthTokenReturnsInvalidAuthToken(t *testing.T) {
+func TestUserProvisionerReturnsInvalidAuthToken(t *testing.T) {
 	t.Parallel()
 
-	service := application.NewUserService(memory.NewRepository(), "", nil)
+	provisioner := application.NewUserProvisioner(
+		application.NewUserService(memory.NewRepository()),
+		&recordingDefaultStackEnsurer{},
+		"",
+		nil,
+	)
 
-	_, err := service.ResolveByAuthToken(context.Background(), " ")
+	_, err := provisioner.ResolveByAuthToken(context.Background(), " ")
 	if !errors.Is(err, domain.ErrInvalidAuthToken) {
-		t.Fatalf("GetByAuthToken() error = %v, want %v", err, domain.ErrInvalidAuthToken)
+		t.Fatalf("ResolveByAuthToken() error = %v, want %v", err, domain.ErrInvalidAuthToken)
 	}
 }
