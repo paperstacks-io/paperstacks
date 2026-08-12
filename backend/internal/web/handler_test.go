@@ -21,24 +21,17 @@ import (
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
-type fakeUserGetter map[string]userDomain.User
-
-func (f fakeUserGetter) GetByExternalID(_ context.Context, externalID string) (userDomain.User, error) {
-	user, ok := f[externalID]
-	if !ok {
-		return userDomain.User{}, userDomain.ErrUserNotFound
-	}
-
-	return user, nil
+func newTestStackService() *stackApp.StackService {
+	return stackApp.NewStackService(stackMemory.NewRepository(), nil)
 }
 
-func newTestStackService(users ...userDomain.User) *stackApp.StackService {
-	userGetter := make(fakeUserGetter, len(users))
+func newTestUserService(users ...userDomain.User) *userApplication.UserService {
+	repo := userMemory.NewRepository()
 	for _, user := range users {
-		userGetter[user.ExternalID] = user
+		_, _ = repo.SaveIfNotExist(context.Background(), user)
 	}
 
-	return stackApp.NewStackService(stackMemory.NewRepository(), userGetter, nil)
+	return userApplication.NewUserService(repo)
 }
 
 func TestPageNameFromPath(t *testing.T) {
@@ -332,8 +325,8 @@ func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
 	user := userDomain.NewUser("owner-sidebar-create", "sidebar@example.com")
-	stackService := newTestStackService(user)
-	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), stackService)
+	stackService := newTestStackService()
+	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), newTestUserService(user), stackService)
 
 	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "Sidebar Stack")
 	rr := httptest.NewRecorder()
@@ -357,6 +350,9 @@ func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 	if created.Name != "Sidebar Stack" {
 		t.Fatalf("created stack name = %q, want %q", created.Name, "Sidebar Stack")
 	}
+	if created.Owner != user {
+		t.Fatalf("created stack owner = %#v, want %#v", created.Owner, user)
+	}
 }
 
 func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
@@ -366,7 +362,8 @@ func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
 	handler := handleSidebarStackCreate(
 		testLogger(),
 		testWebTemplate(t),
-		newTestStackService(user),
+		newTestUserService(user),
+		newTestStackService(),
 	)
 
 	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "   ")
@@ -381,13 +378,13 @@ func TestHandleSidebarStackCreateRendersToastOnDuplicateName(t *testing.T) {
 	t.Parallel()
 
 	user := userDomain.NewUser("owner-duplicate-sidebar-create", "duplicate@example.com")
-	stackService := newTestStackService(user)
+	stackService := newTestStackService()
 	existing := stackDomain.NewStack("Duplicate Stack", user)
 	if err := stackService.Create(t.Context(), *existing); err != nil {
 		t.Fatalf("seed duplicate stack: %v", err)
 	}
 
-	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), stackService)
+	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), newTestUserService(user), stackService)
 	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "duplicate stack")
 	rr := httptest.NewRecorder()
 
@@ -402,6 +399,7 @@ func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
 	handler := handleSidebarStackCreate(
 		testLogger(),
 		testWebTemplate(t),
+		newTestUserService(),
 		newTestStackService(),
 	)
 	req := httptest.NewRequest(http.MethodPost, "/app/stacks/sidebar/create", strings.NewReader(url.Values{
@@ -418,7 +416,7 @@ func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
 func TestHandleSettingsPageRendersUserORCID(t *testing.T) {
 	t.Parallel()
 
-	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
+	userService := userApplication.NewUserService(userMemory.NewRepository())
 	user, err := userService.CreateIfNotExist(t.Context(), "settings-page-user", "settings-page@example.com")
 	if err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v", err)
@@ -454,7 +452,7 @@ func TestHandleSettingsPageRendersUserORCID(t *testing.T) {
 func TestHandleUserSettingsUpdateRendersToastOnInvalidORCID(t *testing.T) {
 	t.Parallel()
 
-	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
+	userService := userApplication.NewUserService(userMemory.NewRepository())
 	user, err := userService.CreateIfNotExist(t.Context(), "settings-invalid-user", "settings-invalid@example.com")
 	if err != nil {
 		t.Fatalf("CreateIfNotExist() error = %v", err)

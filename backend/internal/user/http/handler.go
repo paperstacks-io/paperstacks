@@ -83,7 +83,7 @@ func handleListUserStacks(
 
 func handleListCurrentUserStacks(
 	logger *slog.Logger,
-	userService *application.UserService,
+	userProvisioner *application.UserProvisioner,
 	stackService *stackApplication.StackService,
 ) nethttp.Handler {
 	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -93,7 +93,7 @@ func handleListCurrentUserStacks(
 			return
 		}
 
-		user, err := userService.ResolveByAuthToken(r.Context(), token)
+		user, err := userProvisioner.ResolveByAuthToken(r.Context(), token)
 		if err != nil {
 			if errors.Is(err, domain.ErrInvalidAuthToken) {
 				nethttp.Error(w, domain.ErrInvalidAuthToken.Error(), nethttp.StatusUnauthorized)
@@ -121,7 +121,7 @@ func handleListCurrentUserStacks(
 	})
 }
 
-func handleGetCurrentUser(logger *slog.Logger, service *application.UserService) nethttp.Handler {
+func handleGetCurrentUser(logger *slog.Logger, userProvisioner *application.UserProvisioner) nethttp.Handler {
 	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		token, ok := bearerToken(r.Header.Get("Authorization"))
 		if !ok {
@@ -129,7 +129,7 @@ func handleGetCurrentUser(logger *slog.Logger, service *application.UserService)
 			return
 		}
 
-		user, err := service.ResolveByAuthToken(r.Context(), token)
+		user, err := userProvisioner.ResolveByAuthToken(r.Context(), token)
 		if err != nil {
 			if errors.Is(err, domain.ErrInvalidAuthToken) {
 				nethttp.Error(w, domain.ErrInvalidAuthToken.Error(), nethttp.StatusUnauthorized)

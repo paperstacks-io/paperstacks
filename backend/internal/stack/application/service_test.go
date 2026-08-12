@@ -26,7 +26,7 @@ func (f fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomai
 }
 
 func newTestStackService() *StackService {
-	return NewStackService(memory.NewRepository(), nil, fakePaperGetter{
+	return NewStackService(memory.NewRepository(), fakePaperGetter{
 		papers: map[string]paperDomain.Paper{
 			existingPaperUUID: {
 				UUID:  existingPaperUUID,
@@ -34,6 +34,18 @@ func newTestStackService() *StackService {
 			},
 		},
 	})
+}
+
+type duplicateDefaultStackRepository struct {
+	domain.Repository
+}
+
+func (duplicateDefaultStackRepository) List(context.Context, string) ([]domain.Stack, error) {
+	return nil, nil
+}
+
+func (duplicateDefaultStackRepository) Create(context.Context, domain.Stack) error {
+	return domain.ErrStackAlreadyExists
 }
 
 func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
@@ -65,6 +77,52 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 
 	if created.Owner.ExternalID != "0" {
 		t.Fatalf("Create() did not associate the stack with the correct user")
+	}
+}
+
+func TestEnsureDefaultCreatesOnePrivateEmptyStack(t *testing.T) {
+	t.Parallel()
+
+	service := newTestStackService()
+	user := userDomain.User{ExternalID: "default-user", Email: "default@example.com"}
+
+	if err := service.EnsureDefault(context.Background(), user); err != nil {
+		t.Fatalf("EnsureDefault() error = %v", err)
+	}
+	if err := service.EnsureDefault(context.Background(), user); err != nil {
+		t.Fatalf("second EnsureDefault() error = %v", err)
+	}
+
+	stacks, err := service.List(context.Background(), user.ExternalID)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(stacks) != 1 {
+		t.Fatalf("List() returned %d stacks, want 1", len(stacks))
+	}
+
+	stack := stacks[0]
+	if stack.Name != defaultStackName {
+		t.Fatalf("default stack name = %q, want %q", stack.Name, defaultStackName)
+	}
+	if stack.Owner != user {
+		t.Fatalf("default stack owner = %#v, want %#v", stack.Owner, user)
+	}
+	if stack.IsPublic {
+		t.Fatal("default stack is public, want private")
+	}
+	if len(stack.Papers) != 0 {
+		t.Fatalf("default stack papers = %#v, want empty", stack.Papers)
+	}
+}
+
+func TestEnsureDefaultAcceptsConcurrentCreation(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(duplicateDefaultStackRepository{Repository: memory.NewRepository()}, nil)
+
+	if err := service.EnsureDefault(context.Background(), userDomain.User{ExternalID: "default-user"}); err != nil {
+		t.Fatalf("EnsureDefault() error = %v, want nil", err)
 	}
 }
 
