@@ -102,7 +102,7 @@ func bibLaTeXFields(paper domain.Paper) []bibLaTeXField {
 	fields = appendBibLaTeXField(fields, "author", bibLaTeXAuthors(paper.Authors))
 	fields = appendBibLaTeXField(fields, "date", paper.PublicationDate.String())
 	fields = appendBibLaTeXField(fields, "doi", paper.DOI)
-	fields = appendBibLaTeXField(fields, "abstract", paper.Abstract)
+	fields = appendBibLaTeXField(fields, "issn", strings.Join(nonEmpty(metadata.ISSN), ", "))
 	fields = appendBibLaTeXField(fields, "keywords", strings.Join(nonEmpty(paper.Keywords), ", "))
 	fields = appendBibLaTeXField(fields, bibLaTeXContainerField(paper.Type), metadata.PublishedIn)
 	fields = appendBibLaTeXField(fields, "publisher", metadata.Publisher)
@@ -110,8 +110,8 @@ func bibLaTeXFields(paper domain.Paper) []bibLaTeXField {
 	fields = appendBibLaTeXField(fields, "number", metadata.Issue)
 	fields = appendBibLaTeXField(fields, "pages", metadata.Pages)
 	fields = appendBibLaTeXField(fields, "isbn", firstNonEmpty(metadata.ISBN))
-	fields = appendBibLaTeXField(fields, "issn", firstNonEmpty(metadata.ISSN))
 	fields = appendBibLaTeXField(fields, "url", firstHTTPURL(metadata.References))
+	fields = appendBibLaTeXField(fields, "abstract", paper.Abstract)
 
 	return fields
 }

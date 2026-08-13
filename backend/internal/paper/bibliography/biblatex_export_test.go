@@ -7,44 +7,73 @@ import (
 	"testing"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+
+	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
+
+func getSeedPaper(uuid string) domain.Paper {
+	paper, ok := seedPapersByUUID[uuid]
+	if !ok {
+		panic("missing paper seed data for " + uuid)
+	}
+
+	return paper
+}
+
+var seedPapersByUUID = indexSeedPapers(paperMemory.SeedData())
+
+func indexSeedPapers(papers []domain.Paper) map[string]domain.Paper {
+	papersByUUID := make(map[string]domain.Paper, len(papers))
+	for _, paper := range papers {
+		papersByUUID[paper.UUID] = paper
+	}
+
+	return papersByUUID
+}
 
 func TestExportBibLaTeX(t *testing.T) {
 	t.Parallel()
 
-	papers := []domain.Paper{{
-		UUID:            "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
-		DOI:             "10.1000/example",
-		Title:           "A {brace} & 50%_# $ ~ ^ \\",
-		TitleShort:      "Short title",
-		Authors:         []domain.Author{{NameFirst: "Jane", NameMiddle: "Q.", NameLast: "Doe"}, {NameFirst: "Pat", NameLast: "O'Neil"}},
-		PublicationDate: domain.Date{Year: 2024, Month: 8, Day: 13},
-		Abstract:        "A & B",
-		Keywords:        []string{" software testing ", "", "bibliography"},
-		Type:            domain.PublicationTypeJournalArticle,
-		Metadata: domain.Metadata{
-			PublishedIn: "Journal of Examples",
-			Publisher:   "Example Press",
-			Volume:      "12",
-			Issue:       "3",
-			Pages:       "42-53",
-			ISBN:        []string{"978-1-234-56789-0", "978-9-876-54321-0"},
-			ISSN:        []string{"1234-5678", "8765-4321"},
-			References:  []string{"mailto:editor@example.com", "https://example.com/paper", "https://second.example.com/paper"},
-		},
-	}}
-
-	got, err := ExportBibLaTeX(papers)
-	if err != nil {
-		t.Fatalf("ExportBibLaTeX() error = %v", err)
+	tests := []struct {
+		UUID         string
+		testDataFile string
+	}{
+		{UUID: "67132cd6-3213-4b49-ac5e-0d3ffb030a85", testDataFile: "testdata/bauer.bib"},
+		{UUID: "14815b6a-6e2d-5b73-8aa3-1a2d7b517106", testDataFile: "testdata/bosu.bib"},
 	}
 
-	want, err := os.ReadFile("testdata/rich-paper.bib")
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
-	if string(got) != string(want) {
-		t.Fatalf("ExportBibLaTeX() =\n%s\nwant:\n%s", got, want)
+	for _, tt := range tests {
+		t.Run(tt.testDataFile, func(t *testing.T) {
+			t.Parallel()
+
+			paper := getSeedPaper(tt.UUID)
+			papers := []domain.Paper{paper}
+
+			got, err := ExportBibLaTeX(papers)
+			if err != nil {
+				t.Fatalf("ExportBibLaTeX() error = %v", err)
+			}
+
+			want, err := os.ReadFile(tt.testDataFile)
+			if err != nil {
+				t.Fatalf("read fixture: %v", err)
+			}
+
+			gotLines := strings.Split(string(got), "\n")
+			wantLines := strings.Split(string(want), "\n")
+			for line := range max(len(gotLines), len(wantLines)) {
+				var gotLine, wantLine string
+				if line < len(gotLines) {
+					gotLine = gotLines[line]
+				}
+				if line < len(wantLines) {
+					wantLine = wantLines[line]
+				}
+				if gotLine != wantLine {
+					t.Fatalf("ExportBibLaTeX() differs at line %d:\n got: %q\nwant: %q", line+1, gotLine, wantLine)
+				}
+			}
+		})
 	}
 }
 
