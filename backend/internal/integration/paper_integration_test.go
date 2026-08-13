@@ -29,7 +29,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 		// sort
 		{query: "", sortBy: "-title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "a9d7c335"},
 		{query: "", sortBy: "+title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "df34d6d8"},
-		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "bc884ec1"},
+		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "67132cd6"},
 		{query: "", sortBy: "+year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "5966a651"},
 		// title
 		{query: "we tried", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "3df8adca"},
@@ -123,7 +123,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			pageSize:         50,
 			expectedPage:     "1",
 			expectedPageSize: "50",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "true",
 		},
 		{
@@ -133,7 +133,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			pageSize:         50,
 			expectedPage:     "2",
 			expectedPageSize: "50",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "false",
 		},
 		{
@@ -141,7 +141,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			query:            "gui",
 			expectedPage:     "1",
 			expectedPageSize: "10",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "true",
 		},
 	}
