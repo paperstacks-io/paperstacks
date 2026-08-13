@@ -3,35 +3,35 @@ package http
 import "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 
 type PaperRequest struct {
-	UUID                       string          `json:"uuid"`
-	DOI                        string          `json:"DOI"`
-	Title                      string          `json:"title"`
-	TitleShort                 string          `json:"title-short"`
-	Authors                    []AuthorRequest `json:"authors"`
-	PublicationDate            PublicationDate `json:"publication-date"`
-	PublicationStatus          string          `json:"publication-status"`
-	PublicationStatusTimestamp string          `json:"publication-status-timestamp"`
-	Abstract                   string          `json:"abstract"`
-	Keywords                   []string        `json:"keywords"`
-	Type                       string          `json:"type"`
-	PDFs                       []string        `json:"pdfs"`
-	Metadata                   MetadataRequest `json:"metadata"`
+	UUID                       string                 `json:"uuid"`
+	DOI                        string                 `json:"DOI"`
+	Title                      string                 `json:"title"`
+	TitleShort                 string                 `json:"title-short"`
+	Authors                    []AuthorRequest        `json:"authors"`
+	PublicationDate            PublicationDate        `json:"publication-date"`
+	PublicationStatus          string                 `json:"publication-status"`
+	PublicationStatusTimestamp string                 `json:"publication-status-timestamp"`
+	Abstract                   string                 `json:"abstract"`
+	Keywords                   []string               `json:"keywords"`
+	Type                       domain.PublicationType `json:"type"`
+	PDFs                       []string               `json:"pdfs"`
+	Metadata                   MetadataRequest        `json:"metadata"`
 }
 
 type PaperResponse struct {
-	UUID                       string           `json:"uuid"`
-	DOI                        string           `json:"DOI"`
-	Title                      string           `json:"title"`
-	TitleShort                 string           `json:"title-short"`
-	Authors                    []AuthorResponse `json:"authors"`
-	PublicationDate            PublicationDate  `json:"publication-date"`
-	PublicationStatus          string           `json:"publication-status"`
-	PublicationStatusTimestamp string           `json:"publication-status-timestamp"`
-	Abstract                   string           `json:"abstract"`
-	Keywords                   []string         `json:"keywords"`
-	Type                       string           `json:"type"`
-	PDFs                       []string         `json:"pdfs"`
-	Metadata                   MetadataResponse `json:"metadata"`
+	UUID                       string                 `json:"uuid"`
+	DOI                        string                 `json:"DOI"`
+	Title                      string                 `json:"title"`
+	TitleShort                 string                 `json:"title-short"`
+	Authors                    []AuthorResponse       `json:"authors"`
+	PublicationDate            PublicationDate        `json:"publication-date"`
+	PublicationStatus          string                 `json:"publication-status"`
+	PublicationStatusTimestamp string                 `json:"publication-status-timestamp"`
+	Abstract                   string                 `json:"abstract"`
+	Keywords                   []string               `json:"keywords"`
+	Type                       domain.PublicationType `json:"type"`
+	PDFs                       []string               `json:"pdfs"`
+	Metadata                   MetadataResponse       `json:"metadata"`
 }
 
 type PublicationDate struct {

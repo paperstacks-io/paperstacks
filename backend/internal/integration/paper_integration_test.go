@@ -249,6 +249,7 @@ func TestIntegrationSavePaper(t *testing.T) {
 		DOI:             "10.1109/some_DOI",
 		Title:           "Test article",
 		PublicationDate: paperHttp.PublicationDate{Year: 2026, Month: 8, Day: 13},
+		Type:            "journal-article",
 	}
 	endpoint := testAPIPath + "/api/papers"
 	resp := doPostRequest(t, endpoint, paper)
@@ -268,5 +269,9 @@ func TestIntegrationSavePaper(t *testing.T) {
 
 	if created.PublicationDate != paper.PublicationDate {
 		t.Fatalf("created publication date = %#v, want %#v", created.PublicationDate, paper.PublicationDate)
+	}
+
+	if created.Type != paper.Type {
+		t.Fatalf("created publication type = %q, want %q", created.Type, paper.Type)
 	}
 }
