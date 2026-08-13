@@ -173,6 +173,7 @@ CREATE TABLE public.metadata (
 	datasource_timestamp timestamptz,
 	reference text[],
 	isbn text[],
+	issn text[],
 	pages smallint,
 	license text,
 	copyright text,
@@ -180,7 +181,6 @@ CREATE TABLE public.metadata (
 	uuid_paper uuid NOT NULL,
 	CONSTRAINT metadata_pk PRIMARY KEY (key)
 );
-
 COMMENT ON COLUMN public.metadata.volume IS E'volume of publication';
 COMMENT ON COLUMN public.metadata.issue IS E'issue of publication';
 COMMENT ON COLUMN public.metadata.datasource IS E'url of datasource';

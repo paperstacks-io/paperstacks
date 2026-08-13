@@ -4,6 +4,7 @@ package integration
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -250,6 +251,9 @@ func TestIntegrationSavePaper(t *testing.T) {
 		Title:           "Test article",
 		PublicationDate: paperHttp.PublicationDate{Year: 2026, Month: 8, Day: 13},
 		Type:            "journal-article",
+		Metadata: paperHttp.MetadataRequest{
+			ISSN: []string{" 1234-5678 ", "8765-4321"},
+		},
 	}
 	endpoint := testAPIPath + "/api/papers"
 	resp := doPostRequest(t, endpoint, paper)
@@ -273,5 +277,9 @@ func TestIntegrationSavePaper(t *testing.T) {
 
 	if created.Type != paper.Type {
 		t.Fatalf("created publication type = %q, want %q", created.Type, paper.Type)
+	}
+
+	if got, want := created.Metadata.ISSN, []string{"1234-5678", "8765-4321"}; !slices.Equal(got, want) {
+		t.Fatalf("created ISSN = %q, want %q", got, want)
 	}
 }
