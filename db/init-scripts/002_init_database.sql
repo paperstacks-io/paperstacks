@@ -166,7 +166,13 @@ CREATE INDEX pdf_uuid_paper_idx ON public.pdf (uuid_paper);
 CREATE TABLE public.metadata (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	publisher text,
-	published_in text,
+	journal_title text,
+	journal_abbrev text,
+	book_title text,
+	series_title text,
+	event_title text,
+	event_place text,
+	institution text,
 	volume smallint,
 	issue smallint,
 	datasource text,
@@ -185,6 +191,13 @@ COMMENT ON COLUMN public.metadata.volume IS E'volume of publication';
 COMMENT ON COLUMN public.metadata.issue IS E'issue of publication';
 COMMENT ON COLUMN public.metadata.datasource IS E'url of datasource';
 COMMENT ON COLUMN public.metadata.reference IS E'references the paper uses';
+COMMENT ON COLUMN public.metadata.journal_title IS E'title of the journal containing the work';
+COMMENT ON COLUMN public.metadata.journal_abbrev IS E'abbreviated title of the journal containing the work';
+COMMENT ON COLUMN public.metadata.book_title IS E'title of the book or proceedings containing the work';
+COMMENT ON COLUMN public.metadata.series_title IS E'title of the series containing the work';
+COMMENT ON COLUMN public.metadata.event_title IS E'title of the event associated with the work';
+COMMENT ON COLUMN public.metadata.event_place IS E'location of the event associated with the work';
+COMMENT ON COLUMN public.metadata.institution IS E'institution associated with a thesis or report';
 
 ALTER TABLE public.metadata ADD CONSTRAINT metadata_paper_fk
 FOREIGN KEY (uuid_paper)

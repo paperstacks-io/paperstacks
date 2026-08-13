@@ -33,10 +33,36 @@
   </div>
 </fieldset>
 
-<fieldset class="fieldset">
-  <label class="label">Published in</label>
-  <input class="input w-full" value="{{ .Metadata.PublishedIn }}" aria-label="metadata published in" />
-</fieldset>
+<div class="grid gap-2 sm:grid-cols-2">
+  <fieldset class="fieldset">
+    <label class="label">Journal title</label>
+    <input class="input w-full" value="{{ .Metadata.JournalTitle }}" aria-label="metadata journal title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Journal abbreviation</label>
+    <input class="input w-full" value="{{ .Metadata.JournalAbbrev }}" aria-label="metadata journal abbreviation" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Book title</label>
+    <input class="input w-full" value="{{ .Metadata.BookTitle }}" aria-label="metadata book title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Series title</label>
+    <input class="input w-full" value="{{ .Metadata.SeriesTitle }}" aria-label="metadata series title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Event title</label>
+    <input class="input w-full" value="{{ .Metadata.EventTitle }}" aria-label="metadata event title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Event place</label>
+    <input class="input w-full" value="{{ .Metadata.EventLocation }}" aria-label="metadata event location" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Institution</label>
+    <input class="input w-full" value="{{ .Metadata.Institution }}" aria-label="metadata institution" />
+  </fieldset>
+</div>
 
 <div class="grid gap-2 sm:grid-cols-2">
   <fieldset class="fieldset">

@@ -101,17 +101,18 @@ func TestExportBibLaTeXMapsTypesAndContainers(t *testing.T) {
 		name      string
 		type_     domain.PublicationType
 		entryType string
+		metadata  domain.Metadata
 		container string
 	}{
-		{name: "journal article", type_: domain.PublicationTypeJournalArticle, entryType: "article", container: "journaltitle"},
-		{name: "conference article", type_: domain.PublicationTypeConferenceArticle, entryType: "inproceedings", container: "booktitle"},
+		{name: "journal article", type_: domain.PublicationTypeJournalArticle, entryType: "article", metadata: domain.Metadata{JournalTitle: "Container"}, container: "journaltitle"},
+		{name: "conference article", type_: domain.PublicationTypeConferenceArticle, entryType: "inproceedings", metadata: domain.Metadata{BookTitle: "Container"}, container: "booktitle"},
 		{name: "book", type_: domain.PublicationTypeBook, entryType: "book"},
-		{name: "book chapter", type_: domain.PublicationTypeBookChapter, entryType: "incollection", container: "booktitle"},
-		{name: "thesis", type_: domain.PublicationTypeThesis, entryType: "thesis", container: "institution"},
-		{name: "report", type_: domain.PublicationTypeReport, entryType: "report", container: "institution"},
+		{name: "book chapter", type_: domain.PublicationTypeBookChapter, entryType: "incollection", metadata: domain.Metadata{BookTitle: "Container"}, container: "booktitle"},
+		{name: "thesis", type_: domain.PublicationTypeThesis, entryType: "thesis", metadata: domain.Metadata{Institution: "Container"}, container: "institution"},
+		{name: "report", type_: domain.PublicationTypeReport, entryType: "report", metadata: domain.Metadata{Institution: "Container"}, container: "institution"},
 		{name: "dataset", type_: domain.PublicationTypeDataset, entryType: "dataset"},
 		{name: "web page", type_: domain.PublicationTypeWebPage, entryType: "online"},
-		{name: "unspecified", entryType: "article", container: "journaltitle"},
+		{name: "unspecified", entryType: "article", metadata: domain.Metadata{JournalTitle: "Container"}, container: "journaltitle"},
 	}
 
 	for _, tt := range tests {
@@ -119,11 +120,9 @@ func TestExportBibLaTeXMapsTypesAndContainers(t *testing.T) {
 			t.Parallel()
 
 			got, err := ExportBibLaTeX([]domain.Paper{{
-				UUID: "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
-				Type: tt.type_,
-				Metadata: domain.Metadata{
-					PublishedIn: "Container",
-				},
+				UUID:     "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
+				Type:     tt.type_,
+				Metadata: tt.metadata,
 			}})
 			if err != nil {
 				t.Fatalf("ExportBibLaTeX() error = %v", err)
@@ -139,6 +138,40 @@ func TestExportBibLaTeXMapsTypesAndContainers(t *testing.T) {
 				t.Fatalf("missing %q container field in %q", tt.container, got)
 			}
 		})
+	}
+}
+
+func TestExportBibLaTeXMapsDistinctContainerFields(t *testing.T) {
+	t.Parallel()
+
+	got, err := ExportBibLaTeX([]domain.Paper{{
+		UUID: "a4b065f1-1b88-4f50-a7fe-1177f3489fcf",
+		Metadata: domain.Metadata{
+			JournalTitle:  "Journal Title",
+			JournalAbbrev: "J. Title",
+			BookTitle:     "Book Title",
+			SeriesTitle:   "Series Title",
+			EventTitle:    "Conference Title",
+			EventLocation: "Gothenburg",
+			Institution:   "Example University",
+		},
+	}})
+	if err != nil {
+		t.Fatalf("ExportBibLaTeX() error = %v", err)
+	}
+
+	for _, want := range []string{
+		"  journaltitle = {Journal Title}",
+		"  shortjournal = {J. Title}",
+		"  booktitle = {Book Title}",
+		"  series = {Series Title}",
+		"  eventtitle = {Conference Title}",
+		"  location = {Gothenburg}",
+		"  institution = {Example University}",
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Fatalf("ExportBibLaTeX() missing %q in:\n%s", want, got)
+		}
 	}
 }
 

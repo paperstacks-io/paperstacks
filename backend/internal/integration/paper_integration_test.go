@@ -252,7 +252,14 @@ func TestIntegrationSavePaper(t *testing.T) {
 		PublicationDate: paperHttp.PublicationDate{Year: 2026, Month: 8, Day: 13},
 		Type:            "journal-article",
 		Metadata: paperHttp.MetadataRequest{
-			ISSN: []string{" 1234-5678 ", "8765-4321"},
+			JournalTitle:  "Journal Title",
+			JournalAbbrev: "J. Title",
+			BookTitle:     "Book Title",
+			SeriesTitle:   "Series Title",
+			EventTitle:    "Conference Title",
+			EventPlace:    "Gothenburg",
+			Institution:   "Example University",
+			ISSN:          []string{" 1234-5678 ", "8765-4321"},
 		},
 	}
 	endpoint := testAPIPath + "/api/papers"
@@ -281,5 +288,23 @@ func TestIntegrationSavePaper(t *testing.T) {
 
 	if got, want := created.Metadata.ISSN, []string{"1234-5678", "8765-4321"}; !slices.Equal(got, want) {
 		t.Fatalf("created ISSN = %q, want %q", got, want)
+	}
+
+	for _, field := range []struct {
+		name string
+		got  string
+		want string
+	}{
+		{name: "journal title", got: created.Metadata.JournalTitle, want: paper.Metadata.JournalTitle},
+		{name: "journal abbreviation", got: created.Metadata.JournalAbbrev, want: paper.Metadata.JournalAbbrev},
+		{name: "book title", got: created.Metadata.BookTitle, want: paper.Metadata.BookTitle},
+		{name: "series title", got: created.Metadata.SeriesTitle, want: paper.Metadata.SeriesTitle},
+		{name: "event title", got: created.Metadata.EventTitle, want: paper.Metadata.EventTitle},
+		{name: "event place", got: created.Metadata.EventPlace, want: paper.Metadata.EventPlace},
+		{name: "institution", got: created.Metadata.Institution, want: paper.Metadata.Institution},
+	} {
+		if field.got != field.want {
+			t.Errorf("created metadata %s = %q, want %q", field.name, field.got, field.want)
+		}
 	}
 }

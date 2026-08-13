@@ -96,7 +96,7 @@ type bibLaTeXField struct {
 
 func bibLaTeXFields(paper domain.Paper) []bibLaTeXField {
 	metadata := paper.Metadata
-	fields := make([]bibLaTeXField, 0, 15)
+	fields := make([]bibLaTeXField, 0, 21)
 	fields = appendBibLaTeXField(fields, "title", paper.Title)
 	fields = appendBibLaTeXField(fields, "shorttitle", paper.TitleShort)
 	fields = appendBibLaTeXField(fields, "author", bibLaTeXAuthors(paper.Authors))
@@ -104,7 +104,13 @@ func bibLaTeXFields(paper domain.Paper) []bibLaTeXField {
 	fields = appendBibLaTeXField(fields, "doi", paper.DOI)
 	fields = appendBibLaTeXField(fields, "issn", strings.Join(nonEmpty(metadata.ISSN), ", "))
 	fields = appendBibLaTeXField(fields, "keywords", strings.Join(nonEmpty(paper.Keywords), ", "))
-	fields = appendBibLaTeXField(fields, bibLaTeXContainerField(paper.Type), metadata.PublishedIn)
+	fields = appendBibLaTeXField(fields, "journaltitle", metadata.JournalTitle)
+	fields = appendBibLaTeXField(fields, "shortjournal", metadata.JournalAbbrev)
+	fields = appendBibLaTeXField(fields, "booktitle", metadata.BookTitle)
+	fields = appendBibLaTeXField(fields, "series", metadata.SeriesTitle)
+	fields = appendBibLaTeXField(fields, "eventtitle", metadata.EventTitle)
+	fields = appendBibLaTeXField(fields, "location", metadata.EventLocation)
+	fields = appendBibLaTeXField(fields, "institution", metadata.Institution)
 	fields = appendBibLaTeXField(fields, "publisher", metadata.Publisher)
 	fields = appendBibLaTeXField(fields, "volume", metadata.Volume)
 	fields = appendBibLaTeXField(fields, "number", metadata.Issue)
@@ -145,19 +151,6 @@ func bibLaTeXEntryType(publicationType domain.PublicationType) string {
 		return "article"
 	default:
 		return "article"
-	}
-}
-
-func bibLaTeXContainerField(publicationType domain.PublicationType) string {
-	switch publicationType {
-	case domain.PublicationTypeConferenceArticle, domain.PublicationTypeBookChapter:
-		return "booktitle"
-	case domain.PublicationTypeThesis, domain.PublicationTypeReport:
-		return "institution"
-	case domain.PublicationTypeJournalArticle, "":
-		return "journaltitle"
-	default:
-		return ""
 	}
 }
 

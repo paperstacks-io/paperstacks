@@ -98,7 +98,13 @@ type AuthorResponse struct {
 
 type MetadataRequest struct {
 	Publisher           string   `json:"publisher"`
-	PublishedIn         string   `json:"published_in"`
+	JournalTitle        string   `json:"journal_title"`
+	JournalAbbrev       string   `json:"journal_abbrev"`
+	BookTitle           string   `json:"book_title"`
+	SeriesTitle         string   `json:"series_title"`
+	EventTitle          string   `json:"event_title"`
+	EventPlace          string   `json:"event_place"`
+	Institution         string   `json:"institution"`
 	Pages               string   `json:"pages"`
 	Volume              string   `json:"volume"`
 	Issue               string   `json:"issue"`
@@ -114,7 +120,13 @@ type MetadataRequest struct {
 
 type MetadataResponse struct {
 	Publisher           string   `json:"publisher"`
-	PublishedIn         string   `json:"published_in"`
+	JournalTitle        string   `json:"journal_title"`
+	JournalAbbrev       string   `json:"journal_abbrev"`
+	BookTitle           string   `json:"book_title"`
+	SeriesTitle         string   `json:"series_title"`
+	EventTitle          string   `json:"event_title"`
+	EventPlace          string   `json:"event_place"`
+	Institution         string   `json:"institution"`
 	Pages               string   `json:"pages"`
 	Volume              string   `json:"volume"`
 	Issue               string   `json:"issue"`
@@ -287,7 +299,13 @@ func NewAuthorResponses(authors []paperDomain.Author) []AuthorResponse {
 func (m MetadataRequest) toDomain() paperDomain.Metadata {
 	return paperDomain.Metadata{
 		Publisher:           m.Publisher,
-		PublishedIn:         m.PublishedIn,
+		JournalTitle:        m.JournalTitle,
+		JournalAbbrev:       m.JournalAbbrev,
+		BookTitle:           m.BookTitle,
+		SeriesTitle:         m.SeriesTitle,
+		EventTitle:          m.EventTitle,
+		EventLocation:       m.EventPlace,
+		Institution:         m.Institution,
 		Pages:               m.Pages,
 		Volume:              m.Volume,
 		Issue:               m.Issue,
@@ -305,7 +323,13 @@ func (m MetadataRequest) toDomain() paperDomain.Metadata {
 func NewMetadataResponse(metadata paperDomain.Metadata) MetadataResponse {
 	return MetadataResponse{
 		Publisher:           metadata.Publisher,
-		PublishedIn:         metadata.PublishedIn,
+		JournalTitle:        metadata.JournalTitle,
+		JournalAbbrev:       metadata.JournalAbbrev,
+		BookTitle:           metadata.BookTitle,
+		SeriesTitle:         metadata.SeriesTitle,
+		EventTitle:          metadata.EventTitle,
+		EventPlace:          metadata.EventLocation,
+		Institution:         metadata.Institution,
 		Pages:               metadata.Pages,
 		Volume:              metadata.Volume,
 		Issue:               metadata.Issue,
