@@ -44,9 +44,9 @@ func ExportBibLaTeX(papers []domain.Paper) ([]byte, error) {
 }
 
 func bibLaTeXEntryKey(paper domain.Paper) (string, error) {
-	key := strings.TrimSpace(paper.DOI)
+	key := paper.DOI
 	if key == "" {
-		key = strings.TrimSpace(paper.UUID)
+		key = paper.UUID
 	}
 
 	if key == "" {
@@ -164,7 +164,7 @@ func bibLaTeXContainerField(publicationType domain.PublicationType) string {
 func bibLaTeXAuthors(authors []domain.Author) string {
 	names := make([]string, 0, len(authors))
 	for _, author := range authors {
-		last := strings.TrimSpace(author.NameLast)
+		last := author.NameLast
 		given := strings.Join(nonEmpty([]string{author.NameFirst, author.NameMiddle}), " ")
 
 		switch {
@@ -183,7 +183,7 @@ func bibLaTeXAuthors(authors []domain.Author) string {
 func nonEmpty(values []string) []string {
 	result := make([]string, 0, len(values))
 	for _, value := range values {
-		if value = strings.TrimSpace(value); value != "" {
+		if value != "" {
 			result = append(result, value)
 		}
 	}
@@ -193,7 +193,7 @@ func nonEmpty(values []string) []string {
 
 func firstNonEmpty(values []string) string {
 	for _, value := range values {
-		if value = strings.TrimSpace(value); value != "" {
+		if value != "" {
 			return value
 		}
 	}
