@@ -25,8 +25,9 @@ type Paper struct {
 	// Authors lists all authors who contributed to the publication.
 	Authors []Author
 
-	// PublicationYear is the year the work was published or made public.
-	PublicationYear string
+	// PublicationDate is the date the work was published or made public.
+	// It supports year, year-month, and full-date precision.
+	PublicationDate Date
 
 	// PublicationStatus describes the publication state
 	// (e.g., "published", "preprint", or "retracted").
@@ -56,7 +57,6 @@ func (p Paper) Normalize() Paper {
 	p.DOI = strings.TrimSpace(p.DOI)
 	p.Title = strings.TrimSpace(p.Title)
 	p.TitleShort = strings.TrimSpace(p.TitleShort)
-	p.PublicationYear = strings.TrimSpace(p.PublicationYear)
 	p.PublicationStatus = strings.TrimSpace(p.PublicationStatus)
 	p.PublicationStatusTimestamp = strings.TrimSpace(p.PublicationStatusTimestamp)
 	p.Abstract = strings.TrimSpace(p.Abstract)
@@ -89,6 +89,10 @@ func (p Paper) Validate() error {
 	}
 
 	if strings.TrimSpace(p.Title) == "" {
+		return ErrInvalidPaper
+	}
+
+	if !p.PublicationDate.IsValid() {
 		return ErrInvalidPaper
 	}
 

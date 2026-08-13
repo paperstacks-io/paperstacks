@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 )
 
@@ -246,9 +245,10 @@ func TestIntegrationDeletePaper(t *testing.T) {
 func TestIntegrationSavePaper(t *testing.T) {
 	setupIntegrationTest(t)
 
-	paper := domain.Paper{
-		DOI:   "10.1109/some_DOI",
-		Title: "Test article",
+	paper := paperHttp.PaperRequest{
+		DOI:             "10.1109/some_DOI",
+		Title:           "Test article",
+		PublicationDate: paperHttp.PublicationDate{Year: 2026, Month: 8, Day: 13},
 	}
 	endpoint := testAPIPath + "/api/papers"
 	resp := doPostRequest(t, endpoint, paper)
@@ -264,5 +264,9 @@ func TestIntegrationSavePaper(t *testing.T) {
 	decodeJSON(t, resp, &created)
 	if created.UUID == "" {
 		t.Fatal("expected UUID to be not empty")
+	}
+
+	if created.PublicationDate != paper.PublicationDate {
+		t.Fatalf("created publication date = %#v, want %#v", created.PublicationDate, paper.PublicationDate)
 	}
 }
