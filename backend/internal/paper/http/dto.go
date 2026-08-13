@@ -8,7 +8,7 @@ type PaperRequest struct {
 	Title                      string          `json:"title"`
 	TitleShort                 string          `json:"title-short"`
 	Authors                    []AuthorRequest `json:"authors"`
-	PublicationYear            string          `json:"publication-year"`
+	PublicationDate            PublicationDate `json:"publication-date"`
 	PublicationStatus          string          `json:"publication-status"`
 	PublicationStatusTimestamp string          `json:"publication-status-timestamp"`
 	Abstract                   string          `json:"abstract"`
@@ -24,7 +24,7 @@ type PaperResponse struct {
 	Title                      string           `json:"title"`
 	TitleShort                 string           `json:"title-short"`
 	Authors                    []AuthorResponse `json:"authors"`
-	PublicationYear            string           `json:"publication-year"`
+	PublicationDate            PublicationDate  `json:"publication-date"`
 	PublicationStatus          string           `json:"publication-status"`
 	PublicationStatusTimestamp string           `json:"publication-status-timestamp"`
 	Abstract                   string           `json:"abstract"`
@@ -32,6 +32,12 @@ type PaperResponse struct {
 	Type                       string           `json:"type"`
 	PDFs                       []string         `json:"pdfs"`
 	Metadata                   MetadataResponse `json:"metadata"`
+}
+
+type PublicationDate struct {
+	Year  int `json:"year"`
+	Month int `json:"month"`
+	Day   int `json:"day"`
 }
 
 type AuthorRequest struct {
@@ -92,7 +98,7 @@ func (r PaperRequest) toDomain() domain.Paper {
 		Title:                      r.Title,
 		TitleShort:                 r.TitleShort,
 		Authors:                    authors,
-		PublicationYear:            r.PublicationYear,
+		PublicationDate:            r.PublicationDate.toDomain(),
 		PublicationStatus:          r.PublicationStatus,
 		PublicationStatusTimestamp: r.PublicationStatusTimestamp,
 		Abstract:                   r.Abstract,
@@ -115,7 +121,7 @@ func NewPaperResponse(p domain.Paper) PaperResponse {
 		Title:                      p.Title,
 		TitleShort:                 p.TitleShort,
 		Authors:                    authors,
-		PublicationYear:            p.PublicationYear,
+		PublicationDate:            NewPublicationDate(p.PublicationDate),
 		PublicationStatus:          p.PublicationStatus,
 		PublicationStatusTimestamp: p.PublicationStatusTimestamp,
 		Abstract:                   p.Abstract,
@@ -133,6 +139,22 @@ func NewPaperResponses(papers []domain.Paper) []PaperResponse {
 	}
 
 	return out
+}
+
+func (d PublicationDate) toDomain() domain.Date {
+	return domain.Date{
+		Year:  d.Year,
+		Month: d.Month,
+		Day:   d.Day,
+	}
+}
+
+func NewPublicationDate(d domain.Date) PublicationDate {
+	return PublicationDate{
+		Year:  d.Year,
+		Month: d.Month,
+		Day:   d.Day,
+	}
 }
 
 func (r AuthorRequest) toDomain() domain.Author {

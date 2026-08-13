@@ -41,6 +41,21 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 	}
 }
 
+func TestServiceCreateRejectsInvalidPublicationDate(t *testing.T) {
+	t.Parallel()
+
+	service := NewPaperService(memory.NewRepository())
+
+	_, err := service.Create(context.Background(), domain.Paper{
+		DOI:             "10.1000/example",
+		Title:           "Example Paper",
+		PublicationDate: domain.Date{Year: 2025, Month: 2, Day: 29},
+	})
+	if err != domain.ErrInvalidPaper {
+		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidPaper)
+	}
+}
+
 func TestServiceUpdateRejectsMismatchedUUID(t *testing.T) {
 	t.Parallel()
 
