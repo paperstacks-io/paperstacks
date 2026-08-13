@@ -31,20 +31,14 @@ ON DELETE SET NULL ON UPDATE CASCADE;
 CREATE INDEX author_key_affiliation_idx ON public.author (key_affiliation);
 
 CREATE TYPE public.paper_type AS ENUM (
-	'journal_article',
-	'conference_paper',
-	'workshop_paper',
-	'preprint',
-	'thesis',
+	'journal-article',
+	'conference-article',
 	'book',
-	'book_chapter',
-	'technical_report',
-	'survey',
-	'review',
-	'poster',
+	'book-chapter',
+	'thesis',
+	'report',
 	'dataset',
-	'software',
-	'other'
+	'webpage'
 );
 
 CREATE TYPE public.publication_status AS ENUM (

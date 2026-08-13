@@ -43,35 +43,35 @@ type UserResponse struct {
 }
 
 type PaperRequest struct {
-	UUID                       string          `json:"uuid"`
-	DOI                        string          `json:"doi"`
-	Title                      string          `json:"title"`
-	TitleShort                 string          `json:"title_short"`
-	Authors                    []AuthorRequest `json:"authors"`
-	PublicationDate            PublicationDate `json:"publication_date"`
-	PublicationStatus          string          `json:"publication_status"`
-	PublicationStatusTimestamp string          `json:"publication_status_timestamp"`
-	Abstract                   string          `json:"abstract"`
-	Keywords                   []string        `json:"keywords"`
-	Type                       string          `json:"type"`
-	PDFs                       []string        `json:"pdfs"`
-	Metadata                   MetadataRequest `json:"metadata"`
+	UUID                       string                      `json:"uuid"`
+	DOI                        string                      `json:"doi"`
+	Title                      string                      `json:"title"`
+	TitleShort                 string                      `json:"title_short"`
+	Authors                    []AuthorRequest             `json:"authors"`
+	PublicationDate            PublicationDate             `json:"publication_date"`
+	PublicationStatus          string                      `json:"publication_status"`
+	PublicationStatusTimestamp string                      `json:"publication_status_timestamp"`
+	Abstract                   string                      `json:"abstract"`
+	Keywords                   []string                    `json:"keywords"`
+	Type                       paperDomain.PublicationType `json:"type"`
+	PDFs                       []string                    `json:"pdfs"`
+	Metadata                   MetadataRequest             `json:"metadata"`
 }
 
 type PaperResponse struct {
-	UUID                       string           `json:"uuid"`
-	DOI                        string           `json:"doi"`
-	Title                      string           `json:"title"`
-	TitleShort                 string           `json:"title_short"`
-	Authors                    []AuthorResponse `json:"authors"`
-	PublicationDate            PublicationDate  `json:"publication_date"`
-	PublicationStatus          string           `json:"publication_status"`
-	PublicationStatusTimestamp string           `json:"publication_status_timestamp"`
-	Abstract                   string           `json:"abstract"`
-	Keywords                   []string         `json:"keywords"`
-	Type                       string           `json:"type"`
-	PDFs                       []string         `json:"pdfs"`
-	Metadata                   MetadataResponse `json:"metadata"`
+	UUID                       string                      `json:"uuid"`
+	DOI                        string                      `json:"doi"`
+	Title                      string                      `json:"title"`
+	TitleShort                 string                      `json:"title_short"`
+	Authors                    []AuthorResponse            `json:"authors"`
+	PublicationDate            PublicationDate             `json:"publication_date"`
+	PublicationStatus          string                      `json:"publication_status"`
+	PublicationStatusTimestamp string                      `json:"publication_status_timestamp"`
+	Abstract                   string                      `json:"abstract"`
+	Keywords                   []string                    `json:"keywords"`
+	Type                       paperDomain.PublicationType `json:"type"`
+	PDFs                       []string                    `json:"pdfs"`
+	Metadata                   MetadataResponse            `json:"metadata"`
 }
 
 type PublicationDate struct {
