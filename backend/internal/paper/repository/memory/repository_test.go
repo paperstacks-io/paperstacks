@@ -110,8 +110,8 @@ func TestRepositorySearchSortByYearDescending(t *testing.T) {
 	if len(result.Items) != 326 {
 		t.Fatalf("Search() returned %d papers, want 326", len(result.Items))
 	}
-	if result.Items[0].DOI != "10.1016/j.infsof.2025.107723" {
-		t.Fatalf("Search() first DOI = %q, want %q", result.Items[0].DOI, "10.1016/j.infsof.2025.107723")
+	if result.Items[0].DOI != "10.1002/stvr.70024" {
+		t.Fatalf("Search() first DOI = %q, want %q", result.Items[0].DOI, "10.1002/stvr.70024")
 	}
 }
 
