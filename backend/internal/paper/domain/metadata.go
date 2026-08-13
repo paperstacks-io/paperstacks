@@ -5,8 +5,8 @@ import "strings"
 // Metadata contains bibliographic and provenance information
 // describing where and how a publication was published.
 //
-// It includes identifiers such as DOI and ISBN, publication
-// details like volume and issue, licensing information, and
+// It includes identifiers such as DOI, ISBN, and ISSN, publication
+// details like volume and issue, licensing information, and provenance
 // metadata about the source from which this information was
 // retrieved (e.g., CrossRef or IEEE).
 type Metadata struct {
@@ -31,6 +31,10 @@ type Metadata struct {
 	// ISBN lists International Standard Book Numbers associated
 	// with the publication, typically used for books or proceedings.
 	ISBN []string
+
+	// ISSN lists International Standard Serial Numbers associated with
+	// journal and other serial publications.
+	ISSN []string
 
 	// References contains external references related to the work,
 	// typically URLs or URIs pointing to additional resources.
@@ -71,6 +75,10 @@ func (m Metadata) Normalize() Metadata {
 
 	for i := range m.ISBN {
 		m.ISBN[i] = strings.TrimSpace(m.ISBN[i])
+	}
+
+	for i := range m.ISSN {
+		m.ISSN[i] = strings.TrimSpace(m.ISSN[i])
 	}
 
 	for i := range m.References {

@@ -63,6 +63,7 @@ type MetadataRequest struct {
 	Volume              string   `json:"volume"`
 	Issue               string   `json:"issue"`
 	ISBN                []string `json:"ISBN"`
+	ISSN                []string `json:"ISSN"`
 	References          []string `json:"references"`
 	License             string   `json:"license"`
 	Copyright           string   `json:"copyright"`
@@ -78,6 +79,7 @@ type MetadataResponse struct {
 	Volume              string   `json:"volume"`
 	Issue               string   `json:"issue"`
 	ISBN                []string `json:"ISBN"`
+	ISSN                []string `json:"ISSN"`
 	References          []string `json:"references"`
 	License             string   `json:"license"`
 	Copyright           string   `json:"copyright"`
@@ -185,6 +187,7 @@ func (r MetadataRequest) toDomain() domain.Metadata {
 		Volume:              r.Volume,
 		Issue:               r.Issue,
 		ISBN:                r.ISBN,
+		ISSN:                r.ISSN,
 		References:          r.References,
 		License:             r.License,
 		Copyright:           r.Copyright,
@@ -202,6 +205,7 @@ func NewMetadataResponse(m domain.Metadata) MetadataResponse {
 		Volume:              m.Volume,
 		Issue:               m.Issue,
 		ISBN:                m.ISBN,
+		ISSN:                m.ISSN,
 		References:          m.References,
 		License:             m.License,
 		Copyright:           m.Copyright,
