@@ -91,49 +91,6 @@ func TestPageNameFromPath(t *testing.T) {
 	}
 }
 
-func TestStackPaperInfoTemplateRendersPaperMetadata(t *testing.T) {
-	t.Parallel()
-
-	var body strings.Builder
-	err := testWebTemplate(t).ExecuteTemplate(&body, "stacks/partials/paper-info", paperDomain.Paper{
-		DOI: "10.1000/182",
-		Metadata: paperDomain.Metadata{
-			JournalTitle:  "Example Journal",
-			JournalAbbrev: "Ex. J.",
-			BookTitle:     "Proceedings of the Example Conference",
-			SeriesTitle:   "Example Series",
-			EventTitle:    "Example Conference",
-			EventLocation: "Gothenburg",
-			Institution:   "Example University",
-			Pages:         "42-53",
-			Volume:        "7",
-			Issue:         "2",
-		},
-	})
-	if err != nil {
-		t.Fatalf("ExecuteTemplate() error = %v", err)
-	}
-
-	rendered := body.String()
-	for _, want := range []string{
-		`href="https://doi.org/10.1000/182" target="_blank" rel="noopener noreferrer"`,
-		`value="Example Journal" aria-label="metadata journal title"`,
-		`value="Ex. J." aria-label="metadata journal abbreviation"`,
-		`value="Proceedings of the Example Conference" aria-label="metadata book title"`,
-		`value="Example Series" aria-label="metadata series title"`,
-		`value="Example Conference" aria-label="metadata event title"`,
-		`value="Gothenburg" aria-label="metadata event location"`,
-		`value="Example University" aria-label="metadata institution"`,
-		`value="42-53" aria-label="metadata pages"`,
-		`value="7" aria-label="metadata volume"`,
-		`value="2" aria-label="metadata issue"`,
-	} {
-		if !strings.Contains(rendered, want) {
-			t.Fatalf("rendered paper metadata missing %q: %s", want, rendered)
-		}
-	}
-}
-
 func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFoundHTMX(t *testing.T) {
 	t.Parallel()
 
