@@ -9,6 +9,18 @@
 </div>
 
 <fieldset class="fieldset">
+  <p class="label w-full whitespace-normal">
+    Access additional metadata, citations, and export formats on Crossref {{ if not .DOI }}(DOI must be set){{ end }}
+  </p>
+  <a
+    href="https://search.crossref.org/?from_ui=yes&q={{ .DOI }}"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="btn btn-sm {{ if not .DOI }}btn-disabled{{ end }}"
+    >View on Crossref</a
+  >
+</fieldset>
+<fieldset class="fieldset">
   <label class="label">Title</label>
   <input class="input w-full" value="{{ .Title }}" aria-label="title" />
 </fieldset>
@@ -29,7 +41,13 @@
   <label class="label">DOI</label>
   <div class="join">
     <input type="text" name="doi" class="input input-sm join-item" value="{{ .DOI }}" />
-    <a href="https://doi.org/{{ .DOI }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm join-item">Open</a>
+    <a
+      href="https://doi.org/{{ .DOI }}"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="btn btn-sm join-item {{ if not .DOI }}btn-disabled{{ end }}"
+      >Open</a
+    >
   </div>
 </fieldset>
 
