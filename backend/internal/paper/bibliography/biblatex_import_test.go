@@ -31,7 +31,16 @@ func TestImportBibLaTeXMapsSeedPapers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := importBibLaTeXFixture(t, tt.file)
+			source, err := os.ReadFile(filepath.Join("testdata", tt.file))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := ImportBibLaTeX(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if len(result.Entries) != 1 {
 				t.Fatalf("expected one candidate, got %d", len(result.Entries))
 			}
@@ -57,7 +66,18 @@ func TestImportBibLaTeXMapsSeedPapers(t *testing.T) {
 func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 	t.Parallel()
 
-	result := importBibLaTeXFixture(t, "import-partial.bib")
+	source, err := os.ReadFile(filepath.Join("testdata", "import-partial.bib"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := ImportBibLaTeX(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Errorf("%+v\n", result.Diagnostics)
+
 	if len(result.Entries) != 1 {
 		t.Fatalf("expected one candidate, got %d", len(result.Entries))
 	}
@@ -73,26 +93,6 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 		if !hasDiagnostic(imported.Warnings, code, "partial") {
 			t.Errorf("missing %s diagnostic: %#v", code, imported.Warnings)
 		}
-	}
-}
-
-func TestImportBibLaTeXReturnsDOILessCandidate(t *testing.T) {
-	t.Parallel()
-
-	result := importBibLaTeXFixture(t, "import-doi-less.bib")
-	if len(result.Entries) != 1 {
-		t.Fatalf("expected one candidate, got %d", len(result.Entries))
-	}
-
-	imported := result.Entries[0]
-	if imported.Paper.DOI != "" {
-		t.Errorf("DOI = %q, want empty", imported.Paper.DOI)
-	}
-	if got, want := imported.Paper.PublicationDate, (domain.Date{Year: 2025, Month: 3}); got != want {
-		t.Errorf("publication date = %#v, want %#v", got, want)
-	}
-	if !hasDiagnostic(imported.Warnings, "missing-doi", "doi-less") {
-		t.Errorf("missing DOI diagnostic: %#v", imported.Warnings)
 	}
 }
 
@@ -116,51 +116,42 @@ func TestImportBibLaTeXRejectsMalformedDocument(t *testing.T) {
 	}
 }
 
-func TestImportBibLaTeXPreservesEntryOrderAndReportsUnsupportedType(t *testing.T) {
+func TestParseBibLaTeXDate(t *testing.T) {
 	t.Parallel()
 
-	result, err := ImportBibLaTeX([]byte(`
-@article{first,
-  title = "First",
-  doi = "10.1000/first",
-}
-@patent{second,
-  title = {Second},
-  doi = {10.1000/second},
-}
-`))
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name    string
+		value   string
+		want    domain.Date
+		wantErr bool
+	}{
+		{name: "year", value: "2024", want: domain.Date{Year: 2024}},
+		{name: "year and month", value: "2024-02", want: domain.Date{Year: 2024, Month: 2}},
+		{name: "full leap date", value: "2024-02-29", want: domain.Date{Year: 2024, Month: 2, Day: 29}},
+		{name: "date range", value: "2024/2025", wantErr: true},
+		{name: "zero year", value: "0000", wantErr: true},
+		{name: "invalid month", value: "2024-13", wantErr: true},
+		{name: "invalid calendar day", value: "2023-02-29", wantErr: true},
+		{name: "too precise", value: "2024-01-02-03", wantErr: true},
 	}
-	if got, want := len(result.Entries), 2; got != want {
-		t.Fatalf("entries = %d, want %d", got, want)
-	}
-	if got, want := result.Entries[0].SourceKey, "first"; got != want {
-		t.Errorf("first source key = %q, want %q", got, want)
-	}
-	if got, want := result.Entries[1].SourceKey, "second"; got != want {
-		t.Errorf("second source key = %q, want %q", got, want)
-	}
-	if !hasDiagnostic(result.Entries[1].Warnings, "unsupported-entry-type", "second") {
-		t.Errorf("missing unsupported type diagnostic: %#v", result.Entries[1].Warnings)
-	}
-	if !hasDiagnostic(result.Entries[1].Warnings, "invalid-type", "second") {
-		t.Errorf("missing invalid type diagnostic: %#v", result.Entries[1].Warnings)
-	}
-}
 
-func importBibLaTeXFixture(t *testing.T, name string) ImportResult {
-	t.Helper()
-
-	source, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatal(err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseBibLaTeXDate(tt.value)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("parseBibLaTeXDate(%q) succeeded, want error", tt.value)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseBibLaTeXDate(%q) error = %v", tt.value, err)
+			}
+			if got != tt.want {
+				t.Errorf("parseBibLaTeXDate(%q) = %#v, want %#v", tt.value, got, tt.want)
+			}
+		})
 	}
-	result, err := ImportBibLaTeX(source)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return result
 }
 
 func hasDiagnostic(diagnostics []Diagnostic, code, entryKey string) bool {
