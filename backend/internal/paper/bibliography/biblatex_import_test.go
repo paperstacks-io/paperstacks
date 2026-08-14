@@ -76,8 +76,6 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Logf("import errors: %+v", result.Errors)
-
 	if len(result.Entries) != 1 {
 		t.Fatalf("expected one candidate, got %d", len(result.Entries))
 	}
@@ -96,6 +94,26 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 		if !hasDiagnostic(imported.Warnings, field, "partial") {
 			t.Errorf("missing %s warning: %#v", field, imported.Warnings)
 		}
+	}
+}
+
+func TestImportBibLaTeXReportsMissingTitleAndDOI(t *testing.T) {
+	t.Parallel()
+
+	result, err := ImportBibLaTeX([]byte("@article{missing-title-and-doi}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Entries) != 1 {
+		t.Fatalf("expected one candidate, got %d", len(result.Entries))
+	}
+
+	if !hasDiagnostic(result.Errors, "title", "missing-title-and-doi") {
+		t.Error("missing title error")
+	}
+
+	if !hasDiagnostic(result.Errors, "doi", "missing-title-and-doi") {
+		t.Error("missing doi error")
 	}
 }
 
