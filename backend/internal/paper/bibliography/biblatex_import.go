@@ -103,13 +103,13 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	warnings := make([]Diagnostic, 0, len(entry.issues)+2)
 	errors := make([]Diagnostic, 0, 4)
 	for _, issue := range entry.issues {
-		warnings = append(warnings, entryDiagnostic(entry.key, issue.message, issue.field))
+		warnings = append(warnings, entryDiagnostic(entry.key, issue.field, issue.message))
 	}
 
 	publicationType, supportedType := bibLaTeXPublicationType(entry.typeName)
 	if !supportedType {
 		paper.Type = domain.PublicationType(entry.typeName)
-		errors = append(errors, entryDiagnostic(entry.key, fmt.Sprintf("BibLaTeX entry type %q has no Paper type mapping", entry.typeName), ""))
+		errors = append(errors, entryDiagnostic(entry.key, "", fmt.Sprintf("BibLaTeX entry type %q has no Paper type mapping", entry.typeName)))
 	} else {
 		paper.Type = publicationType
 	}
@@ -124,28 +124,28 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	if rawURL := bibLaTeXImportField(entry, "url"); rawURL != "" {
 		parsed, err := url.ParseRequestURI(rawURL)
 		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-			warnings = append(warnings, entryDiagnostic(entry.key, "URL is not an absolute HTTP(S) URL and was omitted", "url"))
+			warnings = append(warnings, entryDiagnostic(entry.key, "url", "URL is not an absolute HTTP(S) URL and was omitted"))
 		} else {
 			paper.Metadata.References = []string{parsed.String()}
 		}
 	}
 
 	for _, field := range unsupportedBibLaTeXFields(entry.fields) {
-		warnings = append(warnings, entryDiagnostic(entry.key, fmt.Sprintf("BibLaTeX field %q is not represented by Paper", field), field))
+		warnings = append(warnings, entryDiagnostic(entry.key, field, fmt.Sprintf("BibLaTeX field %q is not represented by Paper", field)))
 	}
 
 	paper = paper.Normalize()
 	if paper.DOI == "" {
-		errors = append(errors, entryDiagnostic(entry.key, "PaperService.Create requires a DOI", "doi"))
+		errors = append(errors, entryDiagnostic(entry.key, "doi", "PaperService.Create requires a DOI"))
 	}
 	if paper.Title == "" {
-		errors = append(errors, entryDiagnostic(entry.key, "Paper validation requires a title", "title"))
+		errors = append(errors, entryDiagnostic(entry.key, "title", "Paper validation requires a title"))
 	}
 	if !paper.PublicationDate.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "publication date cannot pass Paper validation", "date"))
+		errors = append(errors, entryDiagnostic(entry.key, "date", "publication date cannot pass Paper validation"))
 	}
 	if !paper.Type.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "publication type cannot pass Paper validation", ""))
+		errors = append(errors, entryDiagnostic(entry.key, "", "publication type cannot pass Paper validation"))
 	}
 
 	return ImportedPaper{
@@ -155,7 +155,7 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	}, errors
 }
 
-func entryDiagnostic(entryKey, message, field string) Diagnostic {
+func entryDiagnostic(entryKey, field, message string) Diagnostic {
 	return Diagnostic{
 		Message:  message,
 		EntryKey: entryKey,
@@ -208,7 +208,7 @@ func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, []Diagnostic) {
 	if value := bibLaTeXImportField(entry, "date"); value != "" {
 		date, err := parseBibLaTeXDate(value)
 		if err != nil {
-			return domain.Date{}, []Diagnostic{entryDiagnostic("", err.Error(), "date")}
+			return domain.Date{}, []Diagnostic{entryDiagnostic("", "date", err.Error())}
 		}
 		return date, nil
 	}
@@ -220,14 +220,14 @@ func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, []Diagnostic) {
 
 	parsedYear, err := strconv.Atoi(year)
 	if err != nil || parsedYear < 1 {
-		return domain.Date{}, []Diagnostic{entryDiagnostic("", "year is not a positive integer", "year")}
+		return domain.Date{}, []Diagnostic{entryDiagnostic("", "year", "year is not a positive integer")}
 	}
 
 	date := domain.Date{Year: parsedYear}
 	if month := bibLaTeXMonth(bibLaTeXImportField(entry, "month")); month != 0 {
 		date.Month = month
 	} else if bibLaTeXImportField(entry, "month") != "" {
-		return domain.Date{}, []Diagnostic{entryDiagnostic("", "month is not a valid BibLaTeX month", "month")}
+		return domain.Date{}, []Diagnostic{entryDiagnostic("", "month", "month is not a valid BibLaTeX month")}
 	}
 
 	return date, nil
