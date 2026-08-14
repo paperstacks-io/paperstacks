@@ -17,10 +17,9 @@ var ErrInvalidBibLaTeX = errors.New("invalid BibLaTeX")
 
 // Diagnostic identifies source data that was ignored or cannot be represented.
 type Diagnostic struct {
-	Code     string
-	Message  string
 	EntryKey string
 	Field    string
+	Message  string
 }
 
 // ImportResult is the result of parsing a complete BibLaTeX document.
@@ -72,7 +71,6 @@ type bibLaTeXEntry struct {
 }
 
 type bibLaTeXIssue struct {
-	code    string
 	message string
 	field   string
 }
@@ -105,13 +103,13 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	warnings := make([]Diagnostic, 0, len(entry.issues)+2)
 	errors := make([]Diagnostic, 0, 4)
 	for _, issue := range entry.issues {
-		warnings = append(warnings, entryDiagnostic(entry.key, issue.code, issue.message, issue.field))
+		warnings = append(warnings, entryDiagnostic(entry.key, issue.message, issue.field))
 	}
 
 	publicationType, supportedType := bibLaTeXPublicationType(entry.typeName)
 	if !supportedType {
 		paper.Type = domain.PublicationType(entry.typeName)
-		errors = append(errors, entryDiagnostic(entry.key, "unsupported-entry-type", fmt.Sprintf("BibLaTeX entry type %q has no Paper type mapping", entry.typeName), ""))
+		errors = append(errors, entryDiagnostic(entry.key, fmt.Sprintf("BibLaTeX entry type %q has no Paper type mapping", entry.typeName), ""))
 	} else {
 		paper.Type = publicationType
 	}
@@ -126,28 +124,28 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	if rawURL := bibLaTeXImportField(entry, "url"); rawURL != "" {
 		parsed, err := url.ParseRequestURI(rawURL)
 		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-			warnings = append(warnings, entryDiagnostic(entry.key, "unrepresentable-url", "URL is not an absolute HTTP(S) URL and was omitted", "url"))
+			warnings = append(warnings, entryDiagnostic(entry.key, "URL is not an absolute HTTP(S) URL and was omitted", "url"))
 		} else {
 			paper.Metadata.References = []string{parsed.String()}
 		}
 	}
 
 	for _, field := range unsupportedBibLaTeXFields(entry.fields) {
-		warnings = append(warnings, entryDiagnostic(entry.key, "unsupported-field", fmt.Sprintf("BibLaTeX field %q is not represented by Paper", field), field))
+		warnings = append(warnings, entryDiagnostic(entry.key, fmt.Sprintf("BibLaTeX field %q is not represented by Paper", field), field))
 	}
 
 	paper = paper.Normalize()
 	if paper.DOI == "" {
-		errors = append(errors, entryDiagnostic(entry.key, "missing-doi", "PaperService.Create requires a DOI", "doi"))
+		errors = append(errors, entryDiagnostic(entry.key, "PaperService.Create requires a DOI", "doi"))
 	}
 	if paper.Title == "" {
-		errors = append(errors, entryDiagnostic(entry.key, "missing-title", "Paper validation requires a title", "title"))
+		errors = append(errors, entryDiagnostic(entry.key, "Paper validation requires a title", "title"))
 	}
 	if !paper.PublicationDate.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "invalid-date", "publication date cannot pass Paper validation", "date"))
+		errors = append(errors, entryDiagnostic(entry.key, "publication date cannot pass Paper validation", "date"))
 	}
 	if !paper.Type.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "invalid-type", "publication type cannot pass Paper validation", ""))
+		errors = append(errors, entryDiagnostic(entry.key, "publication type cannot pass Paper validation", ""))
 	}
 
 	return ImportedPaper{
@@ -157,9 +155,8 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	}, errors
 }
 
-func entryDiagnostic(entryKey, code, message, field string) Diagnostic {
+func entryDiagnostic(entryKey, message, field string) Diagnostic {
 	return Diagnostic{
-		Code:     code,
 		Message:  message,
 		EntryKey: entryKey,
 		Field:    field,
@@ -211,7 +208,7 @@ func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, []Diagnostic) {
 	if value := bibLaTeXImportField(entry, "date"); value != "" {
 		date, err := parseBibLaTeXDate(value)
 		if err != nil {
-			return domain.Date{}, []Diagnostic{entryDiagnostic("", "unrepresentable-date", err.Error(), "date")}
+			return domain.Date{}, []Diagnostic{entryDiagnostic("", err.Error(), "date")}
 		}
 		return date, nil
 	}
@@ -223,14 +220,14 @@ func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, []Diagnostic) {
 
 	parsedYear, err := strconv.Atoi(year)
 	if err != nil || parsedYear < 1 {
-		return domain.Date{}, []Diagnostic{entryDiagnostic("", "unrepresentable-date", "year is not a positive integer", "year")}
+		return domain.Date{}, []Diagnostic{entryDiagnostic("", "year is not a positive integer", "year")}
 	}
 
 	date := domain.Date{Year: parsedYear}
 	if month := bibLaTeXMonth(bibLaTeXImportField(entry, "month")); month != 0 {
 		date.Month = month
 	} else if bibLaTeXImportField(entry, "month") != "" {
-		return domain.Date{}, []Diagnostic{entryDiagnostic("", "unrepresentable-date", "month is not a valid BibLaTeX month", "month")}
+		return domain.Date{}, []Diagnostic{entryDiagnostic("", "month is not a valid BibLaTeX month", "month")}
 	}
 
 	return date, nil
@@ -577,7 +574,7 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 			return bibLaTeXEntry{}, err
 		}
 		if _, exists := entry.fields[field]; exists {
-			entry.issues = append(entry.issues, bibLaTeXIssue{code: "duplicate-field", message: fmt.Sprintf("BibLaTeX field %q appears more than once; the last value was used", field), field: field})
+			entry.issues = append(entry.issues, bibLaTeXIssue{message: fmt.Sprintf("BibLaTeX field %q appears more than once; the last value was used", field), field: field})
 		}
 		entry.fields[field] = value
 		for _, issue := range issues {
@@ -644,7 +641,7 @@ func (parser *bibLaTeXParser) readValuePart(close byte) (string, *bibLaTeXIssue,
 		if _, err := strconv.Atoi(name); err == nil || bibLaTeXMonth(name) != 0 {
 			return name, nil, nil
 		}
-		return name, &bibLaTeXIssue{code: "undefined-string", message: fmt.Sprintf("BibLaTeX string %q is undefined and was preserved literally", name)}, nil
+		return name, &bibLaTeXIssue{message: fmt.Sprintf("BibLaTeX string %q is undefined and was preserved literally", name)}, nil
 	}
 }
 

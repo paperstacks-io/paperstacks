@@ -89,12 +89,12 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 	if len(imported.Paper.Metadata.References) != 0 {
 		t.Errorf("references = %#v, want omitted invalid URL", imported.Paper.Metadata.References)
 	}
-	if !hasDiagnostic(result.Errors, "unrepresentable-date", "partial") {
-		t.Errorf("missing unrepresentable date error: %#v", result.Errors)
+	if !hasDiagnostic(result.Errors, "date", "partial") {
+		t.Errorf("missing date error: %#v", result.Errors)
 	}
-	for _, code := range []string{"unrepresentable-url", "unsupported-field"} {
-		if !hasDiagnostic(imported.Warnings, code, "partial") {
-			t.Errorf("missing %s warning: %#v", code, imported.Warnings)
+	for _, field := range []string{"url", "editor"} {
+		if !hasDiagnostic(imported.Warnings, field, "partial") {
+			t.Errorf("missing %s warning: %#v", field, imported.Warnings)
 		}
 	}
 }
@@ -157,9 +157,9 @@ func TestParseBibLaTeXDate(t *testing.T) {
 	}
 }
 
-func hasDiagnostic(diagnostics []Diagnostic, code, entryKey string) bool {
+func hasDiagnostic(diagnostics []Diagnostic, field, entryKey string) bool {
 	for _, diagnostic := range diagnostics {
-		if diagnostic.Code == code && diagnostic.EntryKey == entryKey {
+		if diagnostic.Field == field && diagnostic.EntryKey == entryKey {
 			return true
 		}
 	}
