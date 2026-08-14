@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -222,39 +223,32 @@ func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, *Diagnostic) {
 }
 
 func parseBibLaTeXDate(value string) (domain.Date, error) {
-	if strings.Contains(value, "/") {
-		return domain.Date{}, errors.New("date ranges cannot be represented by Paper")
-	}
-
-	parts := strings.Split(value, "-")
-	if len(parts) < 1 || len(parts) > 3 {
-		return domain.Date{}, fmt.Errorf("date %q is not year, year-month, or full-date", value)
-	}
-
-	year, err := strconv.Atoi(parts[0])
-	if err != nil || year < 1 {
-		return domain.Date{}, fmt.Errorf("date %q has an invalid year", value)
-	}
-	date := domain.Date{Year: year}
-	if len(parts) >= 2 {
-		month, err := strconv.Atoi(parts[1])
-		if err != nil || month < 1 || month > 12 {
-			return domain.Date{}, fmt.Errorf("date %q has an invalid month", value)
+	for _, candidate := range [...]struct {
+		layout    string
+		precision int
+	}{
+		{layout: "2006-01-02", precision: 3},
+		{layout: "2006-01", precision: 2},
+		{layout: "2006", precision: 1},
+	} {
+		parsed, err := time.Parse(candidate.layout, value)
+		if err != nil {
+			continue
 		}
-		date.Month = month
-	}
-	if len(parts) == 3 {
-		day, err := strconv.Atoi(parts[2])
-		if err != nil || day < 1 {
-			return domain.Date{}, fmt.Errorf("date %q has an invalid day", value)
+
+		date := domain.Date{Year: parsed.Year()}
+		if candidate.precision >= 2 {
+			date.Month = int(parsed.Month())
 		}
-		date.Day = day
-	}
-	if !date.IsValid() {
-		return domain.Date{}, fmt.Errorf("date %q is not a calendar date", value)
+		if candidate.precision == 3 {
+			date.Day = parsed.Day()
+		}
+		if date.Year > 0 && date.IsValid() {
+			return date, nil
+		}
 	}
 
-	return date, nil
+	return domain.Date{}, fmt.Errorf("invalid BibLaTeX date %q, supported date types are ['2006-01-0', '2006-01', '2006']", value)
 }
 
 func bibLaTeXMonth(value string) int {
