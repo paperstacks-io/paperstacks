@@ -36,6 +36,17 @@ type ImportedPaper struct {
 	Warnings  []Diagnostic
 }
 
+type bibLaTeXDocument struct {
+	entries []bibLaTeXEntry
+}
+
+type bibLaTeXEntry struct {
+	typeName    string
+	key         string
+	fields      map[string]string
+	diagnostics []Diagnostic
+}
+
 // ImportBibLaTeX parses BibLaTeX source into Paper candidates without reading
 // repositories, allocating UUIDs, or writing data. A syntactically malformed
 // document returns an error. Candidate errors are returned in Errors; warnings
@@ -57,22 +68,6 @@ func ImportBibLaTeX(source []byte) (ImportResult, error) {
 	}
 
 	return result, nil
-}
-
-type bibLaTeXDocument struct {
-	entries []bibLaTeXEntry
-}
-
-type bibLaTeXEntry struct {
-	typeName string
-	key      string
-	fields   map[string]string
-	issues   []bibLaTeXIssue
-}
-
-type bibLaTeXIssue struct {
-	message string
-	field   string
 }
 
 func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
@@ -100,11 +95,9 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 		},
 	}
 
-	warnings := make([]Diagnostic, 0, len(entry.issues)+2)
+	warnings := make([]Diagnostic, 0, len(entry.diagnostics)+2)
 	errors := make([]Diagnostic, 0, 4)
-	for _, issue := range entry.issues {
-		warnings = append(warnings, entryDiagnostic(entry.key, issue.field, issue.message))
-	}
+	warnings = append(warnings, entry.diagnostics...)
 
 	publicationType, supportedType := bibLaTeXPublicationType(entry.typeName)
 	if !supportedType {
@@ -569,19 +562,24 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 		if err := parser.expect('='); err != nil {
 			return bibLaTeXEntry{}, err
 		}
-		value, issues, err := parser.readValue(close)
+		value, diagnostics, err := parser.readValue(close)
 		if err != nil {
 			return bibLaTeXEntry{}, err
 		}
 		if _, exists := entry.fields[field]; exists {
-			entry.issues = append(entry.issues, bibLaTeXIssue{message: fmt.Sprintf("BibLaTeX field %q appears more than once; the last value was used", field), field: field})
+			entry.diagnostics = append(entry.diagnostics, Diagnostic{
+				EntryKey: entry.key,
+				Field:    field,
+				Message:  fmt.Sprintf("BibLaTeX field %q appears more than once; the last value was used", field),
+			})
 		}
 		entry.fields[field] = value
-		for _, issue := range issues {
-			if issue.field == "" {
-				issue.field = field
+		for _, diagnostic := range diagnostics {
+			if diagnostic.Field == "" {
+				diagnostic.Field = field
 			}
-			entry.issues = append(entry.issues, issue)
+			diagnostic.EntryKey = entry.key
+			entry.diagnostics = append(entry.diagnostics, diagnostic)
 		}
 
 		parser.skipSpaceAndComments()
@@ -595,29 +593,29 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 	}
 }
 
-func (parser *bibLaTeXParser) readValue(close byte) (string, []bibLaTeXIssue, error) {
+func (parser *bibLaTeXParser) readValue(close byte) (string, []Diagnostic, error) {
 	parser.skipSpace()
 	var value strings.Builder
-	issues := make([]bibLaTeXIssue, 0)
+	diagnostics := make([]Diagnostic, 0)
 	for {
-		part, issue, err := parser.readValuePart(close)
+		part, diagnostic, err := parser.readValuePart(close)
 		if err != nil {
 			return "", nil, err
 		}
 		value.WriteString(part)
-		if issue != nil {
-			issues = append(issues, *issue)
+		if diagnostic != nil {
+			diagnostics = append(diagnostics, *diagnostic)
 		}
 		parser.skipSpace()
 		if parser.peek() != '#' {
-			return value.String(), issues, nil
+			return value.String(), diagnostics, nil
 		}
 		parser.position++
 		parser.skipSpace()
 	}
 }
 
-func (parser *bibLaTeXParser) readValuePart(close byte) (string, *bibLaTeXIssue, error) {
+func (parser *bibLaTeXParser) readValuePart(close byte) (string, *Diagnostic, error) {
 	if parser.eof() || parser.peek() == close || parser.peek() == ',' {
 		return "", nil, parser.errorf("expected field value")
 	}
@@ -641,11 +639,11 @@ func (parser *bibLaTeXParser) readValuePart(close byte) (string, *bibLaTeXIssue,
 		if _, err := strconv.Atoi(name); err == nil || bibLaTeXMonth(name) != 0 {
 			return name, nil, nil
 		}
-		return name, &bibLaTeXIssue{message: fmt.Sprintf("BibLaTeX string %q is undefined and was preserved literally", name)}, nil
+		return name, &Diagnostic{Message: fmt.Sprintf("BibLaTeX string %q is undefined and was preserved literally", name)}, nil
 	}
 }
 
-func (parser *bibLaTeXParser) readBracedValue() (string, *bibLaTeXIssue, error) {
+func (parser *bibLaTeXParser) readBracedValue() (string, *Diagnostic, error) {
 	parser.position++
 	depth := 1
 	start := parser.position
@@ -672,7 +670,7 @@ func (parser *bibLaTeXParser) readBracedValue() (string, *bibLaTeXIssue, error) 
 	return "", nil, parser.errorf("unterminated braced value")
 }
 
-func (parser *bibLaTeXParser) readQuotedValue() (string, *bibLaTeXIssue, error) {
+func (parser *bibLaTeXParser) readQuotedValue() (string, *Diagnostic, error) {
 	parser.position++
 	start := parser.position
 	for !parser.eof() {
