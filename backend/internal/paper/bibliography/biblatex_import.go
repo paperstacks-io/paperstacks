@@ -125,16 +125,16 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 
 	paper = paper.Normalize()
 	if paper.DOI == "" {
-		errors = append(errors, entryDiagnostic(entry.key, "doi", "PaperService.Create requires a DOI"))
+		errors = append(errors, entryDiagnostic(entry.key, "doi", "DOI is required"))
 	}
 	if paper.Title == "" {
-		errors = append(errors, entryDiagnostic(entry.key, "title", "Paper validation requires a title"))
+		errors = append(errors, entryDiagnostic(entry.key, "title", "title is required"))
 	}
 	if !paper.PublicationDate.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "date", "publication date cannot pass Paper validation"))
+		errors = append(errors, entryDiagnostic(entry.key, "date", "publication date cannot be parsed"))
 	}
 	if !paper.Type.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "", "publication type cannot pass Paper validation"))
+		errors = append(errors, entryDiagnostic(entry.key, "", "publication type not supported"))
 	}
 
 	return ImportedPaper{
