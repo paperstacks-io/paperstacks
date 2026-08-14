@@ -44,8 +44,8 @@ func TestImportBibLaTeXMapsSeedPapers(t *testing.T) {
 			if len(result.Entries) != 1 {
 				t.Fatalf("expected one candidate, got %d", len(result.Entries))
 			}
-			if len(result.Diagnostics) != 0 {
-				t.Fatalf("expected no diagnostics, got %#v", result.Diagnostics)
+			if len(result.Errors) != 0 {
+				t.Fatalf("expected no errors, got %#v", result.Errors)
 			}
 
 			imported := result.Entries[0]
@@ -76,7 +76,7 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Errorf("%+v\n", result.Diagnostics)
+	t.Logf("import errors: %+v", result.Errors)
 
 	if len(result.Entries) != 1 {
 		t.Fatalf("expected one candidate, got %d", len(result.Entries))
@@ -89,9 +89,12 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 	if len(imported.Paper.Metadata.References) != 0 {
 		t.Errorf("references = %#v, want omitted invalid URL", imported.Paper.Metadata.References)
 	}
-	for _, code := range []string{"unrepresentable-date", "unrepresentable-url", "unsupported-field"} {
+	if !hasDiagnostic(result.Errors, "unrepresentable-date", "partial") {
+		t.Errorf("missing unrepresentable date error: %#v", result.Errors)
+	}
+	for _, code := range []string{"unrepresentable-url", "unsupported-field"} {
 		if !hasDiagnostic(imported.Warnings, code, "partial") {
-			t.Errorf("missing %s diagnostic: %#v", code, imported.Warnings)
+			t.Errorf("missing %s warning: %#v", code, imported.Warnings)
 		}
 	}
 }
@@ -111,7 +114,7 @@ func TestImportBibLaTeXRejectsMalformedDocument(t *testing.T) {
 	if !errors.Is(err, ErrInvalidBibLaTeX) {
 		t.Errorf("error = %v, want ErrInvalidBibLaTeX", err)
 	}
-	if len(result.Entries) != 0 || len(result.Diagnostics) != 0 {
+	if len(result.Entries) != 0 || len(result.Errors) != 0 {
 		t.Errorf("result = %#v, want empty result", result)
 	}
 }
