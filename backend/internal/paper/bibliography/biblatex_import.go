@@ -72,7 +72,7 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 		TitleShort: bibLaTeXImportField(entry, "shorttitle"),
 		DOI:        bibLaTeXImportField(entry, "doi"),
 		Abstract:   bibLaTeXImportField(entry, "abstract"),
-		Authors:    bibLaTeXAuthorsToDomain(bibLaTeXRawField(entry, "author")),
+		Authors:    bibLaTeXAuthorsToDomain(entry.fields["author"]),
 		Keywords:   splitBibLaTeXList(bibLaTeXImportField(entry, "keywords")),
 		Metadata: domain.Metadata{
 			JournalTitle:  firstBibLaTeXField(entry, "journaltitle", "journal"),
@@ -120,7 +120,7 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 	}
 
 	for _, field := range unsupportedBibLaTeXFields(entry.fields) {
-		warnings = append(warnings, entryDiagnostic(entry.key, field, fmt.Sprintf("BibLaTeX field %q is not represented by Paper", field)))
+		warnings = append(warnings, entryDiagnostic(entry.key, field, fmt.Sprintf("BibLaTeX field %q is not represented paperstacks.io", field)))
 	}
 
 	paper = paper.Normalize()
@@ -176,11 +176,7 @@ func bibLaTeXPublicationType(entryType string) (domain.PublicationType, bool) {
 }
 
 func bibLaTeXImportField(entry bibLaTeXEntry, name string) string {
-	return removeBibLaTeXGrouping(bibLaTeXRawField(entry, name))
-}
-
-func bibLaTeXRawField(entry bibLaTeXEntry, name string) string {
-	return strings.TrimSpace(entry.fields[name])
+	return removeBibLaTeXGrouping(strings.TrimSpace(entry.fields[name]))
 }
 
 func firstBibLaTeXField(entry bibLaTeXEntry, names ...string) string {
@@ -406,6 +402,8 @@ func startsLower(value string) bool {
 	return false
 }
 
+// removeBibLaTeXGrouping removes the outer field delimiters.
+// Example: "some {grouped} value" becomes "some grouped value"
 func removeBibLaTeXGrouping(value string) string {
 	var out strings.Builder
 	out.Grow(len(value))
@@ -468,7 +466,7 @@ func parseBibLaTeX(source []byte) ([]bibLaTeXEntry, error) {
 		parser.position++
 		entryType := strings.ToLower(parser.readIdentifier())
 		if entryType == "" {
-			return nil, parser.errorf("expected entry type after @")
+			return nil, fmt.Errorf("byte %d: expected entry type after @", parser.position)
 		}
 		parser.skipSpace()
 		close, err := parser.closingDelimiter()
@@ -507,7 +505,7 @@ func (parser *bibLaTeXParser) parseString(close byte) error {
 	parser.skipSpaceAndComments()
 	name := strings.ToLower(parser.readIdentifier())
 	if name == "" {
-		return parser.errorf("expected string name")
+		return fmt.Errorf("byte %d: expected string name", parser.position)
 	}
 	parser.skipSpace()
 	if err := parser.expect('='); err != nil {
@@ -534,7 +532,7 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 	}
 	key := strings.TrimSpace(string(parser.source[keyStart:parser.position]))
 	if key == "" {
-		return bibLaTeXEntry{}, parser.errorf("expected entry key")
+		return bibLaTeXEntry{}, fmt.Errorf("byte %d: expected entry key", parser.position)
 	}
 
 	entry := bibLaTeXEntry{typeName: entryType, key: key, fields: make(map[string]string)}
@@ -554,7 +552,7 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 		}
 		field := strings.ToLower(parser.readIdentifier())
 		if field == "" {
-			return bibLaTeXEntry{}, parser.errorf("expected field name")
+			return bibLaTeXEntry{}, fmt.Errorf("byte %d: expected field name", parser.position)
 		}
 		parser.skipSpace()
 		if err := parser.expect('='); err != nil {
@@ -615,7 +613,7 @@ func (parser *bibLaTeXParser) readValue(close byte) (string, []Diagnostic, error
 
 func (parser *bibLaTeXParser) readValuePart(close byte) (string, *Diagnostic, error) {
 	if parser.eof() || parser.peek() == close || parser.peek() == ',' {
-		return "", nil, parser.errorf("expected field value")
+		return "", nil, fmt.Errorf("byte %d: expected field value", parser.position)
 	}
 	switch parser.peek() {
 	case '{':
@@ -631,7 +629,7 @@ func (parser *bibLaTeXParser) readValuePart(close byte) (string, *Diagnostic, er
 		}
 		name := strings.TrimSpace(string(parser.source[start:parser.position]))
 		if name == "" {
-			return "", nil, parser.errorf("expected field value")
+			return "", nil, fmt.Errorf("byte %d: expected field value", parser.position)
 		}
 		if value, ok := parser.macros[strings.ToLower(name)]; ok {
 			return value, nil, nil
@@ -667,7 +665,7 @@ func (parser *bibLaTeXParser) readBracedValue() (string, error) {
 			}
 		}
 	}
-	return "", parser.errorf("unterminated braced value")
+	return "", fmt.Errorf("byte %d: unterminated braced value", parser.position)
 }
 
 func (parser *bibLaTeXParser) readQuotedValue() (string, error) {
@@ -687,7 +685,7 @@ func (parser *bibLaTeXParser) readQuotedValue() (string, error) {
 			return string(parser.source[start : parser.position-1]), nil
 		}
 	}
-	return "", parser.errorf("unterminated quoted value")
+	return "", fmt.Errorf("byte %d: unterminated quoted value", parser.position)
 }
 
 func (parser *bibLaTeXParser) skipBalanced(close byte) error {
@@ -709,12 +707,12 @@ func (parser *bibLaTeXParser) skipBalanced(close byte) error {
 			depth++
 		}
 	}
-	return parser.errorf("unterminated @comment")
+	return fmt.Errorf("byte %d: unterminated @comment", parser.position)
 }
 
 func (parser *bibLaTeXParser) closingDelimiter() (byte, error) {
 	if parser.eof() {
-		return 0, parser.errorf("expected { or (")
+		return 0, fmt.Errorf("byte %d: expected { or (", parser.position)
 	}
 	switch parser.peek() {
 	case '{':
@@ -724,7 +722,7 @@ func (parser *bibLaTeXParser) closingDelimiter() (byte, error) {
 		parser.position++
 		return ')', nil
 	default:
-		return 0, parser.errorf("expected { or (")
+		return 0, fmt.Errorf("byte %d: expected { or (", parser.position)
 	}
 }
 
@@ -760,14 +758,10 @@ func (parser *bibLaTeXParser) skipSpace() {
 
 func (parser *bibLaTeXParser) expect(expected byte) error {
 	if parser.eof() || parser.peek() != expected {
-		return parser.errorf("expected %q", expected)
+		return fmt.Errorf("byte %d: expected %q", parser.position, expected)
 	}
 	parser.position++
 	return nil
-}
-
-func (parser *bibLaTeXParser) errorf(format string, args ...any) error {
-	return fmt.Errorf("byte %d: %s", parser.position, fmt.Sprintf(format, args...))
 }
 
 func (parser *bibLaTeXParser) eof() bool {
