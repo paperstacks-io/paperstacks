@@ -11,25 +11,27 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-var (
-	ErrInvalidBibLaTeXEntryKey   = errors.New("invalid BibLaTeX entry key")
-	ErrDuplicateBibLaTeXEntryKey = errors.New("duplicate BibLaTeX entry key")
-)
+var ErrInvalidBibLaTeXEntryKey = errors.New("invalid BibLaTeX entry key")
 
 // ExportBibLaTeX exports Papers as a deterministic BibLaTeX document.
 // Papers are emitted in input order. A Paper's DOI is its entry key when
-// available; otherwise its UUID is used.
+// available; otherwise its UUID is used. Duplicate DOI keys use the paper UUID.
 func ExportBibLaTeX(papers []domain.Paper) ([]byte, error) {
 	var out strings.Builder
 	keys := make(map[string]struct{}, len(papers))
 
 	for i, paper := range papers {
-		key, err := bibLaTeXEntryKey(paper)
-		if err != nil {
-			return nil, fmt.Errorf("paper %d: %w", i, err)
+		key := paper.DOI
+		if key == "" {
+			key = paper.UUID
 		}
 		if _, exists := keys[key]; exists {
-			return nil, fmt.Errorf("%q: %w", key, ErrDuplicateBibLaTeXEntryKey)
+			key = paper.UUID
+		}
+
+		key, err := bibLaTeXEntryKey(key)
+		if err != nil {
+			return nil, fmt.Errorf("paper %d: %w", i, err)
 		}
 		keys[key] = struct{}{}
 
@@ -43,12 +45,7 @@ func ExportBibLaTeX(papers []domain.Paper) ([]byte, error) {
 	return []byte(out.String()), nil
 }
 
-func bibLaTeXEntryKey(paper domain.Paper) (string, error) {
-	key := paper.DOI
-	if key == "" {
-		key = paper.UUID
-	}
-
+func bibLaTeXEntryKey(key string) (string, error) {
 	if key == "" {
 		return "", ErrInvalidBibLaTeXEntryKey
 	}
