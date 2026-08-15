@@ -42,7 +42,9 @@ func run(
 	cfg config.Config,
 ) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	paperService := paperApp.NewPaperService(paperMem.NewRepository())
+	paperRepo := paperMem.NewRepository()
+	paperService := paperApp.NewPaperService(paperRepo)
+	bibliographyService := paperApp.NewBibliographyService(paperRepo)
 	doiService := doiApp.NewDOIService(nil)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
 	userService := userApp.NewUserService(userMem.NewRepository())
@@ -74,7 +76,7 @@ func run(
 	userHttp.AddUserRoute(apiMux, logger, userService, userProvisioner, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
+	web.AddRoute(webMux, cfg, logger, paperService, bibliographyService, stackService, userService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
