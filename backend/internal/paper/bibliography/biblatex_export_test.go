@@ -175,16 +175,30 @@ func TestExportBibLaTeXMapsDistinctContainerFields(t *testing.T) {
 	}
 }
 
-func TestExportBibLaTeXRejectsInvalidOrDuplicateKeys(t *testing.T) {
+func TestExportBibLaTeXRejectsInvalidEntryKey(t *testing.T) {
 	t.Parallel()
 
 	_, err := ExportBibLaTeX([]domain.Paper{{DOI: "invalid key"}})
 	if !errors.Is(err, ErrInvalidBibLaTeXEntryKey) {
 		t.Fatalf("invalid key error = %v, want %v", err, ErrInvalidBibLaTeXEntryKey)
 	}
+}
 
-	_, err = ExportBibLaTeX([]domain.Paper{{DOI: "10.1000/example"}, {DOI: "10.1000/example"}})
-	if !errors.Is(err, ErrDuplicateBibLaTeXEntryKey) {
-		t.Fatalf("duplicate key error = %v, want %v", err, ErrDuplicateBibLaTeXEntryKey)
+func TestExportBibLaTeXUsesUUIDForDuplicateDOI(t *testing.T) {
+	t.Parallel()
+
+	secondUUID := "22b8cb22-4804-493b-9bb7-5f7b0ee56567"
+	got, err := ExportBibLaTeX([]domain.Paper{
+		{UUID: "c8deefcf-c68c-44f4-b13e-b4bc35c7f8fc", DOI: "10.1000/example", Title: "First"},
+		{UUID: secondUUID, DOI: "10.1000/example", Title: "Second"},
+	})
+	if err != nil {
+		t.Fatalf("ExportBibLaTeX() error = %v", err)
+	}
+
+	want := "@article{10.1000/example,\n  title = {First},\n  doi = {10.1000/example}\n}\n\n" +
+		"@article{" + secondUUID + ",\n  title = {Second},\n  doi = {10.1000/example}\n}\n"
+	if string(got) != want {
+		t.Fatalf("document = %q, want %q", got, want)
 	}
 }
