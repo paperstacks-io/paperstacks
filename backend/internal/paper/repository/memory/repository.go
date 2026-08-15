@@ -153,11 +153,16 @@ func sortPapersByOrder(papers []domain.Paper, sortBy string, desc bool) {
 
 			return compare(papers[i].Title, papers[j].Title, desc)
 		case "year":
-			if papers[i].PublicationYear == papers[j].PublicationYear {
+			dateOrder := papers[i].PublicationDate.Compare(papers[j].PublicationDate)
+			if dateOrder == 0 {
 				return compare(papers[i].DOI, papers[j].DOI, false)
 			}
 
-			return compare(papers[i].PublicationYear, papers[j].PublicationYear, desc)
+			if desc {
+				return dateOrder > 0
+			}
+
+			return dateOrder < 0
 
 		default:
 			return compare(papers[i].DOI, papers[j].DOI, false)

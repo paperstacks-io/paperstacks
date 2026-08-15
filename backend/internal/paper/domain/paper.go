@@ -25,8 +25,9 @@ type Paper struct {
 	// Authors lists all authors who contributed to the publication.
 	Authors []Author
 
-	// PublicationYear is the year the work was published or made public.
-	PublicationYear string
+	// PublicationDate is the date the work was published or made public.
+	// It supports year, year-month, and full-date precision.
+	PublicationDate Date
 
 	// PublicationStatus describes the publication state
 	// (e.g., "published", "preprint", or "retracted").
@@ -42,8 +43,8 @@ type Paper struct {
 	// Keywords contains search keywords associated with the paper.
 	Keywords []string
 
-	// Type specifies the publication type (e.g. "journal" or "conference").
-	Type string
+	// Type classifies the bibliographic kind of the Paper.
+	Type PublicationType
 
 	// PDFs contains URIs pointing to PDF versions of the paper.
 	PDFs []string
@@ -56,11 +57,10 @@ func (p Paper) Normalize() Paper {
 	p.DOI = strings.TrimSpace(p.DOI)
 	p.Title = strings.TrimSpace(p.Title)
 	p.TitleShort = strings.TrimSpace(p.TitleShort)
-	p.PublicationYear = strings.TrimSpace(p.PublicationYear)
 	p.PublicationStatus = strings.TrimSpace(p.PublicationStatus)
 	p.PublicationStatusTimestamp = strings.TrimSpace(p.PublicationStatusTimestamp)
 	p.Abstract = strings.TrimSpace(p.Abstract)
-	p.Type = strings.TrimSpace(p.Type)
+	p.Type = PublicationType(strings.TrimSpace(string(p.Type)))
 	p.Metadata = p.Metadata.Normalize()
 
 	for i := range p.Authors {
@@ -89,6 +89,14 @@ func (p Paper) Validate() error {
 	}
 
 	if strings.TrimSpace(p.Title) == "" {
+		return ErrInvalidPaper
+	}
+
+	if !p.PublicationDate.IsValid() {
+		return ErrInvalidPaper
+	}
+
+	if !p.Type.IsValid() {
 		return ErrInvalidPaper
 	}
 

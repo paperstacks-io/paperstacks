@@ -13,6 +13,7 @@ import (
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 )
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
@@ -298,6 +299,7 @@ func handleStacksStatsByOwner(
 func handleSidebarStackCreate(
 	logger *slog.Logger,
 	tmpl *template.Template,
+	userService *userApp.UserService,
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -309,8 +311,15 @@ func handleSidebarStackCreate(
 			return
 		}
 
+		owner, err := userService.GetByExternalID(ctx, session.UserID)
+		if err != nil {
+			logger.Error("read sidebar stack owner", "userId", session.UserID, "error", err)
+			renderErrorToast(w, tmpl, "Failed to create stack: "+err.Error())
+			return
+		}
+
 		name := r.FormValue("name")
-		stack, err := stackService.CreateByName(ctx, name, session.UserID)
+		stack, err := stackService.CreateByName(ctx, name, owner)
 		if err != nil {
 			logger.Error("create sidebar stack", "error", err.Error())
 

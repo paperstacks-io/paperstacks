@@ -3,7 +3,6 @@ package application
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
@@ -11,22 +10,12 @@ import (
 )
 
 type UserService struct {
-	repo       domain.Repository
-	httpClient http.Client
-	authAPIURL string
+	repo domain.Repository
 }
 
 // NewUserService creates a user service backed by repo.
-func NewUserService(repo domain.Repository, authAPIURL string, httpClient *http.Client) *UserService {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
-
-	return &UserService{
-		repo:       repo,
-		authAPIURL: strings.TrimRight(strings.TrimSpace(authAPIURL), "/"),
-		httpClient: *httpClient,
-	}
+func NewUserService(repo domain.Repository) *UserService {
+	return &UserService{repo: repo}
 }
 
 // List returns all users.
@@ -74,21 +63,4 @@ func (s *UserService) Update(ctx context.Context, externalID string, user domain
 // Delete removes a user by external authentication ID.
 func (s *UserService) Delete(ctx context.Context, externalID string) error {
 	return s.repo.Delete(ctx, strings.TrimSpace(externalID))
-}
-
-// ResolveByAuthToken resolves an auth token to a local user.
-// It validates the token with the auth provider and creates the user locally
-// if one does not already exist.
-func (s *UserService) ResolveByAuthToken(ctx context.Context, token string) (domain.User, error) {
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return domain.User{}, domain.ErrInvalidAuthToken
-	}
-
-	user, err := s.fetchUserFromAuthProvider(ctx, token)
-	if err != nil {
-		return domain.User{}, err
-	}
-
-	return s.CreateIfNotExist(ctx, user.ExternalID, user.Email)
 }

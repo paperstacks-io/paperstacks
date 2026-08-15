@@ -119,7 +119,7 @@
               <tr>
                 <th>Article</th>
                 <th>Authors</th>
-                <th>Year</th>
+                <th>Published</th>
                 <th></th>
               </tr>
             </thead>
@@ -128,7 +128,7 @@
               <tr
                 data-stack-paper-row
                 data-title="{{ .Title }}"
-                data-year="{{ .PublicationYear }}"
+                data-year="{{ .PublicationDate.Year }}"
                 data-uuid="{{ .UUID }}"
                 class="cursor-pointer hover:bg-base-200"
                 hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
@@ -139,12 +139,16 @@
                   <div class="flex items-center gap-3">
                     <div>
                       <div class="font-bold">{{ .Title }}</div>
-                      <div class="text-base-content/60 text-sm">{{ .Metadata.PublishedIn }}</div>
+                      <div class="text-base-content/60 text-sm">
+                        {{ if .Metadata.JournalTitle }}{{ .Metadata.JournalTitle }}{{ else if .Metadata.BookTitle }}{{
+                        .Metadata.BookTitle }}{{ else if .Metadata.SeriesTitle }}{{ .Metadata.SeriesTitle }}{{ else if
+                        .Metadata.EventTitle }}{{ .Metadata.EventTitle }}{{ else }}{{ .Metadata.Institution }}{{ end }}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
-                <td>{{ .PublicationYear }}</td>
+                <td>{{ .PublicationDate }}</td>
                 <td class="text-right">
                   <div class="flex">
                     <a class="btn btn-ghost btn-xs">PDF</a>

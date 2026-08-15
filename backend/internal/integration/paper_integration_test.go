@@ -4,11 +4,11 @@ package integration
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 )
 
@@ -29,7 +29,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 		// sort
 		{query: "", sortBy: "-title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "a9d7c335"},
 		{query: "", sortBy: "+title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "df34d6d8"},
-		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "bc884ec1"},
+		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "67132cd6"},
 		{query: "", sortBy: "+year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "5966a651"},
 		// title
 		{query: "we tried", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "3df8adca"},
@@ -123,7 +123,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			pageSize:         50,
 			expectedPage:     "1",
 			expectedPageSize: "50",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "true",
 		},
 		{
@@ -133,7 +133,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			pageSize:         50,
 			expectedPage:     "2",
 			expectedPageSize: "50",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "false",
 		},
 		{
@@ -141,7 +141,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			query:            "gui",
 			expectedPage:     "1",
 			expectedPageSize: "10",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "true",
 		},
 	}
@@ -246,9 +246,21 @@ func TestIntegrationDeletePaper(t *testing.T) {
 func TestIntegrationSavePaper(t *testing.T) {
 	setupIntegrationTest(t)
 
-	paper := domain.Paper{
-		DOI:   "10.1109/some_DOI",
-		Title: "Test article",
+	paper := paperHttp.PaperRequest{
+		DOI:             "10.1109/some_DOI",
+		Title:           "Test article",
+		PublicationDate: paperHttp.PublicationDate{Year: 2026, Month: 8, Day: 13},
+		Type:            "journal-article",
+		Metadata: paperHttp.MetadataRequest{
+			JournalTitle:  "Journal Title",
+			JournalAbbrev: "J. Title",
+			BookTitle:     "Book Title",
+			SeriesTitle:   "Series Title",
+			EventTitle:    "Conference Title",
+			EventPlace:    "Gothenburg",
+			Institution:   "Example University",
+			ISSN:          []string{" 1234-5678 ", "8765-4321"},
+		},
 	}
 	endpoint := testAPIPath + "/api/papers"
 	resp := doPostRequest(t, endpoint, paper)
@@ -264,5 +276,35 @@ func TestIntegrationSavePaper(t *testing.T) {
 	decodeJSON(t, resp, &created)
 	if created.UUID == "" {
 		t.Fatal("expected UUID to be not empty")
+	}
+
+	if created.PublicationDate != paper.PublicationDate {
+		t.Fatalf("created publication date = %#v, want %#v", created.PublicationDate, paper.PublicationDate)
+	}
+
+	if created.Type != paper.Type {
+		t.Fatalf("created publication type = %q, want %q", created.Type, paper.Type)
+	}
+
+	if got, want := created.Metadata.ISSN, []string{"1234-5678", "8765-4321"}; !slices.Equal(got, want) {
+		t.Fatalf("created ISSN = %q, want %q", got, want)
+	}
+
+	for _, field := range []struct {
+		name string
+		got  string
+		want string
+	}{
+		{name: "journal title", got: created.Metadata.JournalTitle, want: paper.Metadata.JournalTitle},
+		{name: "journal abbreviation", got: created.Metadata.JournalAbbrev, want: paper.Metadata.JournalAbbrev},
+		{name: "book title", got: created.Metadata.BookTitle, want: paper.Metadata.BookTitle},
+		{name: "series title", got: created.Metadata.SeriesTitle, want: paper.Metadata.SeriesTitle},
+		{name: "event title", got: created.Metadata.EventTitle, want: paper.Metadata.EventTitle},
+		{name: "event place", got: created.Metadata.EventPlace, want: paper.Metadata.EventPlace},
+		{name: "institution", got: created.Metadata.Institution, want: paper.Metadata.Institution},
+	} {
+		if field.got != field.want {
+			t.Errorf("created metadata %s = %q, want %q", field.name, field.got, field.want)
+		}
 	}
 }

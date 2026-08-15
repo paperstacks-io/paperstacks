@@ -5,8 +5,8 @@ import "strings"
 // Metadata contains bibliographic and provenance information
 // describing where and how a publication was published.
 //
-// It includes identifiers such as DOI and ISBN, publication
-// details like volume and issue, licensing information, and
+// It includes identifiers such as DOI, ISBN, and ISSN, publication
+// details like volume and issue, licensing information, and provenance
 // metadata about the source from which this information was
 // retrieved (e.g., CrossRef or IEEE).
 type Metadata struct {
@@ -14,9 +14,26 @@ type Metadata struct {
 	// the work (e.g., "IEEE", "ACM", or "Springer").
 	Publisher string
 
-	// PublishedIn specifies the container in which the work
-	// appears, such as a journal, book, or conference proceedings.
-	PublishedIn string
+	// JournalTitle is the title of the journal in which the work appears.
+	JournalTitle string
+
+	// JournalAbbrev is the abbreviated title of the journal.
+	JournalAbbrev string
+
+	// BookTitle is the title of the book or proceedings containing the work.
+	BookTitle string
+
+	// SeriesTitle is the title of the series containing the work.
+	SeriesTitle string
+
+	// EventTitle is the title of the conference or other event associated with the work.
+	EventTitle string
+
+	// EventLocation is the location of the conference or other event associated with the work.
+	EventLocation string
+
+	// Institution is the institution associated with a thesis or report.
+	Institution string
 
 	// Pages indicates the page number or page range of the work
 	// within the publication (e.g. "11" or "42-53").
@@ -31,6 +48,10 @@ type Metadata struct {
 	// ISBN lists International Standard Book Numbers associated
 	// with the publication, typically used for books or proceedings.
 	ISBN []string
+
+	// ISSN lists International Standard Serial Numbers associated with
+	// journal and other serial publications.
+	ISSN []string
 
 	// References contains external references related to the work,
 	// typically URLs or URIs pointing to additional resources.
@@ -58,8 +79,13 @@ type Metadata struct {
 }
 
 func (m Metadata) Normalize() Metadata {
-	m.Publisher = strings.TrimSpace(m.Publisher)
-	m.PublishedIn = strings.TrimSpace(m.PublishedIn)
+	m.JournalTitle = strings.TrimSpace(m.JournalTitle)
+	m.JournalAbbrev = strings.TrimSpace(m.JournalAbbrev)
+	m.BookTitle = strings.TrimSpace(m.BookTitle)
+	m.SeriesTitle = strings.TrimSpace(m.SeriesTitle)
+	m.EventTitle = strings.TrimSpace(m.EventTitle)
+	m.EventLocation = strings.TrimSpace(m.EventLocation)
+	m.Institution = strings.TrimSpace(m.Institution)
 	m.Pages = strings.TrimSpace(m.Pages)
 	m.Volume = strings.TrimSpace(m.Volume)
 	m.Issue = strings.TrimSpace(m.Issue)
@@ -71,6 +97,10 @@ func (m Metadata) Normalize() Metadata {
 
 	for i := range m.ISBN {
 		m.ISBN[i] = strings.TrimSpace(m.ISBN[i])
+	}
+
+	for i := range m.ISSN {
+		m.ISSN[i] = strings.TrimSpace(m.ISSN[i])
 	}
 
 	for i := range m.References {
