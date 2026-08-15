@@ -12,7 +12,9 @@ import (
 	"testing"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -133,6 +135,111 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 	}
 	if got := rr.Header().Get("Location"); got != stacksPageURL {
 		t.Fatalf("Location = %q, want %q", got, stacksPageURL)
+	}
+}
+
+func TestStacksDetailPageRendersBibLaTeXExportLink(t *testing.T) {
+	t.Parallel()
+
+	stackService := newTestStackService()
+	stack := stackDomain.NewStack("Export Link", userDomain.NewUser("export-link-owner", "export-link@example.com"))
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStacksDetailPage(
+		testLogger(),
+		testPageTemplate(t, "stacks/detail"),
+		"",
+		stackService,
+	)
+	req := newStackDetailRequest(t, stack.UUID)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	want := `href="/app/stacks/detail/` + stack.UUID + `/export/biblatex"`
+	if body := rr.Body.String(); !strings.Contains(body, want) {
+		t.Fatalf("body does not contain export link %q: %s", want, body)
+	}
+}
+
+func TestHandleStackBibLaTeXExportDownloadsStackNamedFile(t *testing.T) {
+	t.Parallel()
+
+	paperRepo := paperMemory.NewRepository()
+	first := paperDomain.Paper{
+		UUID:  "c8deefcf-c68c-44f4-b13e-b4bc35c7f8fc",
+		DOI:   "10.1000/first",
+		Title: "First paper",
+	}
+	second := paperDomain.Paper{
+		UUID:  "22b8cb22-4804-493b-9bb7-5f7b0ee56567",
+		DOI:   "10.1000/second",
+		Title: "Second paper",
+	}
+	for _, paper := range []paperDomain.Paper{first, second} {
+		if _, err := paperRepo.Save(t.Context(), paper); err != nil {
+			t.Fatalf("seed paper: %v", err)
+		}
+	}
+
+	stackService := newTestStackService()
+	stack := stackDomain.NewStack("Literature Review", userDomain.NewUser("export-owner", "export@example.com"))
+	stack.Papers = []paperDomain.Paper{second, first}
+	if err := stackService.Create(t.Context(), *stack); err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+
+	handler := handleStackBibLaTeXExport(
+		testLogger(),
+		stackService,
+		paperApp.NewBibliographyService(paperRepo),
+	)
+	req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/"+stack.UUID+"/export/biblatex", nil)
+	req.SetPathValue("uuid", stack.UUID)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	if got := rr.Header().Get("Content-Type"); got != "application/x-bibtex; charset=utf-8" {
+		t.Fatalf("Content-Type = %q, want BibTeX content type", got)
+	}
+	if got := rr.Header().Get("Content-Disposition"); got != `attachment; filename="Literature Review.bib"` {
+		t.Fatalf("Content-Disposition = %q, want stack-named attachment", got)
+	}
+	want := "@article{10.1000/second,\n  title = {Second paper},\n  doi = {10.1000/second}\n}\n\n" +
+		"@article{10.1000/first,\n  title = {First paper},\n  doi = {10.1000/first}\n}\n"
+	if got := rr.Body.String(); got != want {
+		t.Fatalf("body = %q, want %q", got, want)
+	}
+}
+
+func TestHandleStackBibLaTeXExportReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	handler := handleStackBibLaTeXExport(
+		testLogger(),
+		newTestStackService(),
+		paperApp.NewBibliographyService(paperMemory.NewRepository()),
+	)
+	req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/missing/export/biblatex", nil)
+	req.SetPathValue("uuid", "missing")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+	if got := rr.Header().Get("Content-Disposition"); got != "" {
+		t.Fatalf("Content-Disposition = %q, want none", got)
 	}
 }
 
