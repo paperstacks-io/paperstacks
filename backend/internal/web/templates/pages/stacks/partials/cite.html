@@ -1,6 +1,10 @@
 {{ define "stacks/partials/cite" }}
 
-<section id="citation" class="col-span-12 grid gap-6" data-biblatex="{{ .BibLatex }}">
+<section
+  id="citation"
+  class="col-span-12 grid gap-6"
+  data-biblatex="{{ .BibLatex }}"
+>
   <div class="grid gap-6 w-full">
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
@@ -22,11 +26,18 @@
 
               <button
                 type="button"
-                class="btn shrink-0"
+                class="btn btn-neutral btn-outline"
                 onclick="
-                  navigator.clipboard.writeText(this.closest('fieldset').querySelector('.citation-textarea').value)
+                  navigator.clipboard.writeText(
+                    this.closest('fieldset').querySelector('.citation-textarea')
+                      .value,
+                  )
                 "
               >
+                <svg
+                  data-src="https://unpkg.com/heroicons/20/solid/clipboard-document.svg"
+                  class="size-5"
+                ></svg>
                 Copy
               </button>
             </div>
@@ -39,50 +50,50 @@
 </section>
 
 <script>
-  ;(async () => {
-    const citationElement = document.getElementById("citation")
+  (async () => {
+    const citationElement = document.getElementById("citation");
 
     if (!citationElement) {
-      return
+      return;
     }
 
-    const Cite = require("citation-js")
-    const config = Cite.plugins.config.get("@csl")
+    const Cite = require("citation-js");
+    const config = Cite.plugins.config.get("@csl");
 
-    const textareas = document.querySelectorAll(".citation-textarea")
+    const textareas = document.querySelectorAll(".citation-textarea");
 
     for (const textarea of textareas) {
-      const style = textarea.dataset.style
-      const path = textarea.dataset.cslPath
+      const style = textarea.dataset.style;
+      const path = textarea.dataset.cslPath;
 
       if (!path) {
-        continue
+        continue;
       }
 
-      const response = await fetch(path)
+      const response = await fetch(path);
 
       if (!response.ok) {
-        console.error(`Could not load ${style.toUpperCase()} CSL`)
-        continue
+        console.error(`Could not load ${style.toUpperCase()} CSL`);
+        continue;
       }
 
-      const csl = await response.text()
-      config.styles.add(style, csl)
+      const csl = await response.text();
+      config.styles.add(style, csl);
     }
 
-    const paper = citationElement.dataset.biblatex
-    const cite = new Cite(paper)
+    const paper = citationElement.dataset.biblatex;
+    const cite = new Cite(paper);
 
     textareas.forEach((textarea) => {
       const citation = cite.format("bibliography", {
         format: "text",
         template: textarea.dataset.style,
         lang: "en-US",
-      })
+      });
 
-      textarea.value = citation.trim()
-    })
-  })()
+      textarea.value = citation.trim();
+    });
+  })();
 </script>
 
 {{ end }}
