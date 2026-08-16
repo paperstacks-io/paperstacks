@@ -216,10 +216,15 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		bibLatex, err := bibliographyService.ExportBibLaTeX(ctx, []string{paper.UUID})
+		document, err := bibliographyService.ExportBibLaTeX(ctx, []string{paper.UUID})
+		if err != nil {
+			logger.Error("export paper as BibLaTeX", "paperUUID", paperUUID, "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 
 		data := CitationViewData{
-			BibLatex: string(bibLatex),
+			BibLatex: string(document),
 			Styles:   citationStyles,
 		}
 
