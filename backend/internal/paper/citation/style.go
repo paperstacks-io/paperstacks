@@ -1,15 +1,15 @@
 package citation
 
 type CitationStyle struct {
-	Name    string
-	Style   Style
-	CSLPath string
+	Name  string
+	Style Style
+	Path  string
 }
 
 const (
-	StyleAPA  Style = "apa"
-	StyleIEEE Style = "ieee"
-	StyleACM  Style = "acm"
+	APA  Style = "apa"
+	IEEE Style = "ieee"
+	ACM  Style = "acm"
 )
 
 type Style string

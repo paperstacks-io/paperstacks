@@ -15,7 +15,7 @@
               <textarea
                 class="textarea citation-textarea min-w-0 flex-1 resize-none"
                 data-style="{{ .Style }}"
-                data-csl-path="{{ .CSLPath }}"
+                data-csl-path="{{ .Path }}"
                 rows="3"
                 readonly
               ></textarea>
@@ -23,7 +23,9 @@
               <button
                 type="button"
                 class="btn shrink-0"
-                onclick="navigator.clipboard.writeText(this.previousElementSibling.value)"
+                onclick="
+                  navigator.clipboard.writeText(this.closest('fieldset').querySelector('.citation-textarea').value)
+                "
               >
                 Copy
               </button>

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"html/template"
 	"log/slog"
+	"mime"
 	"net/http"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
@@ -114,6 +115,45 @@ func handleStacksDetailPage(
 	})
 }
 
+func handleStackBibLaTeXExport(
+	logger *slog.Logger,
+	stackService *stackApp.StackService,
+	bibliographyService *paperApp.BibliographyService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stackUUID := r.PathValue("uuid")
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			if errors.Is(err, stackDomain.ErrStackNotFound) {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack for BibLaTeX export", "stackUUID", stackUUID, "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		paperUUIDs := make([]string, len(stack.Papers))
+		for i, paper := range stack.Papers {
+			paperUUIDs[i] = paper.UUID
+		}
+
+		document, err := bibliographyService.ExportBibLaTeX(r.Context(), paperUUIDs)
+		if err != nil {
+			logger.Error("export stack as BibLaTeX", "stackUUID", stackUUID, "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-bibtex; charset=utf-8")
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+			"filename": stack.Name + ".bib",
+		}))
+		_, _ = w.Write(document)
+	})
+}
+
 func handleStackPaperInfo(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -151,8 +191,8 @@ func handleStacksPaperCitation(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
-	citationStyle []citation.CitationStyle,
 	bibliographyService *paperApp.BibliographyService,
+	citationStyles []citation.CitationStyle,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -180,7 +220,7 @@ func handleStacksPaperCitation(
 
 		data := CitationViewData{
 			BibLatex: string(bibLatex),
-			Styles:   citationStyle,
+			Styles:   citationStyles,
 		}
 
 		templateName := "stacks/partials/cite"

@@ -25,7 +25,7 @@ import (
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	"github.com/paperstacks.io/paperstacks/internal/paper/citation"
+	citation "github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
@@ -43,7 +43,9 @@ func run(
 	cfg config.Config,
 ) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	paperService := paperApp.NewPaperService(paperMem.NewRepository())
+	paperRepo := paperMem.NewRepository()
+	paperService := paperApp.NewPaperService(paperRepo)
+	bibliographyService := paperApp.NewBibliographyService(paperRepo)
 	doiService := doiApp.NewDOIService(nil)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
 	userService := userApp.NewUserService(userMem.NewRepository())
@@ -55,20 +57,19 @@ func run(
 	citationStyles := []citation.CitationStyle{
 		{
 			Name:  "APA",
-			Style: citation.StyleAPA,
+			Style: citation.APA,
 		},
 		{
-			Name:    "IEEE",
-			Style:   citation.StyleIEEE,
-			CSLPath: "/app/assets/csl/ieee.csl",
+			Name:  "IEEE",
+			Style: citation.IEEE,
+			Path:  "/app/assets/csl/ieee.csl",
 		},
 		{
-			Name:    "ACM",
-			Style:   citation.StyleACM,
-			CSLPath: "/app/assets/csl/acm-sig-proceedings.csl",
+			Name:  "ACM",
+			Style: citation.ACM,
+			Path:  "/app/assets/csl/acm-sig-proceedings.csl",
 		},
 	}
-	bibliographyService := paperApp.NewBibliographyService(paperMem.NewRepository())
 
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
 		objectStore, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
@@ -92,16 +93,15 @@ func run(
 	userHttp.AddUserRoute(apiMux, logger, userService, userProvisioner, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
-	web.AddRoute(
-		webMux,
+	web.AddRoute(webMux,
 		cfg,
 		logger,
 		paperService,
+		bibliographyService,
 		stackService,
 		userService,
 		sessionService,
 		citationStyles,
-		bibliographyService,
 	)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))

@@ -28,11 +28,11 @@ func AddRoute(
 	cfg config.Config,
 	logger *slog.Logger,
 	paperService *paperApp.PaperService,
+	bibliographyService *paperApp.BibliographyService,
 	stackService *stackApp.StackService,
 	userService *userApp.UserService,
 	sessionService commonauth.SessionService,
-	citationStyle []citation.CitationStyle,
-	bibliographyService *paperApp.BibliographyService,
+	citationStyles []citation.CitationStyle,
 ) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -73,10 +73,11 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /stacks/page", authenticated(handleStacksPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
 	stacksDetailTmpl := pageTemplate("stacks/detail")
 	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}", authenticated(handleStacksDetailPage(logger, stacksDetailTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}/export/biblatex", authenticated(handleStackBibLaTeXExport(logger, stackService, bibliographyService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
-	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}/citation", authenticated(handleStacksPaperCitation(logger, tmpl, paperService, citationStyle, bibliographyService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}/citation", authenticated(handleStacksPaperCitation(logger, tmpl, paperService, bibliographyService, citationStyles)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/papers/{paperUUID}/remove", authenticated(handleStackPaperRemove(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))
