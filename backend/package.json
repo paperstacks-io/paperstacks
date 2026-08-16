@@ -2,15 +2,17 @@
   "name": "paperstacks-backend",
   "private": true,
   "scripts": {
-    "build:web-assets": "npm run build:css && npm run build:htmx",
+    "build:web-assets": "npm run build:css && npm run build:htmx && npm run build:citation",
     "build:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --minify",
     "build:htmx": "node ./scripts/copy-htmx.mjs",
+    "build:citation": "node ./scripts/copy-citation.mjs",
     "watch:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --watch --minify",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.3.2",
+    "citation-js": "^0.8.2",
     "htmx.org": "^2.0.10"
   },
   "devDependencies": {
