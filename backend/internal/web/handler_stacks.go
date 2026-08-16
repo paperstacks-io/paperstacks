@@ -5,11 +5,10 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	citationApp "github.com/paperstacks.io/paperstacks/internal/paper/citation"
+	"github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -44,15 +43,6 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
-type CitationView struct {
-	Style    string
-	Citation string
-}
-
-type CiteViewData struct {
-	Citations []CitationView
-}
-
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
 	return stacksListData{
 		Items:         result.Items,
@@ -71,6 +61,11 @@ type stacksPageData struct {
 	pageData
 	StacksCountTotal  int
 	StacksCountPublic int
+}
+
+type CitationViewData struct {
+	BibLatex string
+	Styles   []citation.CitationStyle
 }
 
 func handleStacksDetailPage(
@@ -156,7 +151,8 @@ func handleStacksPaperCitation(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
-	citationService citationApp.CitationService,
+	citationStyle []citation.CitationStyle,
+	bibliographyService *paperApp.BibliographyService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -180,28 +176,11 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		styles := []citationApp.CitationStyle{
-			citationApp.CitationStyleAPA,
-			citationApp.CitationStyleIEEE,
-			citationApp.CitationStyleACM,
-		}
+		bibLatex, err := bibliographyService.ExportBibLaTeX(ctx, []string{paper.UUID})
 
-		data := CiteViewData{
-			Citations: make([]CitationView, 0, len(styles)),
-		}
-
-		for _, style := range styles {
-			formattedCitation, err := citationService.Format(paper, style)
-			if err != nil {
-				logger.Error("generate citation", "error", err.Error())
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-
-			data.Citations = append(data.Citations, CitationView{
-				Style:    strings.ToUpper(string(style)),
-				Citation: formattedCitation,
-			})
+		data := CitationViewData{
+			BibLatex: string(bibLatex),
+			Styles:   citationStyle,
 		}
 
 		templateName := "stacks/partials/cite"

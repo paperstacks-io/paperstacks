@@ -1,18 +1,24 @@
 {{ define "stacks/partials/cite" }}
 
-<section class="col-span-12 grid gap-6">
+<section id="citation" class="col-span-12 grid gap-6" data-biblatex="{{ .BibLatex }}">
   <div class="grid gap-6 w-full">
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
         <h2 class="card-title">Cite</h2>
 
         <div class="overflow-x-auto">
-          {{ range .Citations }}
+          {{ range .Styles }}
           <fieldset class="fieldset">
-            <label class="label">{{ .Style }}</label>
+            <label class="label">{{ .Name }}</label>
 
             <div class="flex items-center gap-3">
-              <textarea class="textarea min-w-0 flex-1 resize-none" rows="3" readonly>{{ .Citation }}</textarea>
+              <textarea
+                class="textarea citation-textarea min-w-0 flex-1 resize-none"
+                data-style="{{ .Style }}"
+                data-csl-path="{{ .CSLPath }}"
+                rows="3"
+                readonly
+              ></textarea>
 
               <button
                 type="button"
@@ -29,5 +35,52 @@
     </div>
   </div>
 </section>
+
+<script>
+  ;(async () => {
+    const citationElement = document.getElementById("citation")
+
+    if (!citationElement) {
+      return
+    }
+
+    const Cite = require("citation-js")
+    const config = Cite.plugins.config.get("@csl")
+
+    const textareas = document.querySelectorAll(".citation-textarea")
+
+    for (const textarea of textareas) {
+      const style = textarea.dataset.style
+      const path = textarea.dataset.cslPath
+
+      if (!path) {
+        continue
+      }
+
+      const response = await fetch(path)
+
+      if (!response.ok) {
+        console.error(`Could not load ${style.toUpperCase()} CSL`)
+        continue
+      }
+
+      const csl = await response.text()
+      config.styles.add(style, csl)
+    }
+
+    const paper = citationElement.dataset.biblatex
+    const cite = new Cite(paper)
+
+    textareas.forEach((textarea) => {
+      const citation = cite.format("bibliography", {
+        format: "text",
+        template: textarea.dataset.style,
+        lang: "en-US",
+      })
+
+      textarea.value = citation.trim()
+    })
+  })()
+</script>
 
 {{ end }}

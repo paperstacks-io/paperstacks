@@ -1,13 +1,19 @@
 package citation
 
-import "errors"
-
-var ErrUnsupportedCitationStyle = errors.New("unsupported citation style")
+type CitationStyle struct {
+	Name    string
+	Style   Style
+	CSLPath string
+}
 
 const (
-	CitationStyleAPA  CitationStyle = "APA"
-	CitationStyleIEEE CitationStyle = "IEEE"
-	CitationStyleACM  CitationStyle = "ACM"
+	StyleAPA  Style = "apa"
+	StyleIEEE Style = "ieee"
+	StyleACM  Style = "acm"
 )
 
-type CitationStyle string
+type Style string
+
+func CitationStyles(styles ...CitationStyle) []CitationStyle {
+	return styles
+}
