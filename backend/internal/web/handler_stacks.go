@@ -3,12 +3,14 @@ package web
 import (
 	"errors"
 	"html/template"
+	"io"
 	"log/slog"
 	"mime"
 	"net/http"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -18,6 +20,17 @@ import (
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
 
 const stacksPageURL = "/app/stacks/page"
+
+const (
+	maxBibLaTeXFileSize    int64 = 10 << 20
+	maxBibLaTeXRequestSize int64 = maxBibLaTeXFileSize + (1 << 20)
+)
+
+type stackBibLaTeXImportData struct {
+	Candidates []bibliography.ImportedPaper
+	Existing   []bibliography.ImportedPaper
+	Rejected   []paperApp.RejectedBibLaTeXEntry
+}
 
 type papersListData struct {
 	Items         []paperDomain.Paper
@@ -145,6 +158,92 @@ func handleStackBibLaTeXExport(
 			"filename": stack.Name + ".bib",
 		}))
 		_, _ = w.Write(document)
+	})
+}
+
+func handleStackBibLaTeXImport(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	bibliographyService *paperApp.BibliographyService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			_ = renderErrorToast(w, tmpl, "Please log in before importing papers.")
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			if !errors.Is(err, stackDomain.ErrStackNotFound) {
+				logger.Error("get stack before BibLaTeX import", "stackUUID", stackUUID, "error", err.Error())
+			}
+			_ = renderErrorToast(w, tmpl, "The requested stack could not be found.")
+			return
+		}
+		if stack.Owner.ExternalID != session.UserID {
+			_ = renderErrorToast(w, tmpl, "You are not allowed to import papers into this stack.")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, maxBibLaTeXRequestSize)
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			if r.MultipartForm != nil {
+				_ = r.MultipartForm.RemoveAll()
+			}
+			_ = renderErrorToast(w, tmpl, "Upload a .bib file no larger than 10 MiB.")
+			return
+		}
+		defer r.MultipartForm.RemoveAll()
+
+		file, _, err := r.FormFile("biblatex")
+		if err != nil {
+			_ = renderErrorToast(w, tmpl, "Choose a .bib file to import.")
+			return
+		}
+		defer file.Close()
+
+		source, err := io.ReadAll(io.LimitReader(file, maxBibLaTeXFileSize+1))
+		if err != nil {
+			logger.Error("read BibLaTeX upload", "stackUUID", stackUUID, "error", err.Error())
+			_ = renderErrorToast(w, tmpl, "The uploaded file could not be read.")
+			return
+		}
+
+		switch {
+		case len(source) == 0:
+			_ = renderErrorToast(w, tmpl, "The uploaded .bib file is empty.")
+			return
+		case int64(len(source)) > maxBibLaTeXFileSize:
+			_ = renderErrorToast(w, tmpl, "Choose a .bib file no larger than 10 MiB.")
+			return
+		}
+
+		result, importErr := bibliographyService.ImportBibLaTeX(ctx, source)
+		data := stackBibLaTeXImportData{
+			Candidates: result.Created,
+			Existing:   result.Existing,
+			Rejected:   result.Rejected,
+		}
+
+		if importErr != nil {
+			if errors.Is(importErr, bibliography.ErrInvalidBibLaTeX) {
+				_ = renderErrorToast(w, tmpl, "The file is not valid BibLaTeX. Check its syntax and try again.")
+			} else {
+				logger.Error("import BibLaTeX", "stackUUID", stackUUID, "error", importErr.Error())
+				_ = renderErrorToast(w, tmpl, "The import stopped because of a server error.")
+			}
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", data); err != nil {
+			logger.Error("render BibLaTeX import result", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
 	})
 }
 
