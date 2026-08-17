@@ -26,6 +26,19 @@
       <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
       Export as BibLaTeX
     </a>
+    <a
+      class="btn btn-sm"
+      href="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
+      hx-get="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
+      hx-target="#page-shell"
+      hx-select="#page-shell"
+      hx-select-oob="#sidebar:outerHTML"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+    >
+      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-down-tray.svg" class="size-4"></svg>
+      Import from BibLaTeX
+    </a>
     <button class="btn btn-sm" type="button" onclick="modal_confirm_delete.showModal()">
       <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
       Delete
