@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
@@ -157,6 +158,10 @@ func (s *StackService) AddPaper(ctx context.Context, stackUUID string, paperUUID
 	}
 
 	return s.repo.AddPaper(ctx, stackUUID, paper)
+}
+
+func (s *StackService) ImportPapers(ctx context.Context, stackUUID string, in bibliography.ImportResult) error {
+	return nil
 }
 
 // RemovePaper removes a paper from the specified stack.
