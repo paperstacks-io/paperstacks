@@ -490,7 +490,6 @@ func TestHandleStackBibLaTeXImportDisplaysCandidatesWithoutAddingToStack(t *test
 	handleStackBibLaTeXImport(
 		testLogger(),
 		testWebTemplate(t),
-		paperApp.NewBibliographyService(paperService),
 		stackService,
 	).ServeHTTP(rr, req)
 

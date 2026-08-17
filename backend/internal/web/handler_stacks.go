@@ -26,12 +26,6 @@ const (
 	maxBibLaTeXRequestSize int64 = maxBibLaTeXFileSize + (1 << 20)
 )
 
-type stackBibLaTeXImportData struct {
-	Candidates []bibliography.ImportedPaper
-	Existing   []bibliography.ImportedPaper
-	Rejected   []paperApp.RejectedBibLaTeXEntry
-}
-
 type papersListData struct {
 	Items         []paperDomain.Paper
 	Total         int
@@ -158,7 +152,6 @@ func handleStackBibLaTeXExport(
 func handleStackBibLaTeXImport(
 	logger *slog.Logger,
 	tmpl *template.Template,
-	bibliographyService *paperApp.BibliographyService,
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -216,12 +209,7 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
-		result, importErr := bibliographyService.ImportBibLaTeX(ctx, source)
-		data := stackBibLaTeXImportData{
-			Candidates: result.Created,
-			Existing:   result.Existing,
-			Rejected:   result.Rejected,
-		}
+		result, importErr := bibliography.ImportBibLaTeX(source)
 
 		if importErr != nil {
 			if errors.Is(importErr, bibliography.ErrInvalidBibLaTeX) {
@@ -234,7 +222,7 @@ func handleStackBibLaTeXImport(
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", data); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", result); err != nil {
 			logger.Error("render BibLaTeX import result", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}

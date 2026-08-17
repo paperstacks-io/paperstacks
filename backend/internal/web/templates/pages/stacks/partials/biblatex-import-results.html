@@ -1,7 +1,7 @@
 {{ define "stacks/partials/biblatex-import-results" }}
 <div class="space-y-4">
   <div class="overflow-x-auto">
-    <h2>New</h2>
+    <h2>Candidates</h2>
     <table class="table">
       <thead>
         <tr>
@@ -12,7 +12,7 @@
         </tr>
       </thead>
       <tbody>
-        {{ range .Candidates}}
+        {{ range .Entries}}
         <tr>
           <td>
             <div class="font-bold">{{ .Paper.Title }}</div>
@@ -32,65 +32,23 @@
       </tbody>
     </table>
 
-    <h2>Existing</h2>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Authors</th>
-          <th>Published</th>
-          <th>DOI</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{ range .Existing}}
-        <tr>
-          <td>
-            <div class="font-bold">{{ .Paper.Title }}</div>
-            {{ if .Warnings }}
-            <ul class="text-warning list-disc pl-4 text-sm">
-              {{ range .Warnings }}
-              <li>{{ if .Field }}{{ .Field }}: {{ end }}{{ .Message }}</li>
-              {{ end }}
-            </ul>
-            {{ end }}
-          </td>
-          <td>{{ range $i, $author := .Paper.Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
-          <td>{{ .Paper.PublicationDate }}</td>
-          <td>{{ .Paper.DOI }}</td>
-        </tr>
-        {{ end }}
-      </tbody>
-    </table>
 
     <h2>Rejected</h2>
 
     <table class="table">
       <thead>
         <tr>
-          <th>Title</th>
-          <th>Authors</th>
-          <th>Published</th>
-          <th>DOI</th>
+          <th>Entry</th>
+          <th>Field</th>
+          <th>Error</th>
         </tr>
       </thead>
       <tbody>
-        {{ range .Rejected}}
+        {{ range .Errors}}
         <tr>
-          <td>
-            <div class="font-bold">{{ .Paper.Title }}</div>
-            {{ if .Warnings }}
-            <ul class="text-warning list-disc pl-4 text-sm">
-              {{ range .Warnings }}
-              <li>{{ if .Field }}{{ .Field }}: {{ end }}{{ .Message }}</li>
-              {{ end }}
-            </ul>
-            {{ end }}
-          </td>
-          <td>{{ range $i, $author := .Paper.Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
-          <td>{{ .Paper.PublicationDate }}</td>
-          <td>{{ .Paper.DOI }}</td>
+          <td>{{ .EntryKey }}</td>
+          <td>{{ .Field }}</td>
+          <td class="text-error">{{ .Message }}</td>
         </tr>
         {{ end }}
       </tbody>
