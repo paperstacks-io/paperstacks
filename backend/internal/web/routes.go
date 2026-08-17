@@ -27,7 +27,6 @@ func AddRoute(
 	cfg config.Config,
 	logger *slog.Logger,
 	paperService *paperApp.PaperService,
-	bibliographyService *paperApp.BibliographyService,
 	stackService *stackApp.StackService,
 	userService *userApp.UserService,
 	sessionService commonauth.SessionService,
@@ -74,7 +73,7 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/{uuid}/import/biblatex", authenticated(handleStackBibLaTeXImport(logger, tmpl, bibliographyService, stackService)))
 	stacksDetailTmpl := pageTemplate("stacks/detail")
 	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}", authenticated(handleStacksDetailPage(logger, stacksDetailTmpl, cfg.HankoAPIURL, stackService)))
-	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}/export/biblatex", authenticated(handleStackBibLaTeXExport(logger, stackService, bibliographyService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}/export/biblatex", authenticated(handleStackBibLaTeXExport(logger, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))

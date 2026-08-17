@@ -125,7 +125,6 @@ func handleStacksDetailPage(
 func handleStackBibLaTeXExport(
 	logger *slog.Logger,
 	stackService *stackApp.StackService,
-	bibliographyService *paperApp.BibliographyService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		stackUUID := r.PathValue("uuid")
@@ -141,12 +140,7 @@ func handleStackBibLaTeXExport(
 			return
 		}
 
-		paperUUIDs := make([]string, len(stack.Papers))
-		for i, paper := range stack.Papers {
-			paperUUIDs[i] = paper.UUID
-		}
-
-		document, err := bibliographyService.ExportBibLaTeX(r.Context(), paperUUIDs)
+		document, err := bibliography.ExportBibLaTeX(stack.Papers)
 		if err != nil {
 			logger.Error("export stack as BibLaTeX", "stackUUID", stackUUID, "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

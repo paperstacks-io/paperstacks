@@ -25,13 +25,13 @@ type Diagnostic struct {
 
 // ImportResult is the result of parsing a complete BibLaTeX document.
 type ImportResult struct {
-	Entries []ImportedPaper
+	Entries []PaperEntry
 	Errors  []Diagnostic
 }
 
-// ImportedPaper is one BibLaTeX entry translated to a Paper candidate. Paper
+// PaperEntry is one BibLaTeX entry translated to a Paper candidate. Paper
 // UUIDs are deliberately left empty: allocation belongs to PaperService.Create.
-type ImportedPaper struct {
+type PaperEntry struct {
 	SourceKey string
 	Paper     domain.Paper
 	Warnings  []Diagnostic
@@ -55,7 +55,7 @@ func ImportBibLaTeX(source []byte) (ImportResult, error) {
 	}
 
 	result := ImportResult{
-		Entries: make([]ImportedPaper, 0, len(entries)),
+		Entries: make([]PaperEntry, 0, len(entries)),
 		Errors:  make([]Diagnostic, 0),
 	}
 	for _, entry := range entries {
@@ -67,7 +67,7 @@ func ImportBibLaTeX(source []byte) (ImportResult, error) {
 	return result, nil
 }
 
-func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
+func importBibLaTeXEntry(entry bibLaTeXEntry) (PaperEntry, []Diagnostic) {
 	paper := domain.Paper{
 		Title:      bibLaTeXImportField(entry, "title"),
 		TitleShort: bibLaTeXImportField(entry, "shorttitle"),
@@ -138,7 +138,7 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (ImportedPaper, []Diagnostic) {
 		errors = append(errors, entryDiagnostic(entry.key, "", "publication type not supported"))
 	}
 
-	return ImportedPaper{
+	return PaperEntry{
 		SourceKey: entry.key,
 		Paper:     paper,
 		Warnings:  warnings,
