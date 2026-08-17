@@ -44,7 +44,7 @@ func run(
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	paperRepo := paperMem.NewRepository()
 	paperService := paperApp.NewPaperService(paperRepo)
-	bibliographyService := paperApp.NewBibliographyService(paperRepo)
+	bibliographyService := paperApp.NewBibliographyService(paperService)
 	doiService := doiApp.NewDOIService(nil)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
 	userService := userApp.NewUserService(userMem.NewRepository())
