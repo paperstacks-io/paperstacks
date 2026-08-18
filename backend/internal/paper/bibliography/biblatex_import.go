@@ -133,8 +133,7 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) PaperEntry {
 		errors = append(errors, entryDiagnostic(entry.key, "title", "title is required"))
 	}
 
-	hasAuthors := len(paper.Authors) > 0 && paper.Authors[0].NameLast != "" && paper.Authors[0].NameFirst != ""
-	if !hasAuthors {
+	if len(paper.Authors) == 0 || paper.Authors[0].NameFirst == "" || paper.Authors[0].NameLast == "" {
 		errors = append(errors, entryDiagnostic(entry.key, "author", "author is required (first + last name)"))
 	}
 
@@ -214,51 +213,46 @@ func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, error) {
 }
 
 func parseBibLaTeXDate(value string) (domain.Date, error) {
-	for _, candidate := range [...]struct {
-		layout    string
-		precision int
-	}{
-		{layout: "2006-01-02", precision: 3},
-		{layout: "2006-01", precision: 2},
-		{layout: "2006", precision: 1},
-	} {
-		parsed, err := time.Parse(candidate.layout, value)
-		if err != nil {
-			continue
-		}
-
-		date := domain.Date{Year: parsed.Year()}
-		if candidate.precision >= 2 {
-			date.Month = int(parsed.Month())
-		}
-		if candidate.precision == 3 {
-			date.Day = parsed.Day()
-		}
-		if date.Year > 0 && date.IsValid() {
-			return date, nil
-		}
+	if parsed, err := time.Parse("2006-01-02", value); err == nil && parsed.Year() > 0 {
+		return domain.Date{Year: parsed.Year(), Month: int(parsed.Month()), Day: parsed.Day()}, nil
+	}
+	if parsed, err := time.Parse("2006-01", value); err == nil && parsed.Year() > 0 {
+		return domain.Date{Year: parsed.Year(), Month: int(parsed.Month())}, nil
+	}
+	if parsed, err := time.Parse("2006", value); err == nil && parsed.Year() > 0 {
+		return domain.Date{Year: parsed.Year()}, nil
 	}
 
-	return domain.Date{}, fmt.Errorf("invalid BibLaTeX date %q, supported date types are ['2006-01-0', '2006-01', '2006']", value)
+	return domain.Date{}, fmt.Errorf("invalid BibLaTeX date %q; supported formats are YYYY, YYYY-MM, and YYYY-MM-DD", value)
 }
 
 func bibLaTeXMonth(value string) int {
-	months := map[string]int{
-		"jan": 1, "january": 1,
-		"feb": 2, "february": 2,
-		"mar": 3, "march": 3,
-		"apr": 4, "april": 4,
-		"may": 5,
-		"jun": 6, "june": 6,
-		"jul": 7, "july": 7,
-		"aug": 8, "august": 8,
-		"sep": 9, "sept": 9, "september": 9,
-		"oct": 10, "october": 10,
-		"nov": 11, "november": 11,
-		"dec": 12, "december": 12,
-	}
-	if month, ok := months[strings.ToLower(strings.TrimSpace(value))]; ok {
-		return month
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "jan", "january":
+		return 1
+	case "feb", "february":
+		return 2
+	case "mar", "march":
+		return 3
+	case "apr", "april":
+		return 4
+	case "may":
+		return 5
+	case "jun", "june":
+		return 6
+	case "jul", "july":
+		return 7
+	case "aug", "august":
+		return 8
+	case "sep", "sept", "september":
+		return 9
+	case "oct", "october":
+		return 10
+	case "nov", "november":
+		return 11
+	case "dec", "december":
+		return 12
 	}
 
 	month, _ := strconv.Atoi(value)
@@ -312,27 +306,16 @@ func bibLaTeXAuthorsToDomain(value string) []domain.Author {
 }
 
 func splitBibLaTeXNames(value string) []string {
-	return splitBibLaTeXDelimited(value, func(value string, index int) (int, bool) {
-		if index+5 > len(value) || !strings.EqualFold(value[index:index+5], " and ") {
-			return 0, false
-		}
-		return 5, true
-	})
+	return splitBibLaTeXDelimited(value, " and ")
 }
 
 func splitBibLaTeXCommas(value string) []string {
-	return splitBibLaTeXDelimited(value, func(value string, index int) (int, bool) {
-		if value[index] != ',' {
-			return 0, false
-		}
-		return 1, true
-	})
+	return splitBibLaTeXDelimited(value, ",")
 }
 
 func splitBibLaTeXList(value string) []string {
-	parts := strings.Split(value, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
+	var result []string
+	for part := range strings.SplitSeq(value, ",") {
 		if part = strings.TrimSpace(part); part != "" {
 			result = append(result, part)
 		}
@@ -340,7 +323,7 @@ func splitBibLaTeXList(value string) []string {
 	return result
 }
 
-func splitBibLaTeXDelimited(value string, delimiter func(string, int) (int, bool)) []string {
+func splitBibLaTeXDelimited(value, delimiter string) []string {
 	parts := make([]string, 0, 1)
 	start := 0
 	depth := 0
@@ -356,20 +339,18 @@ func splitBibLaTeXDelimited(value string, delimiter func(string, int) (int, bool
 				depth--
 			}
 		default:
-			if depth == 0 {
-				if width, ok := delimiter(value, index); ok {
-					parts = append(parts, value[start:index])
-					index += width
-					start = index
-					continue
-				}
+			end := index + len(delimiter)
+			if depth == 0 && end <= len(value) && strings.EqualFold(value[index:end], delimiter) {
+				parts = append(parts, value[start:index])
+				index = end
+				start = index
+				continue
 			}
 		}
 		_, width := utf8.DecodeRuneInString(value[index:])
 		index += width
 	}
-	parts = append(parts, value[start:])
-	return parts
+	return append(parts, value[start:])
 }
 
 func splitGivenName(value string) (string, string) {
@@ -412,17 +393,15 @@ func removeBibLaTeXGrouping(value string) string {
 }
 
 func unsupportedBibLaTeXFields(fields map[string]string) []string {
-	supported := map[string]struct{}{
-		"title": {}, "shorttitle": {}, "author": {}, "date": {}, "year": {}, "month": {},
-		"doi": {}, "url": {}, "abstract": {}, "keywords": {}, "isbn": {}, "issn": {},
-		"journaltitle": {}, "journal": {}, "shortjournal": {}, "booktitle": {}, "series": {},
-		"eventtitle": {}, "eventplace": {}, "location": {}, "institution": {}, "publisher": {},
-		"volume": {}, "number": {}, "pages": {},
-	}
-
-	unsupported := make([]string, 0)
+	var unsupported []string
 	for field := range fields {
-		if _, ok := supported[field]; !ok {
+		switch field {
+		case "title", "shorttitle", "author", "date", "year", "month",
+			"doi", "url", "abstract", "keywords", "isbn", "issn",
+			"journaltitle", "journal", "shortjournal", "booktitle", "series",
+			"eventtitle", "eventplace", "location", "institution", "publisher",
+			"volume", "number", "pages":
+		default:
 			unsupported = append(unsupported, field)
 		}
 	}
@@ -577,7 +556,7 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 func (parser *bibLaTeXParser) readValue(close byte) (string, []Diagnostic, error) {
 	parser.skipSpace()
 	var value strings.Builder
-	diagnostics := make([]Diagnostic, 0)
+	var diagnostics []Diagnostic
 	for {
 		part, diagnostic, err := parser.readValuePart(close)
 		if err != nil {
