@@ -186,7 +186,7 @@ func handleStackBibLaTeXImport(
 		}
 		defer r.MultipartForm.RemoveAll()
 
-		file, _, err := r.FormFile("biblatex")
+		file, _, err := r.FormFile("bib_file")
 		if err != nil {
 			_ = renderErrorToast(w, tmpl, "Choose a .bib file to import.")
 			return
@@ -209,7 +209,8 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
-		result, importErr := bibliography.ImportBibLaTeX(source)
+		candiates, importErr := bibliography.ImportBibLaTeX(source)
+		// failed := candiates.Failed
 
 		if importErr != nil {
 			if errors.Is(importErr, bibliography.ErrInvalidBibLaTeX) {
@@ -222,7 +223,7 @@ func handleStackBibLaTeXImport(
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", result); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", candiates); err != nil {
 			logger.Error("render BibLaTeX import result", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}

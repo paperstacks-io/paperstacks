@@ -1,4 +1,10 @@
 {{ define "stacks/partials/biblatex-import-results" }}
+
+<p>Imported: {{ len .Imported }}</p>
+<p>Allready in Papers: unknown</p>
+<p>In Stack: unknown</p>
+<p>Failed: {{ len .Failed}}</p>
+
 <div class="space-y-4">
   <div class="overflow-x-auto">
     <h2>Candidates</h2>
@@ -12,7 +18,7 @@
         </tr>
       </thead>
       <tbody>
-        {{ range .Entries}}
+        {{ range .Imported}}
         <tr>
           <td>
             <div class="font-bold">{{ .Paper.Title }}</div>
@@ -27,28 +33,6 @@
           <td>{{ range $i, $author := .Paper.Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
           <td>{{ .Paper.PublicationDate }}</td>
           <td>{{ .Paper.DOI }}</td>
-        </tr>
-        {{ end }}
-      </tbody>
-    </table>
-
-
-    <h2>Rejected</h2>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Entry</th>
-          <th>Field</th>
-          <th>Error</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{ range .Errors}}
-        <tr>
-          <td>{{ .EntryKey }}</td>
-          <td>{{ .Field }}</td>
-          <td class="text-error">{{ .Message }}</td>
         </tr>
         {{ end }}
       </tbody>
