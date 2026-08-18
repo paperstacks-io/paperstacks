@@ -41,14 +41,17 @@ func TestImportBibLaTeXMapsSeedPapers(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if len(result.Entries) != 1 {
-				t.Fatalf("expected one candidate, got %d", len(result.Entries))
+			if len(result.Imported) != 1 {
+				t.Fatalf("expected one imported candidate, got %d", len(result.Imported))
 			}
-			if len(result.Errors) != 0 {
-				t.Fatalf("expected no errors, got %#v", result.Errors)
+			if len(result.Failed) != 0 {
+				t.Fatalf("expected no failed candidates, got %#v", result.Failed)
 			}
 
-			imported := result.Entries[0]
+			imported := result.Imported[0]
+			if len(imported.Errors) != 0 {
+				t.Fatalf("expected no errors, got %#v", imported.Errors)
+			}
 			want := getSeedPaper(tt.uuid)
 			if imported.SourceKey != want.DOI {
 				t.Errorf("source key = %q, want %q", imported.SourceKey, want.DOI)
@@ -76,19 +79,22 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(result.Entries) != 1 {
-		t.Fatalf("expected one candidate, got %d", len(result.Entries))
+	if len(result.Imported) != 0 {
+		t.Fatalf("expected 0 imported candidate, got %d", len(result.Imported))
+	}
+	if len(result.Failed) != 1 {
+		t.Fatalf("expected 1 failed imported candidate, got %d", len(result.Failed))
 	}
 
-	imported := result.Entries[0]
+	imported := result.Failed[0]
 	if !imported.Paper.PublicationDate.IsZero() {
 		t.Errorf("publication date = %#v, want zero date", imported.Paper.PublicationDate)
 	}
 	if len(imported.Paper.Metadata.References) != 0 {
 		t.Errorf("references = %#v, want omitted invalid URL", imported.Paper.Metadata.References)
 	}
-	if !hasDiagnostic(result.Errors, "date", "partial") {
-		t.Errorf("missing date error: %#v", result.Errors)
+	if !hasDiagnostic(imported.Errors, "date", "partial") {
+		t.Errorf("missing date error: %#v", imported.Errors)
 	}
 	for _, field := range []string{"url", "editor"} {
 		if !hasDiagnostic(imported.Warnings, field, "partial") {
@@ -97,23 +103,28 @@ func TestImportBibLaTeXReportsRepresentationalProblems(t *testing.T) {
 	}
 }
 
-func TestImportBibLaTeXReportsMissingTitleAndDOI(t *testing.T) {
+func TestImportBibLaTeXReportsEntryErrors(t *testing.T) {
 	t.Parallel()
 
-	result, err := ImportBibLaTeX([]byte("@article{missing-title-and-doi}"))
+	source, err := os.ReadFile(filepath.Join("testdata", "import-error.bib"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Entries) != 1 {
-		t.Fatalf("expected one candidate, got %d", len(result.Entries))
+
+	result, err := ImportBibLaTeX(source)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if !hasDiagnostic(result.Errors, "title", "missing-title-and-doi") {
-		t.Error("missing title error")
+	if len(result.Imported) != 1 {
+		t.Fatalf("expected 1 imported candidates, got %d", len(result.Imported))
+	}
+	if result.Imported[0].SourceKey != "ok" {
+		t.Fatalf("expected %s as key for imported candidates, got %s", "ok", result.Imported[0].SourceKey)
 	}
 
-	if !hasDiagnostic(result.Errors, "doi", "missing-title-and-doi") {
-		t.Error("missing doi error")
+	if len(result.Failed) != 3 {
+		t.Fatalf("expected 3 failed candidates, got %#v", result.Failed)
 	}
 }
 
@@ -132,7 +143,7 @@ func TestImportBibLaTeXRejectsMalformedDocument(t *testing.T) {
 	if !errors.Is(err, ErrInvalidBibLaTeX) {
 		t.Errorf("error = %v, want ErrInvalidBibLaTeX", err)
 	}
-	if len(result.Entries) != 0 || len(result.Errors) != 0 {
+	if len(result.Imported) != 0 || len(result.Failed) != 0 {
 		t.Errorf("result = %#v, want empty result", result)
 	}
 }
