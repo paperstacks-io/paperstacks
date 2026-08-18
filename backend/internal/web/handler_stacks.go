@@ -22,8 +22,8 @@ const invalidStackNameMessage = "Stack name must be 1-80 characters and contain 
 const stacksPageURL = "/app/stacks/page"
 
 const (
-	maxBibLaTeXFileSize    int64 = 10 << 20
-	maxBibLaTeXRequestSize int64 = maxBibLaTeXFileSize + (1 << 20)
+	oneMiB int64 = 1 << 20
+	tenMiB int64 = 10 << 20
 )
 
 type papersListData struct {
@@ -176,8 +176,8 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
-		r.Body = http.MaxBytesReader(w, r.Body, maxBibLaTeXRequestSize)
-		if err := r.ParseMultipartForm(1 << 20); err != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, tenMiB+oneMiB)
+		if err := r.ParseMultipartForm(oneMiB); err != nil {
 			if r.MultipartForm != nil {
 				_ = r.MultipartForm.RemoveAll()
 			}
@@ -193,7 +193,7 @@ func handleStackBibLaTeXImport(
 		}
 		defer file.Close()
 
-		source, err := io.ReadAll(io.LimitReader(file, maxBibLaTeXFileSize+1))
+		source, err := io.ReadAll(io.LimitReader(file, tenMiB+1))
 		if err != nil {
 			logger.Error("read BibLaTeX upload", "stackUUID", stackUUID, "error", err.Error())
 			_ = renderErrorToast(w, tmpl, "The uploaded file could not be read.")
@@ -204,7 +204,7 @@ func handleStackBibLaTeXImport(
 		case len(source) == 0:
 			_ = renderErrorToast(w, tmpl, "The uploaded .bib file is empty.")
 			return
-		case int64(len(source)) > maxBibLaTeXFileSize:
+		case int64(len(source)) > tenMiB:
 			_ = renderErrorToast(w, tmpl, "Choose a .bib file no larger than 10 MiB.")
 			return
 		}
