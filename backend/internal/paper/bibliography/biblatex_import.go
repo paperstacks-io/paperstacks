@@ -25,8 +25,8 @@ type Diagnostic struct {
 
 // ImportResult is the result of parsing a complete BibLaTeX document.
 type ImportResult struct {
-	Entries []PaperEntry
-	Errors  []Diagnostic
+	Imported []PaperEntry
+	Failed   []PaperEntry
 }
 
 // PaperEntry is one BibLaTeX entry translated to a Paper candidate. Paper
@@ -35,6 +35,7 @@ type PaperEntry struct {
 	SourceKey string
 	Paper     domain.Paper
 	Warnings  []Diagnostic
+	Errors    []Diagnostic
 }
 
 type bibLaTeXEntry struct {
@@ -55,19 +56,23 @@ func ImportBibLaTeX(source []byte) (ImportResult, error) {
 	}
 
 	result := ImportResult{
-		Entries: make([]PaperEntry, 0, len(entries)),
-		Errors:  make([]Diagnostic, 0),
+		Imported: make([]PaperEntry, 0, len(entries)),
+		Failed:   make([]PaperEntry, 0),
 	}
 	for _, entry := range entries {
-		imported, errors := importBibLaTeXEntry(entry)
-		result.Entries = append(result.Entries, imported)
-		result.Errors = append(result.Errors, errors...)
+		imported := importBibLaTeXEntry(entry)
+		if len(imported.Errors) > 0 {
+			result.Failed = append(result.Failed, imported)
+			continue
+		}
+
+		result.Imported = append(result.Imported, imported)
 	}
 
 	return result, nil
 }
 
-func importBibLaTeXEntry(entry bibLaTeXEntry) (PaperEntry, []Diagnostic) {
+func importBibLaTeXEntry(entry bibLaTeXEntry) PaperEntry {
 	paper := domain.Paper{
 		Title:      bibLaTeXImportField(entry, "title"),
 		TitleShort: bibLaTeXImportField(entry, "shorttitle"),
@@ -96,21 +101,6 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (PaperEntry, []Diagnostic) {
 	errors := make([]Diagnostic, 0, 4)
 	warnings = append(warnings, entry.parserWarnings...)
 
-	publicationType, supportedType := bibLaTeXPublicationType(entry.typeName)
-	if !supportedType {
-		paper.Type = domain.PublicationType(entry.typeName)
-		errors = append(errors, entryDiagnostic(entry.key, "", fmt.Sprintf("BibLaTeX entry type %q has no Paper type mapping", entry.typeName)))
-	} else {
-		paper.Type = publicationType
-	}
-
-	date, dateDiagnostic := bibLaTeXDate(entry)
-	paper.PublicationDate = date
-	if dateDiagnostic != nil {
-		dateDiagnostic.EntryKey = entry.key
-		errors = append(errors, *dateDiagnostic)
-	}
-
 	if rawURL := bibLaTeXImportField(entry, "url"); rawURL != "" {
 		parsed, err := url.ParseRequestURI(rawURL)
 		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
@@ -124,25 +114,35 @@ func importBibLaTeXEntry(entry bibLaTeXEntry) (PaperEntry, []Diagnostic) {
 		warnings = append(warnings, entryDiagnostic(entry.key, field, fmt.Sprintf("BibLaTeX field %q is not represented paperstacks.io", field)))
 	}
 
-	paper = paper.Normalize()
+	publicationType, isSupported := bibLaTeXPublicationType(entry.typeName)
+	paper.Type = publicationType
+	if !isSupported || !paper.Type.IsValid() {
+		errors = append(errors, entryDiagnostic(entry.key, "", fmt.Sprintf("BibLaTeX entry type %q is not a supported publication type", entry.typeName)))
+	}
+
+	date, err := bibLaTeXDate(entry)
+	paper.PublicationDate = date
+	if err != nil || !date.IsValid() {
+		errors = append(errors, entryDiagnostic(entry.key, "date", err.Error()))
+	}
+
 	if paper.DOI == "" {
 		errors = append(errors, entryDiagnostic(entry.key, "doi", "DOI is required"))
 	}
 	if paper.Title == "" {
 		errors = append(errors, entryDiagnostic(entry.key, "title", "title is required"))
 	}
-	if !paper.PublicationDate.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "date", "publication date cannot be parsed"))
-	}
-	if !paper.Type.IsValid() {
-		errors = append(errors, entryDiagnostic(entry.key, "", "publication type not supported"))
+
+	if len(paper.Authors) == 0 || paper.Authors[0].NameFirst == "" || paper.Authors[0].NameLast == "" {
+		errors = append(errors, entryDiagnostic(entry.key, "author", "author is required (first + last name)"))
 	}
 
 	return PaperEntry{
 		SourceKey: entry.key,
 		Paper:     paper,
 		Warnings:  warnings,
-	}, errors
+		Errors:    errors,
+	}
 }
 
 func entryDiagnostic(entryKey, field, message string) Diagnostic {
@@ -190,84 +190,69 @@ func firstBibLaTeXField(entry bibLaTeXEntry, names ...string) string {
 	return ""
 }
 
-func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, *Diagnostic) {
-	if value := bibLaTeXImportField(entry, "date"); value != "" {
-		date, err := parseBibLaTeXDate(value)
-		if err != nil {
-			diagnostic := entryDiagnostic("", "date", err.Error())
-			return domain.Date{}, &diagnostic
-		}
-		return date, nil
+func bibLaTeXDate(entry bibLaTeXEntry) (domain.Date, error) {
+	var result domain.Date
+
+	date, _ := parseBibLaTeXDate(bibLaTeXImportField(entry, "date"))
+	year, _ := parseBibLaTeXDate(bibLaTeXImportField(entry, "year"))
+	month := bibLaTeXMonth(bibLaTeXImportField(entry, "month"))
+
+	if !date.IsZero() && date.IsValid() {
+		result = date
+	} else if !year.IsZero() && year.IsValid() {
+		result = year
+	} else {
+		return domain.Date{}, errors.New("Unable to parse a date from the fileds 'date' or 'year'")
 	}
 
-	year := bibLaTeXImportField(entry, "year")
-	if year == "" {
-		return domain.Date{}, nil
+	if result.Month == 0 && month >= 1 {
+		result.Month = month
 	}
 
-	parsedYear, err := strconv.Atoi(year)
-	if err != nil || parsedYear < 1 {
-		diagnostic := entryDiagnostic("", "year", "year is not a positive integer")
-		return domain.Date{}, &diagnostic
-	}
-
-	date := domain.Date{Year: parsedYear}
-	if month := bibLaTeXMonth(bibLaTeXImportField(entry, "month")); month != 0 {
-		date.Month = month
-	} else if bibLaTeXImportField(entry, "month") != "" {
-		diagnostic := entryDiagnostic("", "month", "month is not a valid BibLaTeX month")
-		return domain.Date{}, &diagnostic
-	}
-
-	return date, nil
+	return result, nil
 }
 
 func parseBibLaTeXDate(value string) (domain.Date, error) {
-	for _, candidate := range [...]struct {
-		layout    string
-		precision int
-	}{
-		{layout: "2006-01-02", precision: 3},
-		{layout: "2006-01", precision: 2},
-		{layout: "2006", precision: 1},
-	} {
-		parsed, err := time.Parse(candidate.layout, value)
-		if err != nil {
-			continue
-		}
-
-		date := domain.Date{Year: parsed.Year()}
-		if candidate.precision >= 2 {
-			date.Month = int(parsed.Month())
-		}
-		if candidate.precision == 3 {
-			date.Day = parsed.Day()
-		}
-		if date.Year > 0 && date.IsValid() {
-			return date, nil
-		}
+	if parsed, err := time.Parse("2006-01-02", value); err == nil && parsed.Year() > 0 {
+		return domain.Date{Year: parsed.Year(), Month: int(parsed.Month()), Day: parsed.Day()}, nil
+	}
+	if parsed, err := time.Parse("2006-01", value); err == nil && parsed.Year() > 0 {
+		return domain.Date{Year: parsed.Year(), Month: int(parsed.Month())}, nil
+	}
+	if parsed, err := time.Parse("2006", value); err == nil && parsed.Year() > 0 {
+		return domain.Date{Year: parsed.Year()}, nil
 	}
 
-	return domain.Date{}, fmt.Errorf("invalid BibLaTeX date %q, supported date types are ['2006-01-0', '2006-01', '2006']", value)
+	return domain.Date{}, fmt.Errorf("invalid BibLaTeX date %q; supported formats are YYYY, YYYY-MM, and YYYY-MM-DD", value)
 }
 
 func bibLaTeXMonth(value string) int {
-	months := map[string]int{
-		"jan": 1, "january": 1,
-		"feb": 2, "february": 2,
-		"mar": 3, "march": 3,
-		"apr": 4, "april": 4,
-		"may": 5,
-		"jun": 6, "june": 6,
-		"jul": 7, "july": 7,
-		"aug": 8, "august": 8,
-		"sep": 9, "sept": 9, "september": 9,
-		"oct": 10, "october": 10,
-		"nov": 11, "november": 11,
-		"dec": 12, "december": 12,
-	}
-	if month, ok := months[strings.ToLower(strings.TrimSpace(value))]; ok {
-		return month
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "jan", "january":
+		return 1
+	case "feb", "february":
+		return 2
+	case "mar", "march":
+		return 3
+	case "apr", "april":
+		return 4
+	case "may":
+		return 5
+	case "jun", "june":
+		return 6
+	case "jul", "july":
+		return 7
+	case "aug", "august":
+		return 8
+	case "sep", "sept", "september":
+		return 9
+	case "oct", "october":
+		return 10
+	case "nov", "november":
+		return 11
+	case "dec", "december":
+		return 12
 	}
 
 	month, _ := strconv.Atoi(value)
@@ -321,27 +306,16 @@ func bibLaTeXAuthorsToDomain(value string) []domain.Author {
 }
 
 func splitBibLaTeXNames(value string) []string {
-	return splitBibLaTeXDelimited(value, func(value string, index int) (int, bool) {
-		if index+5 > len(value) || !strings.EqualFold(value[index:index+5], " and ") {
-			return 0, false
-		}
-		return 5, true
-	})
+	return splitBibLaTeXDelimited(value, " and ")
 }
 
 func splitBibLaTeXCommas(value string) []string {
-	return splitBibLaTeXDelimited(value, func(value string, index int) (int, bool) {
-		if value[index] != ',' {
-			return 0, false
-		}
-		return 1, true
-	})
+	return splitBibLaTeXDelimited(value, ",")
 }
 
 func splitBibLaTeXList(value string) []string {
-	parts := strings.Split(value, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
+	var result []string
+	for part := range strings.SplitSeq(value, ",") {
 		if part = strings.TrimSpace(part); part != "" {
 			result = append(result, part)
 		}
@@ -349,7 +323,7 @@ func splitBibLaTeXList(value string) []string {
 	return result
 }
 
-func splitBibLaTeXDelimited(value string, delimiter func(string, int) (int, bool)) []string {
+func splitBibLaTeXDelimited(value, delimiter string) []string {
 	parts := make([]string, 0, 1)
 	start := 0
 	depth := 0
@@ -365,20 +339,18 @@ func splitBibLaTeXDelimited(value string, delimiter func(string, int) (int, bool
 				depth--
 			}
 		default:
-			if depth == 0 {
-				if width, ok := delimiter(value, index); ok {
-					parts = append(parts, value[start:index])
-					index += width
-					start = index
-					continue
-				}
+			end := index + len(delimiter)
+			if depth == 0 && end <= len(value) && strings.EqualFold(value[index:end], delimiter) {
+				parts = append(parts, value[start:index])
+				index = end
+				start = index
+				continue
 			}
 		}
 		_, width := utf8.DecodeRuneInString(value[index:])
 		index += width
 	}
-	parts = append(parts, value[start:])
-	return parts
+	return append(parts, value[start:])
 }
 
 func splitGivenName(value string) (string, string) {
@@ -421,17 +393,15 @@ func removeBibLaTeXGrouping(value string) string {
 }
 
 func unsupportedBibLaTeXFields(fields map[string]string) []string {
-	supported := map[string]struct{}{
-		"title": {}, "shorttitle": {}, "author": {}, "date": {}, "year": {}, "month": {},
-		"doi": {}, "url": {}, "abstract": {}, "keywords": {}, "isbn": {}, "issn": {},
-		"journaltitle": {}, "journal": {}, "shortjournal": {}, "booktitle": {}, "series": {},
-		"eventtitle": {}, "eventplace": {}, "location": {}, "institution": {}, "publisher": {},
-		"volume": {}, "number": {}, "pages": {},
-	}
-
-	unsupported := make([]string, 0)
+	var unsupported []string
 	for field := range fields {
-		if _, ok := supported[field]; !ok {
+		switch field {
+		case "title", "shorttitle", "author", "date", "year", "month",
+			"doi", "url", "abstract", "keywords", "isbn", "issn",
+			"journaltitle", "journal", "shortjournal", "booktitle", "series",
+			"eventtitle", "eventplace", "location", "institution", "publisher",
+			"volume", "number", "pages":
+		default:
 			unsupported = append(unsupported, field)
 		}
 	}
@@ -586,7 +556,7 @@ func (parser *bibLaTeXParser) parseEntry(entryType string, close byte) (bibLaTeX
 func (parser *bibLaTeXParser) readValue(close byte) (string, []Diagnostic, error) {
 	parser.skipSpace()
 	var value strings.Builder
-	diagnostics := make([]Diagnostic, 0)
+	var diagnostics []Diagnostic
 	for {
 		part, diagnostic, err := parser.readValuePart(close)
 		if err != nil {
