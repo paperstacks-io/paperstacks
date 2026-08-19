@@ -68,6 +68,9 @@ func AddRoute(
 
 	stacksMyTmpl := pageTemplate("stacks/page")
 	mux.Handle(http.MethodGet+" /stacks/page", authenticated(handleStacksPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
+	bibImportTmpl := pageTemplate("stacks/import-biblatex")
+	mux.Handle(http.MethodGet+" /stacks/{uuid}/import/biblatex", authenticated(handleStacksDetailPage(logger, bibImportTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodPost+" /stacks/{uuid}/import/biblatex", authenticated(handleStackBibLaTeXImport(logger, tmpl, stackService)))
 	stacksDetailTmpl := pageTemplate("stacks/detail")
 	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}", authenticated(handleStacksDetailPage(logger, stacksDetailTmpl, cfg.HankoAPIURL, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}/export/biblatex", authenticated(handleStackBibLaTeXExport(logger, stackService)))
