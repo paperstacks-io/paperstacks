@@ -209,9 +209,7 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
-		candiates, importErr := bibliography.ImportBibLaTeX(source)
-		// failed := candiates.Failed
-
+		candidates, importErr := bibliography.ImportBibLaTeX(source)
 		if importErr != nil {
 			if errors.Is(importErr, bibliography.ErrInvalidBibLaTeX) {
 				_ = renderErrorToast(w, tmpl, "The file is not valid BibLaTeX. Check its syntax and try again.")
@@ -222,8 +220,26 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
+		result, err := stackService.Import(ctx, stackUUID, candidates.Imported)
+		data := struct {
+			AlreadyInStack       []paperDomain.Paper
+			CreatedPaperAndAdded []paperDomain.Paper
+			ExistingPaperAdded   []paperDomain.Paper
+			Failed               []bibliography.PaperEntry
+		}{
+			AlreadyInStack:       result.AlreadyInStack,
+			CreatedPaperAndAdded: result.CreatedPaperAndAdded,
+			ExistingPaperAdded:   result.ExistingPaperAdded,
+			Failed:               candidates.Failed,
+		}
+		if err != nil {
+			logger.Error("stack service import failed", "stackUUID", stackUUID, "error", err.Error())
+			_ = renderErrorToast(w, tmpl, "The import stopped because of a server error.")
+
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", candiates); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", data); err != nil {
 			logger.Error("render BibLaTeX import result", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}

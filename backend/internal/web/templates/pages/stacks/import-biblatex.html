@@ -50,7 +50,7 @@
       hx-post="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
       hx-encoding="multipart/form-data"
       hx-target="#biblatex-import-results"
-      hx-swap="innerHTML"
+      hx-swap="outerHTML"
     >
       <fieldset class="fieldset mx-auto max-w-md">
         <legend class="fieldset-legend">Pick or drop a BibLaTeX file</legend>
@@ -62,5 +62,5 @@
   </div>
 </section>
 
-<div id="biblatex-import-results" class="col-span-12" aria-live="polite"></div>
+<div id="biblatex-import-results" aria-live="polite"></div>
 {{ end }}
