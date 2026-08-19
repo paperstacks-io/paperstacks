@@ -3,8 +3,6 @@ package application_test
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -53,8 +51,6 @@ func TestUserProvisionerEnsuresDefaultStackForExistingUser(t *testing.T) {
 	provisioner := application.NewUserProvisioner(
 		application.NewUserService(memory.NewRepository()),
 		ensurer,
-		"",
-		nil,
 	)
 
 	if _, err := provisioner.Provision(context.Background(), "external-1", "one@example.com"); err != nil {
@@ -76,8 +72,6 @@ func TestUserProvisionerReturnsDefaultStackError(t *testing.T) {
 	provisioner := application.NewUserProvisioner(
 		application.NewUserService(memory.NewRepository()),
 		&recordingDefaultStackEnsurer{err: wantErr},
-		"",
-		nil,
 	)
 
 	_, err := provisioner.Provision(context.Background(), "external-1", "one@example.com")
@@ -242,60 +236,5 @@ func TestUserServiceDeleteTrimsInput(t *testing.T) {
 	_, err = service.GetByExternalID(context.Background(), "external-1")
 	if err != domain.ErrUserNotFound {
 		t.Fatalf("GetByExternalID() error = %v, want %v", err, domain.ErrUserNotFound)
-	}
-}
-
-func TestUserProvisionerResolvesAndProvisionsUser(t *testing.T) {
-	t.Parallel()
-
-	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/me" {
-			t.Fatalf("request path = %q, want /me", r.URL.Path)
-		}
-		if got := r.Header.Get("Authorization"); got != "Bearer session-token" {
-			t.Fatalf("Authorization = %q, want bearer token", got)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"user_id":"external-1","emails":[{"address":"secondary@example.com"},{"address":"one@example.com","is_primary":true}]}`))
-	}))
-	t.Cleanup(authServer.Close)
-
-	service := application.NewUserService(memory.NewRepository())
-	provisioner := application.NewUserProvisioner(service, &recordingDefaultStackEnsurer{}, authServer.URL, authServer.Client())
-
-	user, err := provisioner.ResolveByAuthToken(context.Background(), " session-token ")
-	if err != nil {
-		t.Fatalf("ResolveByAuthToken() error = %v, want nil", err)
-	}
-	if user.ExternalID != "external-1" {
-		t.Fatalf("ResolveByAuthToken() externalID = %q, want %q", user.ExternalID, "external-1")
-	}
-	if user.Email != "one@example.com" {
-		t.Fatalf("ResolveByAuthToken() email = %q, want %q", user.Email, "one@example.com")
-	}
-
-	stored, err := service.GetByExternalID(context.Background(), "external-1")
-	if err != nil {
-		t.Fatalf("GetByExternalID() error = %v, want nil", err)
-	}
-	if stored != user {
-		t.Fatalf("stored user = %#v, want %#v", stored, user)
-	}
-}
-
-func TestUserProvisionerReturnsInvalidAuthToken(t *testing.T) {
-	t.Parallel()
-
-	provisioner := application.NewUserProvisioner(
-		application.NewUserService(memory.NewRepository()),
-		&recordingDefaultStackEnsurer{},
-		"",
-		nil,
-	)
-
-	_, err := provisioner.ResolveByAuthToken(context.Background(), " ")
-	if !errors.Is(err, domain.ErrInvalidAuthToken) {
-		t.Fatalf("ResolveByAuthToken() error = %v, want %v", err, domain.ErrInvalidAuthToken)
 	}
 }

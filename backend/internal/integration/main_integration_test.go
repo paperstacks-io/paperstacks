@@ -52,11 +52,10 @@ func startApplication(t *testing.T) testApplication {
 	userRepo := userMemory.NewRepository()
 	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
 	userService := userApplication.NewUserService(userRepo)
-	userProvisioner := userApplication.NewUserProvisioner(userService, stackService, "", nil)
 	sessionService := noopSessionService{}
 	server.AddRoute(root, context.Background(), logger, sessionService)
 	paperHttp.AddPaperRoute(api, logger, paperService, sessionService)
-	userHttp.AddUserRoute(api, logger, userService, userProvisioner, stackService, sessionService)
+	userHttp.AddUserRoute(api, logger, userService, stackService, sessionService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
 	testServer := httptest.NewServer(root)
