@@ -185,19 +185,23 @@ func (s *StackService) Import(ctx context.Context, stackUUID string, candidates 
 		}
 
 		paper, err := s.paperGetter.GetByDOI(ctx, candidate.Paper.DOI)
-		if err == nil {
-			result.ExistingPaperAdded = append(result.ExistingPaperAdded, paper)
-		}
-		if errors.Is(err, paperDomain.ErrPaperNotFound) {
+		created := errors.Is(err, paperDomain.ErrPaperNotFound)
+		if created {
 			paper, err = s.paperGetter.Create(ctx, candidate.Paper)
-			result.CreatedPaperAndAdded = append(result.CreatedPaperAndAdded, paper)
 		}
 		if err != nil {
-			return ImportResult{}, err
+			return result, err
 		}
 
 		if err := s.repo.AddPaper(ctx, stackUUID, paper); err != nil {
-			return ImportResult{}, err
+			return result, err
+		}
+
+		stack.Papers = append(stack.Papers, paper)
+		if created {
+			result.CreatedPaperAndAdded = append(result.CreatedPaperAndAdded, paper)
+		} else {
+			result.ExistingPaperAdded = append(result.ExistingPaperAdded, paper)
 		}
 	}
 

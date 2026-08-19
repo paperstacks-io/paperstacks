@@ -11,12 +11,15 @@ import (
 func TestStackContainsPaperWithDOI(t *testing.T) {
 	t.Parallel()
 
-	stack := Stack{Papers: []paperDomain.Paper{{DOI: "10.1000/example"}}}
-	if !stack.ContainsPaperWithDOI("10.1000/example") {
-		t.Error("ContainsPaperWithDOI() = false, want true")
+	want := paperDomain.Paper{UUID: "paper-uuid", DOI: "10.1000/example"}
+	stack := Stack{Papers: []paperDomain.Paper{want}}
+
+	got, ok := stack.ContainsPaperWithDOI(want.DOI)
+	if !ok || got.UUID != want.UUID {
+		t.Errorf("ContainsPaperWithDOI() = (%+v, %t), want (%+v, true)", got, ok, want)
 	}
-	if stack.ContainsPaperWithDOI("10.1000/missing") {
-		t.Error("ContainsPaperWithDOI() = true, want false")
+	if _, ok := stack.ContainsPaperWithDOI("10.1000/missing"); ok {
+		t.Error("ContainsPaperWithDOI() found missing paper")
 	}
 }
 

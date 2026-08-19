@@ -356,11 +356,29 @@ func TestServiceImportUsesExistingAndCreatesMissingPapers(t *testing.T) {
 		{Paper: newPaper},
 	}
 
-	if err := service.Import(context.Background(), stack.UUID, candidates); err != nil {
+	result, err := service.Import(context.Background(), stack.UUID, candidates)
+	if err != nil {
 		t.Fatalf("Import() error = %v", err)
 	}
-	if err := service.Import(context.Background(), stack.UUID, candidates); err != nil {
+	if len(result.AlreadyInStack) != 1 || result.AlreadyInStack[0].UUID != createdPaperUUID {
+		t.Errorf("AlreadyInStack = %v, want created paper", result.AlreadyInStack)
+	}
+	if len(result.ExistingPaperAdded) != 1 || result.ExistingPaperAdded[0].UUID != existingPaperUUID {
+		t.Errorf("ExistingPaperAdded = %v, want existing paper", result.ExistingPaperAdded)
+	}
+	if len(result.CreatedPaperAndAdded) != 1 || result.CreatedPaperAndAdded[0].UUID != createdPaperUUID {
+		t.Errorf("CreatedPaperAndAdded = %v, want created paper", result.CreatedPaperAndAdded)
+	}
+
+	result, err = service.Import(context.Background(), stack.UUID, candidates)
+	if err != nil {
 		t.Fatalf("second Import() error = %v", err)
+	}
+	if len(result.AlreadyInStack) != len(candidates) {
+		t.Errorf("second Import() AlreadyInStack count = %d, want %d", len(result.AlreadyInStack), len(candidates))
+	}
+	if len(result.ExistingPaperAdded) != 0 || len(result.CreatedPaperAndAdded) != 0 {
+		t.Errorf("second Import() unexpectedly added papers: %+v", result)
 	}
 
 	got, err := service.GetByUUID(context.Background(), stack.UUID)
