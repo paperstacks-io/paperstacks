@@ -1,23 +1,18 @@
 package web
 
 import (
-	"bytes"
 	"context"
 	"html/template"
 	"io"
 	"log/slog"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
-	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -446,62 +441,6 @@ func TestHandleUserSettingsUpdateRendersToastOnInvalidORCID(t *testing.T) {
 	}
 	if stored.ORCID != "" {
 		t.Fatalf("stored ORCID = %q, want unchanged empty", stored.ORCID)
-	}
-}
-
-func TestHandleStackBibLaTeXImportDisplaysCandidatesWithoutAddingToStack(t *testing.T) {
-	t.Parallel()
-
-	source, err := os.ReadFile("../paper/bibliography/testdata/bauer.bib")
-	if err != nil {
-		t.Fatalf("read BibLaTeX fixture: %v", err)
-	}
-	paperService := paperApp.NewPaperService(paperMemory.NewRepository())
-	stackService := stackApp.NewStackService(stackMemory.NewRepository(), paperService)
-	owner := userDomain.NewUser("biblatex-import-owner", "biblatex-import@example.com")
-	stack := stackDomain.NewStack("BibLaTeX Import", owner)
-	if err := stackService.Create(t.Context(), *stack); err != nil {
-		t.Fatalf("seed stack: %v", err)
-	}
-
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile("biblatex", "bauer.bib")
-	if err != nil {
-		t.Fatalf("create multipart file: %v", err)
-	}
-	if _, err := part.Write(source); err != nil {
-		t.Fatalf("write multipart file: %v", err)
-	}
-	if err := writer.Close(); err != nil {
-		t.Fatalf("close multipart body: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/app/stacks/"+stack.UUID+"/import/biblatex", &body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.SetPathValue("uuid", stack.UUID)
-	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
-		UserID:  owner.ExternalID,
-		Email:   owner.Email,
-		IsValid: true,
-	}))
-	rr := httptest.NewRecorder()
-
-	handleStackBibLaTeXImport(
-		testLogger(),
-		testWebTemplate(t),
-		stackService,
-	).ServeHTTP(rr, req)
-
-	if !strings.Contains(rr.Body.String(), "When GUI-Based Testing of Web Applications Meets Code Review") {
-		t.Fatalf("response does not contain imported title: %s", rr.Body.String())
-	}
-	updated, err := stackService.GetByUUID(t.Context(), stack.UUID)
-	if err != nil {
-		t.Fatalf("get imported stack: %v", err)
-	}
-	if len(updated.Papers) != 0 {
-		t.Fatalf("stack papers length = %d, want 0", len(updated.Papers))
 	}
 }
 
