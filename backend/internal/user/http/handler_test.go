@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -20,14 +19,8 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
-type fakePaperGetter struct{}
-
-func (fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error) {
-	return paperDomain.Paper{}, paperDomain.ErrPaperNotFound
-}
-
 func newStackService() *stackApplication.StackService {
-	return stackApplication.NewStackService(stackMemory.NewRepository(), fakePaperGetter{})
+	return stackApplication.NewStackService(stackMemory.NewRepository(), nil)
 }
 
 func TestGetUserByID(t *testing.T) {
