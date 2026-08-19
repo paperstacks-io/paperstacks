@@ -221,16 +221,28 @@ func handleStackBibLaTeXImport(
 		}
 
 		result, err := stackService.Import(ctx, stackUUID, candidates.Imported)
+
+		warnings := []bibliography.Diagnostic{}
+		for _, created := range result.CreatedPaperAndAdded {
+			for _, candiate := range candidates.Imported {
+				if created.DOI == candiate.Paper.DOI {
+					warnings = append(warnings, candiate.Warnings...)
+				}
+			}
+		}
+
 		data := struct {
 			AlreadyInStack       []paperDomain.Paper
 			CreatedPaperAndAdded []paperDomain.Paper
 			ExistingPaperAdded   []paperDomain.Paper
 			Failed               []bibliography.PaperEntry
+			CreatedWarnings      []bibliography.Diagnostic
 		}{
 			AlreadyInStack:       result.AlreadyInStack,
 			CreatedPaperAndAdded: result.CreatedPaperAndAdded,
 			ExistingPaperAdded:   result.ExistingPaperAdded,
 			Failed:               candidates.Failed,
+			CreatedWarnings:      warnings,
 		}
 		if err != nil {
 			logger.Error("stack service import failed", "stackUUID", stackUUID, "error", err.Error())

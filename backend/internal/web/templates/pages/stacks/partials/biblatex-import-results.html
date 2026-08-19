@@ -36,6 +36,7 @@
   </div>
 </section>
 
+{{ if .Failed }}
 <section class="card bg-base-200 col-span-12 shadow-xs">
   <div class="card-body pb-0">
     <div class="flex flex-col gap-2">
@@ -43,7 +44,6 @@
     </div>
   </div>
   <div class="px-6 pt-4 pb-6">
-    {{ if .Failed }}
     <div class="space-y-3">
       {{ range .Failed }}
       <div role="alert" class="alert alert-error alert-soft items-start">
@@ -66,11 +66,9 @@
       </div>
       {{ end }}
     </div>
-    {{ else }}
-    <p class="text-base-content/60">No entries failed to import.</p>
-    {{ end }}
   </div>
 </section>
+{{ end }}
 
 <section class="card bg-base-200 col-span-12 shadow-xs">
   <div class="card-body pb-0">
@@ -123,4 +121,32 @@
     </table>
   </div>
 </section>
-{{ end }}
+
+{{ if .CreatedWarnings}}
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <div class="flex flex-col gap-2">
+      <h2 class="card-title">Warnings from created papers</h2>
+    </div>
+  </div>
+  <div class="px-6 pt-4 pb-6">
+    <div class="space-y-3">
+      {{ range .CreatedWarnings }}
+      <div role="alert" class="alert alert-warning alert-soft items-start">
+        <svg
+          data-src="https://unpkg.com/heroicons/24/outline/exclamation-triangle.svg"
+          class="size-5 shrink-0"
+          aria-hidden="true"
+        ></svg>
+        <div>
+          <h3 class="font-semibold">Entry <code>{{ .EntryKey }}</code></h3>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
+            <li>{{ if .Field }}<span class="font-semibold">{{ .Field }}:</span> {{ end }}{{ .Message }}</li>
+          </ul>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }} {{ end }}
