@@ -2,19 +2,18 @@
 package integration
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"log"
+	"encoding/json"
+	"io"
 	"log/slog"
-	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	"github.com/paperstacks.io/paperstacks/internal/common/tests"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
@@ -26,16 +25,12 @@ import (
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
-const (
-	testHost      = "localhost"
-	testPort      = "9999"
-	testAPIPath   = "http://" + testHost + ":" + testPort
-	clientTimeout = 10 * time.Second
-)
+const clientTimeout = 10 * time.Second
 
-var client *http.Client
-var testRepo *memory.Repository
-var integrationTestMu sync.Mutex
+type testApplication struct {
+	baseURL string
+	client  *http.Client
+}
 
 type noopSessionService struct{}
 
@@ -47,12 +42,13 @@ func (noopSessionService) LogoutSession(context.Context, string) error {
 	return nil
 }
 
-func startApplication() bool {
+func startApplication(t *testing.T) testApplication {
+	t.Helper()
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	root := http.NewServeMux()
 	api := http.NewServeMux()
-	testRepo = memory.NewRepository()
-	paperService := application.NewPaperService(testRepo)
+	paperService := application.NewPaperService(memory.NewRepository())
 	userRepo := userMemory.NewRepository()
 	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
 	userService := userApplication.NewUserService(userRepo)
@@ -63,34 +59,78 @@ func startApplication() bool {
 	userHttp.AddUserRoute(api, logger, userService, userProvisioner, stackService, sessionService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
-	httpServer := &http.Server{
-		Addr:         net.JoinHostPort(testHost, testPort),
-		Handler:      root,
-		ReadTimeout:  60 * time.Second,
-		WriteTimeout: 60 * time.Second,
+	testServer := httptest.NewServer(root)
+	t.Cleanup(testServer.Close)
+
+	client := testServer.Client()
+	client.Timeout = clientTimeout
+
+	return testApplication{
+		baseURL: testServer.URL,
+		client:  client,
 	}
-
-	go httpServer.ListenAndServe()
-
-	ok := tests.WaitForPort(testHost + ":" + testPort)
-
-	if !ok {
-		log.Println("Timed out waiting for trainings HTTP to come up")
-	}
-	return ok
 }
 
-func TestMain(m *testing.M) {
-	if !tests.IsIntegrationTest() {
-		fmt.Println("skipping integration tests: set INTEGRATION environment variable")
-		return
+// doRequest makes an HTTP request and returns the response.
+// The caller is responsible for closing resp.Body.
+func (a testApplication) doRequest(t *testing.T, method, endpoint string, body io.Reader, headers map[string]string) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(context.Background(), method, endpoint, body)
+	if err != nil {
+		t.Fatalf("failed to prepare request: %v", err)
 	}
 
-	if !startApplication() {
-		os.Exit(1)
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 
-	client = &http.Client{Timeout: clientTimeout}
+	resp, err := a.client.Do(req)
+	if err != nil {
+		t.Fatalf("failed to make request: %v", err)
+	}
 
-	os.Exit(m.Run())
+	return resp
+}
+
+// doGetRequest makes a GET request and returns the response.
+func (a testApplication) doGetRequest(t *testing.T, endpoint string) *http.Response {
+	t.Helper()
+
+	headers := map[string]string{"Accept": "application/json"}
+	return a.doRequest(t, http.MethodGet, endpoint, nil, headers)
+}
+
+// doPostRequest makes a POST request with JSON body and returns the response.
+func (a testApplication) doPostRequest(t *testing.T, endpoint string, body interface{}) *http.Response {
+	t.Helper()
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal request body: %v", err)
+	}
+
+	headers := map[string]string{"Content-Type": "application/json"}
+	return a.doRequest(t, http.MethodPost, endpoint, bytes.NewBuffer(jsonBody), headers)
+}
+
+// doPutRequest makes a PUT request with JSON body and returns the response.
+func (a testApplication) doPutRequest(t *testing.T, endpoint string, body interface{}) *http.Response {
+	t.Helper()
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal request body: %v", err)
+	}
+
+	headers := map[string]string{"Content-Type": "application/json"}
+	return a.doRequest(t, http.MethodPut, endpoint, bytes.NewBuffer(jsonBody), headers)
+}
+
+// doDeleteRequest makes a DELETE request and returns the response.
+func (a testApplication) doDeleteRequest(t *testing.T, endpoint string) *http.Response {
+	t.Helper()
+
+	headers := map[string]string{"Accept": "application/json"}
+	return a.doRequest(t, http.MethodDelete, endpoint, nil, headers)
 }

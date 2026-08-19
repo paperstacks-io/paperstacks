@@ -1,4 +1,6 @@
 GOCMD=go
+INTEGRATION_PACKAGE=./internal/integration
+UNIT_PACKAGES=$(shell $(GOCMD) list ./... | grep -v '/internal/integration$$')
 BINARY_DIR=.
 BUILD_PKG=github.com/paperstacks.io/paperstacks/internal/common/build
 GO_VERSION ?= $(shell awk '/^go / { print $$2 }' go.mod)
@@ -17,11 +19,11 @@ clean: ## Clean up all build artifacts
 
 .PHONY: test
 test: ## Run all unit tests
-	$(GOCMD) test ./... -coverprofile=coverage.out
+	$(GOCMD) test $(UNIT_PACKAGES) -coverprofile=coverage.out
 
 .PHONY: test-integration
 test-integration: ## Run all integration tests
-	INTEGRATION=1 $(GOCMD) test -parallel=1 -run '^TestIntegration' ./... -coverprofile=coverage.out
+	$(GOCMD) test $(INTEGRATION_PACKAGE) -coverprofile=coverage.out
 
 .PHONY: build
 build: build-server ## Build all
