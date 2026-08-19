@@ -50,6 +50,7 @@
       hx-post="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
       hx-encoding="multipart/form-data"
       hx-target="#biblatex-import-results"
+      hx-indicator="#biblatex-import-indicator"
       hx-swap="outerHTML"
     >
       <fieldset class="fieldset mx-auto max-w-md">
@@ -62,5 +63,7 @@
   </div>
 </section>
 
-<div id="biblatex-import-results" aria-live="polite"></div>
+<div id="biblatex-import-results" class="col-span-12 flex items-center justify-center" aria-live="polite">
+  <span id="biblatex-import-indicator" class="htmx-indicator loading loading-spinner loading-xl"></span>
+</div>
 {{ end }}
