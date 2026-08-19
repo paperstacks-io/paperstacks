@@ -9,7 +9,6 @@ var (
 	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidUser        = errors.New("invalid user")
 	ErrExternalIDMismatch = errors.New("user external ID does not match")
-	ErrInvalidAuthToken   = errors.New("invalid auth token")
 )
 
 type Repository interface {

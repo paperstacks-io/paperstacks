@@ -13,7 +13,7 @@ import (
 )
 
 func TestIntegrationSearchPapersQueryParams(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	type testCase struct {
 		query             string
@@ -49,7 +49,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.query+"_"+tc.sortBy, func(t *testing.T) {
-			u, err := url.Parse(testAPIPath + "/api/papers")
+			u, err := url.Parse(app.baseURL + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
 			}
@@ -69,7 +69,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 			}
 			u.RawQuery = q.Encode()
 
-			resp := doGetRequest(t, u.String())
+			resp := app.doGetRequest(t, u.String())
 			defer resp.Body.Close()
 
 			assertStatusCode(t, resp, tc.HTTPStatusCode)
@@ -101,7 +101,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 }
 
 func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	type testCase struct {
 		name             string
@@ -148,7 +148,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			u, err := url.Parse(testAPIPath + "/api/papers")
+			u, err := url.Parse(app.baseURL + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
 			}
@@ -168,7 +168,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			}
 			u.RawQuery = q.Encode()
 
-			resp := doGetRequest(t, u.String())
+			resp := app.doGetRequest(t, u.String())
 			defer resp.Body.Close()
 
 			assertStatusCode(t, resp, http.StatusOK)
@@ -197,10 +197,10 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 }
 
 func TestIntegrationListPapers(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
-	endpoint := testAPIPath + "/api/papers"
-	resp := doGetRequest(t, endpoint)
+	endpoint := app.baseURL + "/api/papers"
+	resp := app.doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusOK)
@@ -214,11 +214,11 @@ func TestIntegrationListPapers(t *testing.T) {
 }
 
 func TestIntegrationGetPaperByUUID(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	uuid := "36583bb4-8cdc-554e-bcf5-f67b60d0b290"
-	endpoint := testAPIPath + "/api/papers/" + uuid
-	resp := doGetRequest(t, endpoint)
+	endpoint := app.baseURL + "/api/papers/" + uuid
+	resp := app.doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusOK)
@@ -232,19 +232,19 @@ func TestIntegrationGetPaperByUUID(t *testing.T) {
 }
 
 func TestIntegrationDeletePaper(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	uuid := "0f324174-926b-585d-b121-3a1e3f7fee0b"
-	endpoint := testAPIPath + "/api/papers/" + uuid
-	resp := doDeleteRequest(t, endpoint)
+	endpoint := app.baseURL + "/api/papers/" + uuid
+	resp := app.doDeleteRequest(t, endpoint)
 	assertStatusCode(t, resp, http.StatusNoContent)
 
-	resp = doGetRequest(t, endpoint)
+	resp = app.doGetRequest(t, endpoint)
 	assertStatusCode(t, resp, http.StatusNotFound)
 }
 
 func TestIntegrationSavePaper(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	paper := paperHttp.PaperRequest{
 		DOI:             "10.1109/some_DOI",
@@ -262,8 +262,8 @@ func TestIntegrationSavePaper(t *testing.T) {
 			ISSN:          []string{" 1234-5678 ", "8765-4321"},
 		},
 	}
-	endpoint := testAPIPath + "/api/papers"
-	resp := doPostRequest(t, endpoint, paper)
+	endpoint := app.baseURL + "/api/papers"
+	resp := app.doPostRequest(t, endpoint, paper)
 	defer resp.Body.Close()
 	assertStatusCode(t, resp, http.StatusCreated)
 
