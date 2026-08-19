@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
@@ -22,6 +23,8 @@ const (
 
 type PaperGetter interface {
 	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
+	GetByDOI(ctx context.Context, doi string) (paperDomain.Paper, error)
+	Create(ctx context.Context, paper paperDomain.Paper) (paperDomain.Paper, error)
 }
 
 type StackService struct {
@@ -34,6 +37,12 @@ func NewStackService(repo domain.Repository, paperGetter PaperGetter) *StackServ
 		repo:        repo,
 		paperGetter: paperGetter,
 	}
+}
+
+type ImportResult struct {
+	AlreadyInStack       []paperDomain.Paper
+	ExistingPaperAdded   []paperDomain.Paper
+	CreatedPaperAndAdded []paperDomain.Paper
 }
 
 // Create validates and stores a new stack.
@@ -157,6 +166,42 @@ func (s *StackService) AddPaper(ctx context.Context, stackUUID string, paperUUID
 	}
 
 	return s.repo.AddPaper(ctx, stackUUID, paper)
+}
+
+// Import adds candidates to a stack, reusing papers with matching DOIs and creating missing papers.
+func (s *StackService) Import(ctx context.Context, stackUUID string, candidates []bibliography.PaperEntry) (ImportResult, error) {
+	stack, err := s.repo.GetByUUID(ctx, stackUUID)
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	result := ImportResult{}
+
+	for _, candidate := range candidates {
+		inStackPaper, foundInStack := stack.ContainsPaperWithDOI(candidate.Paper.DOI)
+		if foundInStack {
+			result.AlreadyInStack = append(result.AlreadyInStack, inStackPaper)
+			continue
+		}
+
+		paper, err := s.paperGetter.GetByDOI(ctx, candidate.Paper.DOI)
+		if err == nil {
+			result.ExistingPaperAdded = append(result.ExistingPaperAdded, paper)
+		}
+		if errors.Is(err, paperDomain.ErrPaperNotFound) {
+			paper, err = s.paperGetter.Create(ctx, candidate.Paper)
+			result.CreatedPaperAndAdded = append(result.CreatedPaperAndAdded, paper)
+		}
+		if err != nil {
+			return ImportResult{}, err
+		}
+
+		if err := s.repo.AddPaper(ctx, stackUUID, paper); err != nil {
+			return ImportResult{}, err
+		}
+	}
+
+	return result, nil
 }
 
 // RemovePaper removes a paper from the specified stack.

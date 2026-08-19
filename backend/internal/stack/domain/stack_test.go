@@ -4,8 +4,21 @@ import (
 	"strings"
 	"testing"
 
+	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
+
+func TestStackContainsPaperWithDOI(t *testing.T) {
+	t.Parallel()
+
+	stack := Stack{Papers: []paperDomain.Paper{{DOI: "10.1000/example"}}}
+	if !stack.ContainsPaperWithDOI("10.1000/example") {
+		t.Error("ContainsPaperWithDOI() = false, want true")
+	}
+	if stack.ContainsPaperWithDOI("10.1000/missing") {
+		t.Error("ContainsPaperWithDOI() = true, want false")
+	}
+}
 
 func TestStackValidateAcceptsValidNames(t *testing.T) {
 	t.Parallel()
