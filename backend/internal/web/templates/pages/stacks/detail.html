@@ -185,17 +185,16 @@
                       </button>
                       <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow">
                         <li>
-                          <button
-                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation?style=apa"
+                          <a
+                            href="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
+                            hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
+                            hx-target="#page-shell"
                             hx-swap="innerHTML"
-                            hx-target="#citation-modal-content"
-                            onclick="
-                              event.stopPropagation()
-                              citationModal.showModal()
-                            "
+                            hx-push-url="true"
+                            onclick="event.stopPropagation()"
                           >
                             Cite
-                          </button>
+                          </a>
                         </li>
                       </ul>
                     </div>

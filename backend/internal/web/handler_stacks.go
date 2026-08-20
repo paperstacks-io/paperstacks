@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"errors"
 	"html/template"
 	"io"
@@ -11,6 +12,7 @@ import (
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
+	"github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -68,6 +70,13 @@ type stacksPageData struct {
 	pageData
 	StacksCountTotal  int
 	StacksCountPublic int
+}
+
+type CitationViewData struct {
+	Stack   stackDomain.Stack
+	Title   string
+	CSLItem string
+	Styles  []citation.CitationStyle
 }
 
 func handleStacksDetailPage(
@@ -540,5 +549,91 @@ func handleStackPublicSettingUpdate(
 		}
 
 		renderSuccessToast(w, tmpl, "Stack changes saved")
+	})
+}
+
+func handleStacksPaperCitation(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+	citationStyles []citation.CitationStyle,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		ctx := r.Context()
+		paperUUID := r.PathValue("paperUUID")
+		stackUUID := r.PathValue("stackUUID")
+
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			if err == paperDomain.ErrPaperNotFound {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get paper by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			if err == stackDomain.ErrStackNotFound {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		authors := make([]citation.CSLAuthor, 0, len(paper.Authors))
+
+		for _, author := range paper.Authors {
+			authors = append(authors, citation.CSLAuthor{
+				Given:  author.NameFirst,
+				Family: author.NameLast,
+			})
+		}
+
+		cslItem := citation.CSLItem{
+			Title:  paper.Title,
+			Author: authors,
+		}
+
+		cslJSON, err := json.Marshal(cslItem)
+		if err != nil {
+			logger.Error("marshal CSL item", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := CitationViewData{
+			Stack:   stack,
+			Title:   paper.Title,
+			CSLItem: string(cslJSON),
+			Styles:  citationStyles,
+		}
+
+		templateName := "stacks/citation"
+
+		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
+			logger.Error("execute citation template", "template", templateName, "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 	})
 }

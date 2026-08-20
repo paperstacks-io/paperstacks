@@ -1,10 +1,55 @@
-{{ define "stacks/partials/cite" }}
+{{ define "stacks/citation" }}
 
-<section id="citation" class="col-span-12 grid gap-6" data-biblatex="{{ .BibLatex }}">
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>
+          <a
+            href="/app/stacks/page"
+            hx-get="/app/stacks/page"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            Stacks
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            {{ .Stack.Name }}
+          </a>
+        </li>
+
+        <li>Cite</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section id="citation" class="col-span-12 grid gap-6" data-csl-item="{{ .CSLItem }}">
   <div class="grid gap-6 w-full">
+    <div class="mt-3">
+      <p class="text-lg font-medium leading-snug text-base-content">{{ .Title }}</p>
+    </div>
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
-        <h2 class="card-title">Cite</h2>
+        <div class="space-y-1">
+          <h2 class="card-title">Cite</h2>
+
+          <p class="text-xs text-base-content/60">Copy the citation in your preferred style.</p>
+        </div>
 
         <div class="overflow-x-auto">
           {{ range .Styles }}
@@ -47,15 +92,13 @@
       return
     }
 
-    const Cite = require("citation-js")
-    const config = Cite.plugins.config.get("@csl")
+    const config = window.CitePlugins.config.get("@csl")
 
-    const textareas = document.querySelectorAll(".citation-textarea")
+    const textareas = citationElement.querySelectorAll(".citation-textarea")
 
     for (const textarea of textareas) {
       const style = textarea.dataset.style
       const path = textarea.dataset.cslPath
-
       if (!path) {
         continue
       }
@@ -71,8 +114,8 @@
       config.styles.add(style, csl)
     }
 
-    const paper = citationElement.dataset.biblatex
-    const cite = new Cite(paper)
+    const paper = JSON.parse(citationElement.dataset.cslItem)
+    const cite = new window.Cite(paper)
 
     textareas.forEach((textarea) => {
       const citation = cite.format("bibliography", {
@@ -80,7 +123,6 @@
         template: textarea.dataset.style,
         lang: "en-US",
       })
-
       textarea.value = citation.trim()
     })
   })()

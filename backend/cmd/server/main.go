@@ -25,6 +25,7 @@ import (
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	"github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
@@ -52,6 +53,22 @@ func run(
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
 	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)
+	citationStyle := []citation.CitationStyle{
+		{
+			Name:  "APA",
+			Style: citation.APA,
+		},
+		{
+			Name:  "IEEE",
+			Style: citation.IEEE,
+			Path:  "/app/assets/csl/ieee.csl",
+		},
+		{
+			Name:  "ACM",
+			Style: citation.ACM,
+			Path:  "/app/assets/csl/acm-sig-proceedings.csl",
+		},
+	}
 
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
 		objectStore, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
@@ -75,7 +92,7 @@ func run(
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
+	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService, citationStyle)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
