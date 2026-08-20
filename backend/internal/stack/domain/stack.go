@@ -56,6 +56,15 @@ func NewStack(name string, owner userDomain.User) *Stack {
 	}
 }
 
+func (s Stack) ContainsPaperWithDOI(doi string) (paperDomain.Paper, bool) {
+	for _, paper := range s.Papers {
+		if paper.DOI == doi {
+			return paper, true
+		}
+	}
+	return paperDomain.Paper{}, false
+}
+
 func (s Stack) Validate() error {
 	_, err := uuid.Parse(s.UUID)
 	if err != nil {

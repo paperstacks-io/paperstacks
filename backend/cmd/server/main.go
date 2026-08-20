@@ -25,7 +25,6 @@ import (
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	citation "github.com/paperstacks.io/paperstacks/internal/paper/citation"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	"github.com/paperstacks.io/paperstacks/internal/server"
@@ -45,31 +44,14 @@ func run(
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	paperRepo := paperMem.NewRepository()
 	paperService := paperApp.NewPaperService(paperRepo)
-	bibliographyService := paperApp.NewBibliographyService(paperRepo)
 	doiService := doiApp.NewDOIService(nil)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
 	userService := userApp.NewUserService(userMem.NewRepository())
-	userProvisioner := userApp.NewUserProvisioner(userService, stackService, cfg.HankoAPIURL, http.DefaultClient)
+	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
 	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)
-	citationStyles := []citation.CitationStyle{
-		{
-			Name:  "APA",
-			Style: citation.APA,
-		},
-		{
-			Name:  "IEEE",
-			Style: citation.IEEE,
-			Path:  "/app/assets/csl/ieee.csl",
-		},
-		{
-			Name:  "ACM",
-			Style: citation.ACM,
-			Path:  "/app/assets/csl/acm-sig-proceedings.csl",
-		},
-	}
 
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
 		objectStore, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
@@ -90,19 +72,10 @@ func run(
 	server.AddRoute(rootMux, ctx, logger, sessionService)
 	paperHttp.AddPaperRoute(apiMux, logger, paperService, sessionService)
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
-	userHttp.AddUserRoute(apiMux, logger, userService, userProvisioner, stackService, sessionService)
+	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
 	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
-	web.AddRoute(webMux,
-		cfg,
-		logger,
-		paperService,
-		bibliographyService,
-		stackService,
-		userService,
-		sessionService,
-		citationStyles,
-	)
+	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 

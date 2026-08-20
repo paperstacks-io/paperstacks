@@ -6,8 +6,9 @@ import (
 )
 
 func TestIntegrationHealthz(t *testing.T) {
-	endpoint := testAPIPath + "/healthz"
-	resp := doGetRequest(t, endpoint)
+	app := startApplication(t)
+	endpoint := app.baseURL + "/healthz"
+	resp := app.doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusNoContent)

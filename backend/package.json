@@ -2,22 +2,23 @@
   "name": "paperstacks-backend",
   "private": true,
   "scripts": {
-    "build:web-assets": "npm run build:css && npm run build:htmx && npm run build:citation",
+    "build:web-assets": "npm run build:css && npm run build:htmx",
     "build:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --minify",
-    "build:htmx": "node ./scripts/copy-htmx.mjs",
-    "build:citation": "node ./scripts/copy-citation.mjs",
+    "build:htmx": "cp node_modules/htmx.org/dist/htmx.min.js internal/web/assets/htmx.min.js",
     "watch:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --watch --minify",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
   "dependencies": {
-    "@tailwindcss/cli": "^4.3.2",
-    "citation-js": "^0.8.2",
+    "@tailwindcss/cli": "^4.3.3",
     "htmx.org": "^2.0.10"
   },
   "devDependencies": {
-    "daisyui": "^5.6.16",
-    "oxfmt": "^0.58.0",
-    "tailwindcss": "^4.3.2"
+    "daisyui": "^5.7.19",
+    "oxfmt": "^0.64.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.5.1": true
   }
 }
