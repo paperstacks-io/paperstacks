@@ -43,18 +43,18 @@
     <h2 class="card-title">Cite: {{ .Title }}</h2>
     <div class="grid gap-3">
       {{ range .Styles }}
-      <div class="card bg-base-100 shadow-xs">
+      <div class="card bg-base-100 shadow-xs" data-citation-card>
         <div class="card-body p-4">
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div class="font-bold">{{ .Label }}</div>
               <div class="mt-2 text-sm leading-6">
-                <label data-citation-style="{{ .Name }}">
+                <output data-citation>
                   <span class="skeleton skeleton-text">Generating... <br /><br /> </span>
-                </label>
+                </output>
               </div>
             </div>
-            <button type="button" class="btn w-40" data-copy-citation>Copy to Clipboard</button>
+            <button type="button" class="btn w-full sm:w-40" data-copy-citation>Copy to Clipboard</button>
           </div>
         </div>
       </div>
@@ -84,7 +84,8 @@
   ])
   const items = { [paperCSL.id]: paperCSL }
 
-  for (const [index, { name }] of citationStyles.entries()) {
+  const citations = document.querySelectorAll("[data-citation]")
+  for (const [index, citationElement] of citations.entries()) {
     const processor = new CSL.Engine(
       {
         retrieveLocale: () => locale,
@@ -95,16 +96,13 @@
 
     processor.setOutputFormat("text")
     processor.updateItems([paperCSL.id])
-    const citation = processor.makeBibliography()[1].join("\n").trim()
-    for (const element of document.querySelectorAll(`[data-citation-style="${name}"]`)) {
-      element.textContent = citation
-    }
+    citationElement.textContent = processor.makeBibliography()[1].join("\n").trim()
   }
 
   for (const button of document.querySelectorAll("[data-copy-citation]")) {
     let resetTimer
     button.addEventListener("click", async () => {
-      const citation = button.closest(".card").querySelector("[data-citation-style]").textContent
+      const citation = button.closest("[data-citation-card]").querySelector("[data-citation]").textContent
       await navigator.clipboard.writeText(citation)
 
       button.textContent = "Copied!"

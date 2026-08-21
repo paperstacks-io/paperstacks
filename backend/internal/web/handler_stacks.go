@@ -51,14 +51,13 @@ type stacksListData struct {
 }
 
 type citationStyleViewData struct {
-	Name  string `json:"name"`
 	Label string `json:"label"`
 	URL   string `json:"url"`
 }
 
 var citationStyles = []citationStyleViewData{
-	{Name: "ieee", Label: "IEEE", URL: "/app/assets/csl/ieee.csl"},
-	{Name: "apa", Label: "APA", URL: "/app/assets/csl/apa.csl"},
+	{Label: "IEEE", URL: "/app/assets/csl/ieee.csl"},
+	{Label: "APA", URL: "/app/assets/csl/apa.csl"},
 }
 
 type citationViewData struct {
