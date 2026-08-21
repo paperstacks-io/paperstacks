@@ -50,6 +50,12 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
+type citationViewData struct {
+	Stack   stackDomain.Stack
+	Title   string
+	CSLItem string
+}
+
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
 	return stacksListData{
 		Items:         result.Items,
@@ -255,6 +261,62 @@ func handleStackBibLaTeXImport(
 			logger.Error("render BibLaTeX import result", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+	})
+}
+
+func handleStacksPaperCitation(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		ctx := r.Context()
+		paperUUID := r.PathValue("paperUUID")
+		stackUUID := r.PathValue("stackUUID")
+
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			if err == paperDomain.ErrPaperNotFound {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get paper by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			if err == stackDomain.ErrStackNotFound {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := citationViewData{
+			Stack: stack,
+			Title: paper.Title,
+		}
+
+		renderTemplate(w, r, tmpl, data)
 	})
 }
 

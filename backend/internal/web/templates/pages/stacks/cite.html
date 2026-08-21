@@ -1,0 +1,119 @@
+{{ define "stacks/cite" }}
+
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>
+          <a
+            href="/app/stacks/page"
+            hx-get="/app/stacks/page"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            Stacks
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            {{ .Stack.Name }}
+          </a>
+        </li>
+
+        <li>Cite</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section id="citation" class="col-span-12 grid gap-6">
+  <div class="grid gap-6 w-full">
+    <div class="mt-3">
+      <p class="text-lg font-medium leading-snug text-base-content">{{ .Title }}</p>
+    </div>
+    <div class="card bg-base-200 shadow-xs">
+      <div class="card-body">
+        <div class="space-y-1">
+          <h2 class="card-title">Cite</h2>
+
+          <p class="text-xs text-base-content/60">Copy the citation in your preferred style.</p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <fieldset class="fieldset">
+            <label class="label">IEEE</label>
+
+            <div class="flex items-center gap-3">
+              <textarea class="textarea citation-textarea min-w-0 flex-1 resize-none" rows="3" readonly></textarea>
+
+              <button
+                type="button"
+                class="btn btn-neutral btn-outline"
+                onclick="
+                  navigator.clipboard.writeText(this.closest('fieldset').querySelector('.citation-textarea').value)
+                "
+              >
+                <svg data-src="https://unpkg.com/heroicons/20/solid/clipboard-document.svg" class="size-5"></svg>
+                Copy
+              </button>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+  import CSL from "https://esm.sh/citeproc@2.4.63"
+
+  const exampleCSL = {
+    id: "example",
+    type: "article-journal",
+    title: "A Native ESM Citation Example",
+    author: [{ given: "Ada", family: "Lovelace" }],
+    "container-title": "Journal of Examples",
+    volume: "1",
+    issue: "2",
+    page: "3-4",
+    issued: { "date-parts": [[2026]] },
+  }
+
+  const [styleResponse, localeResponse] = await Promise.all([
+    fetch("/app/assets/csl/ieee.csl"),
+    fetch(
+      "https://raw.githubusercontent.com/citation-style-language/locales/c8b03ca9535a8613f191c91dd51f4b36c0656523/locales-en-US.xml",
+    ),
+  ])
+
+  if (!styleResponse.ok || !localeResponse.ok) {
+    throw new Error("Could not load the IEEE style or en-US locale")
+  }
+
+  const [style, locale] = await Promise.all([styleResponse.text(), localeResponse.text()])
+  const items = { [exampleCSL.id]: exampleCSL }
+  const processor = new CSL.Engine(
+    {
+      retrieveLocale: () => locale,
+      retrieveItem: (id) => items[id],
+    },
+    style,
+  )
+
+  processor.updateItems([exampleCSL.id])
+  console.log(processor.makeBibliography()[1].join("").trim())
+</script>
+
+{{ end }}
