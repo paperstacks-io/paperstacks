@@ -49,7 +49,9 @@
             <div>
               <div class="font-bold">{{ .Label }}</div>
               <div class="mt-2 text-sm leading-6">
-                <label data-citation-style="{{ .Name }}"></label>
+                <label data-citation-style="{{ .Name }}">
+                  <span class="skeleton skeleton-text">Generating... <br /><br /> </span>
+                </label>
               </div>
             </div>
             <button type="button" class="btn w-40" data-copy-citation>Copy to Clipboard</button>
