@@ -38,6 +38,7 @@
   </div>
 </header>
 
+
 <section id="citation" class="col-span-12 grid gap-6">
   <div class="grid gap-6 w-full">
     <div class="mt-3">
@@ -108,17 +109,7 @@
 <script type="module">
   import CSL from "https://esm.sh/citeproc@2.4.63"
 
-  const exampleCSL = {
-    id: "example",
-    type: "article-journal",
-    title: "A Native ESM Citation Example",
-    author: [{ given: "Ada", family: "Lovelace" }],
-    "container-title": "Journal of Examples",
-    volume: "1",
-    issue: "2",
-    page: "3-4",
-    issued: { "date-parts": [[2026]] },
-  }
+  const paperCSL = {{ .CSL }}
 
   const [ieeeResponse, apaResponse, localeResponse] = await Promise.all([
     fetch("/app/assets/csl/ieee.csl"),
@@ -130,12 +121,8 @@
     throw new Error("Could not load the IEEE and APA styles or en-US locale")
   }
 
-  const [ieee, apa, locale] = await Promise.all([
-    ieeeResponse.text(),
-    apaResponse.text(),
-    localeResponse.text(),
-  ])
-  const items = { [exampleCSL.id]: exampleCSL }
+  const [ieee, apa, locale] = await Promise.all([ieeeResponse.text(), apaResponse.text(), localeResponse.text()])
+  const items = { [paperCSL.id]: paperCSL }
 
   for (const [name, style] of Object.entries({ ieee, apa })) {
     const processor = new CSL.Engine(
@@ -147,11 +134,8 @@
     )
 
     processor.setOutputFormat("text")
-    processor.updateItems([exampleCSL.id])
-    document.querySelector(`[data-citation-style="${name}"]`).value = processor
-      .makeBibliography()[1]
-      .join("\n")
-      .trim()
+    processor.updateItems([paperCSL.id])
+    document.querySelector(`[data-citation-style="${name}"]`).value = processor.makeBibliography()[1].join("\n").trim()
   }
 </script>
 

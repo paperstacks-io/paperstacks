@@ -51,9 +51,9 @@ type stacksListData struct {
 }
 
 type citationViewData struct {
-	Stack   stackDomain.Stack
-	Title   string
-	CSLItem string
+	Stack stackDomain.Stack
+	Title string
+	CSL   bibliography.CSLItem
 }
 
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
@@ -314,6 +314,7 @@ func handleStacksPaperCitation(
 		data := citationViewData{
 			Stack: stack,
 			Title: paper.Title,
+			CSL:   bibliography.CSLItemFromPaper(paper),
 		}
 
 		renderTemplate(w, r, tmpl, data)
