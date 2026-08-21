@@ -38,70 +38,25 @@
   </div>
 </header>
 
-
-<section id="citation" class="col-span-12 grid gap-6">
-  <div class="grid gap-6 w-full">
-    <div class="mt-3">
-      <p class="text-lg font-medium leading-snug text-base-content">{{ .Title }}</p>
-    </div>
-    <div class="card bg-base-200 shadow-xs">
-      <div class="card-body">
-        <div class="space-y-1">
-          <h2 class="card-title">Cite</h2>
-
-          <p class="text-xs text-base-content/60">Copy the citation in your preferred style.</p>
-        </div>
-
-        <div class="overflow-x-auto">
-          <fieldset class="fieldset">
-            <label class="label">IEEE</label>
-
-            <div class="flex items-center gap-3">
-              <textarea
-                class="textarea citation-textarea min-w-0 flex-1 resize-none"
-                data-citation-style="ieee"
-                rows="3"
-                readonly
-              ></textarea>
-
-              <button
-                type="button"
-                class="btn btn-neutral btn-outline"
-                onclick="
-                  navigator.clipboard.writeText(this.closest('fieldset').querySelector('.citation-textarea').value)
-                "
-              >
-                <svg data-src="https://unpkg.com/heroicons/20/solid/clipboard-document.svg" class="size-5"></svg>
-                Copy
-              </button>
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body">
+    <h2 class="card-title">Cite: {{ .Title }}</h2>
+    <div class="grid gap-3">
+      {{ range .Styles }}
+      <div class="card bg-base-100 shadow-xs">
+        <div class="card-body p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-bold">{{ .Label }}</div>
+              <div class="mt-2 text-sm leading-6">
+                <label data-citation-style="{{ .Name }}"></label>
+              </div>
             </div>
-          </fieldset>
-
-          <fieldset class="fieldset">
-            <label class="label">APA</label>
-
-            <div class="flex items-center gap-3">
-              <textarea
-                class="textarea citation-textarea min-w-0 flex-1 resize-none"
-                data-citation-style="apa"
-                rows="3"
-                readonly
-              ></textarea>
-
-              <button
-                type="button"
-                class="btn btn-neutral btn-outline"
-                onclick="
-                  navigator.clipboard.writeText(this.closest('fieldset').querySelector('.citation-textarea').value)
-                "
-              >
-                <svg data-src="https://unpkg.com/heroicons/20/solid/clipboard-document.svg" class="size-5"></svg>
-                Copy
-              </button>
-            </div>
-          </fieldset>
+            <button class="btn">Copy to Clipboard</button>
+          </div>
         </div>
       </div>
+      {{ end }}
     </div>
   </div>
 </section>
@@ -111,31 +66,37 @@
 
   const paperCSL = {{ .CSL }}
 
-  const [ieeeResponse, apaResponse, localeResponse] = await Promise.all([
-    fetch("/app/assets/csl/ieee.csl"),
-    fetch("/app/assets/csl/apa.csl"),
+  const citationStyles = {{ .Styles }}
+  const [localeResponse, ...styleResponses] = await Promise.all([
     fetch("/app/assets/csl/locales-en-US.xml"),
+    ...citationStyles.map(({ url }) => fetch(url)),
   ])
 
-  if ([ieeeResponse, apaResponse, localeResponse].some((response) => !response.ok)) {
-    throw new Error("Could not load the IEEE and APA styles or en-US locale")
+  if ([localeResponse, ...styleResponses].some((response) => !response.ok)) {
+    throw new Error("Could not load the citation styles or en-US locale")
   }
 
-  const [ieee, apa, locale] = await Promise.all([ieeeResponse.text(), apaResponse.text(), localeResponse.text()])
+  const [locale, ...styles] = await Promise.all([
+    localeResponse.text(),
+    ...styleResponses.map((response) => response.text()),
+  ])
   const items = { [paperCSL.id]: paperCSL }
 
-  for (const [name, style] of Object.entries({ ieee, apa })) {
+  for (const [index, { name }] of citationStyles.entries()) {
     const processor = new CSL.Engine(
       {
         retrieveLocale: () => locale,
         retrieveItem: (id) => items[id],
       },
-      style,
+      styles[index],
     )
 
     processor.setOutputFormat("text")
     processor.updateItems([paperCSL.id])
-    document.querySelector(`[data-citation-style="${name}"]`).value = processor.makeBibliography()[1].join("\n").trim()
+    const citation = processor.makeBibliography()[1].join("\n").trim()
+    for (const element of document.querySelectorAll(`[data-citation-style="${name}"]`)) {
+      element.textContent = citation
+    }
   }
 </script>
 

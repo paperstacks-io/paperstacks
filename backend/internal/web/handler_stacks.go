@@ -50,10 +50,22 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
+type citationStyleViewData struct {
+	Name  string `json:"name"`
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+var citationStyles = []citationStyleViewData{
+	{Name: "ieee", Label: "IEEE", URL: "/app/assets/csl/ieee.csl"},
+	{Name: "apa", Label: "APA", URL: "/app/assets/csl/apa.csl"},
+}
+
 type citationViewData struct {
-	Stack stackDomain.Stack
-	Title string
-	CSL   bibliography.CSLItem
+	Stack  stackDomain.Stack
+	Title  string
+	CSL    bibliography.CSLItem
+	Styles []citationStyleViewData
 }
 
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
@@ -312,9 +324,10 @@ func handleStacksPaperCitation(
 		}
 
 		data := citationViewData{
-			Stack: stack,
-			Title: paper.Title,
-			CSL:   bibliography.CSLItemFromPaper(paper),
+			Stack:  stack,
+			Title:  paper.Title,
+			CSL:    bibliography.CSLItemFromPaper(paper),
+			Styles: citationStyles,
 		}
 
 		renderTemplate(w, r, tmpl, data)
