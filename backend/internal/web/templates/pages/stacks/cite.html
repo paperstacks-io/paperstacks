@@ -99,6 +99,7 @@
     for (const textarea of textareas) {
       const style = textarea.dataset.style
       const path = textarea.dataset.cslPath
+
       if (!path) {
         continue
       }
@@ -123,6 +124,7 @@
         template: textarea.dataset.style,
         lang: "en-US",
       })
+
       textarea.value = citation.trim()
     })
   })()

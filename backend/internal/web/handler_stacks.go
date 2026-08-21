@@ -600,19 +600,19 @@ func handleStacksPaperCitation(
 			return
 		}
 
-		authors := make([]citation.CSLAuthor, 0, len(paper.Authors))
+		/*
+			authors := make([]citation.Author, 0, len(paper.Authors))
+			for _, author := range paper.Authors {
+				log.Printf(
+					"author: first=%q middle=%q last=%q",
+					author.NameFirst,
+					author.NameMiddle,
+					author.NameLast,
+				)
+			}
+		*/
 
-		for _, author := range paper.Authors {
-			authors = append(authors, citation.CSLAuthor{
-				Given:  author.NameFirst,
-				Family: author.NameLast,
-			})
-		}
-
-		cslItem := citation.CSLItem{
-			Title:  paper.Title,
-			Author: authors,
-		}
+		cslItem := citation.NewCSLItem(paper)
 
 		cslJSON, err := json.Marshal(cslItem)
 		if err != nil {

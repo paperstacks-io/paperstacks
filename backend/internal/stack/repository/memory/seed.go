@@ -184,6 +184,7 @@ func testingPapers() []paperDomain.Paper {
 func secondaryStudiesPapers() []paperDomain.Paper {
 	return []paperDomain.Paper{
 		seedPaper("fee26da6-4f03-5665-905e-27bfc1815803"),
+		seedPaper("6df179e1-c5b6-5ba7-8d13-9d6b41e75618"),
 		seedPaper("9b3aff9a-61de-5c35-870b-7eb7959c51d5"),
 		seedPaper("bce3eac8-0156-5518-83e0-753f47ec5e12"),
 		seedPaper("ea0fde12-7e32-5cec-869d-8f61ea8e5a74"),

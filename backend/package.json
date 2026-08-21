@@ -7,18 +7,14 @@
     "build:htmx": "cp node_modules/htmx.org/dist/htmx.min.js internal/web/assets/htmx.min.js",
     "watch:css": "npx @tailwindcss/cli -i ./internal/web/assets/tailwind.css -o ./internal/web/assets/styles.css --watch --minify",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "build:citation": "esbuild internal/web/assets/js/citation-entry.js --bundle --minify --platform=browser --format=iife --alias:node-fetch=./internal/web/assets/js/fetch-shim.js --outfile=internal/web/assets/citation.min.js"
+    "fmt:check": "oxfmt --check"
   },
   "dependencies": {
-    "@citation-js/core": "^0.8.2",
-    "@citation-js/plugin-csl": "^0.8.2",
     "@tailwindcss/cli": "^4.3.3",
     "htmx.org": "^2.0.10"
   },
   "devDependencies": {
     "daisyui": "^5.7.19",
-    "esbuild": "^0.28.2",
     "oxfmt": "^0.64.0",
     "tailwindcss": "^4.3.3"
   },
