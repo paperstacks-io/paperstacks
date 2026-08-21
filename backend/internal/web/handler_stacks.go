@@ -300,7 +300,7 @@ func handleStacksPaperCitation(
 
 		paper, err := paperService.GetByUUID(ctx, paperUUID)
 		if err != nil {
-			if err == paperDomain.ErrPaperNotFound {
+			if errors.Is(err, paperDomain.ErrPaperNotFound) {
 				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 				return
 			}
@@ -312,7 +312,7 @@ func handleStacksPaperCitation(
 
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
-			if err == stackDomain.ErrStackNotFound {
+			if errors.Is(err, stackDomain.ErrStackNotFound) {
 				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 				return
 			}
