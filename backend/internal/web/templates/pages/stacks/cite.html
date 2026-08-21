@@ -70,6 +70,25 @@
               </button>
             </div>
           </fieldset>
+
+          <fieldset class="fieldset">
+            <label class="label">APA</label>
+
+            <div class="flex items-center gap-3">
+              <textarea class="textarea citation-textarea min-w-0 flex-1 resize-none" rows="3" readonly></textarea>
+
+              <button
+                type="button"
+                class="btn btn-neutral btn-outline"
+                onclick="
+                  navigator.clipboard.writeText(this.closest('fieldset').querySelector('.citation-textarea').value)
+                "
+              >
+                <svg data-src="https://unpkg.com/heroicons/20/solid/clipboard-document.svg" class="size-5"></svg>
+                Copy
+              </button>
+            </div>
+          </fieldset>
         </div>
       </div>
     </div>
@@ -93,9 +112,7 @@
 
   const [styleResponse, localeResponse] = await Promise.all([
     fetch("/app/assets/csl/ieee.csl"),
-    fetch(
-      "https://raw.githubusercontent.com/citation-style-language/locales/c8b03ca9535a8613f191c91dd51f4b36c0656523/locales-en-US.xml",
-    ),
+    fetch("/app/assets/csl/locales-en-US.xml"),
   ])
 
   if (!styleResponse.ok || !localeResponse.ok) {

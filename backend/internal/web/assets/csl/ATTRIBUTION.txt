@@ -14,3 +14,11 @@ Authors: Brenton M. Wiernik and Andrew Dunning
 License: Creative Commons Attribution-ShareAlike 3.0 Unported
 License URL: https://creativecommons.org/licenses/by-sa/3.0/
 Changes: None
+
+English (United States) CSL locale (locales-en-US.xml)
+
+Source: https://github.com/citation-style-language/locales/blob/c8b03ca9535a8613f191c91dd51f4b36c0656523/locales-en-US.xml
+Translators: Andrew Dunning, Sebastian Karcher, Rintze M. Zelle, Denis Meier, and Brenton M. Wiernik
+License: Creative Commons Attribution-ShareAlike 3.0 Unported
+License URL: https://creativecommons.org/licenses/by-sa/3.0/
+Changes: None
