@@ -1,39 +1,37 @@
 {{ define "base" }}
 <!doctype html>
 <html data-theme="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{.Title}} · Paperstacks</title>
+    <!-- CSS for production -->
+    <link rel="stylesheet" href="/app/assets/styles.css" />
+    <link rel="stylesheet" href="/app/assets/hanko.css" />
+    <!-- CSS for development -->
+    <!-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" /> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
+    <!-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" /> -->
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{.Title}} · Paperstacks</title>
-  <!-- CSS for production -->
-  <link rel="stylesheet" href="/app/assets/styles.css" />
-  <link rel="stylesheet" href="/app/assets/hanko.css" />
-  <!-- CSS for development -->
-  <!-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" /> -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
-  <!-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" /> -->
+    <script src="/app/assets/htmx.min.js" defer></script>
 
-  <script src="/app/assets/htmx.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/theme-change@3/index.js"></script>
+    <!-- svg loader for icons -->
+    <script src="https://cdn.jsdelivr.net/npm/external-svg-loader@1.6.10/svg-loader.min.js" async></script>
+    <script type="module">
+      import { register } from "https://esm.run/@teamhanko/hanko-elements"
+      window.hanko = register("{{.HankoAPIURL}}")
+    </script>
+    <script type="module">
+      import { Cite, plugins } from "https://esm.run/@citation-js/core@0.8.2"
+      import "https://esm.sh/@citation-js/plugin-csl@0.8.2"
 
-  <script src="https://cdn.jsdelivr.net/npm/theme-change@3/index.js"></script>
-  <!-- svg loader for icons -->
-  <script src="https://cdn.jsdelivr.net/npm/external-svg-loader@1.6.10/svg-loader.min.js" async></script>
-  <script type="module">
-    import {register} from "https://esm.run/@teamhanko/hanko-elements"
-    window.hanko = register("{{.HankoAPIURL}}")
-  </script>
-  <script type="module">
-    import {Cite, plugins} from "https://esm.run/@citation-js/core@0.8.2"
-    import "https://esm.sh/@citation-js/plugin-csl@0.8.2"
+      window.Cite = Cite
+      window.CitePlugins = plugins
+    </script>
+  </head>
 
-    window.Cite = Cite
-    window.CitePlugins = plugins
-  </script>
-</head>
-
-{{ template "app" . }}
-
+  {{ template "app" . }}
 </html>
 {{ end }}
 
@@ -44,7 +42,8 @@
   <div id="app-shell" class="drawer lg:drawer-open min-h-screen bg-base-200">
     <input id="my-drawer" type="checkbox" class="drawer-toggle" aria-label="Toggle sidebar" />
     <main
-      class="drawer-content bg-base-100 lg:mt-2 lg:border-t lg:border-s lg:border-base-300 lg:rounded-ss-4xl lg:[corner-start-start-shape:squircle] lg:bg-[radial-gradient(ellipse_50rem_30rem_at_50%_0%,color-mix(oklch(96%_0.008_68)_3%,transparent)_0%,transparent_80%)]">
+      class="drawer-content bg-base-100 lg:mt-2 lg:border-t lg:border-s lg:border-base-300 lg:rounded-ss-4xl lg:[corner-start-start-shape:squircle] lg:bg-[radial-gradient(ellipse_50rem_30rem_at_50%_0%,color-mix(oklch(96%_0.008_68)_3%,transparent)_0%,transparent_80%)]"
+    >
       <div id="page-shell" class="grid grid-cols-12 gap-6 p-4 lg:p-10">
         <!-- Header for small screen size -->
         <header class="col-span-12 flex items-center gap-1 lg:hidden">
@@ -68,18 +67,32 @@
         <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
         <ul class="menu w-full overflow-y-auto">
           <li>
-            <a href="/app/" hx-get="/app/" hx-target="#page-shell" hx-select="#page-shell"
-              hx-select-oob="#sidebar:outerHTML" hx-swap="outerHTML" hx-push-url="true"
-              class="{{ if eq .PageName `home` }}menu-active{{ end }}">
+            <a
+              href="/app/"
+              hx-get="/app/"
+              hx-target="#page-shell"
+              hx-select="#page-shell"
+              hx-select-oob="#sidebar:outerHTML"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="{{ if eq .PageName `home` }}menu-active{{ end }}"
+            >
               <svg data-src="https://unpkg.com/heroicons/20/solid/home.svg" class="size-4"></svg>
               Home
             </a>
           </li>
 
           <li>
-            <a href="/app/stacks/page" hx-get="/app/stacks/page" hx-target="#page-shell" hx-select="#page-shell"
-              hx-select-oob="#sidebar:outerHTML" hx-swap="outerHTML" hx-push-url="true"
-              class="{{ if eq .PageName `stacks/page` }}menu-active{{ end }}">
+            <a
+              href="/app/stacks/page"
+              hx-get="/app/stacks/page"
+              hx-target="#page-shell"
+              hx-select="#page-shell"
+              hx-select-oob="#sidebar:outerHTML"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              class="{{ if eq .PageName `stacks/page` }}menu-active{{ end }}"
+            >
               <svg data-src="https://unpkg.com/heroicons/20/solid/rectangle-stack.svg" class="size-4"></svg>
               Stacks Overview
             </a>
@@ -92,9 +105,17 @@
               </summary>
               <ul>
                 <li>
-                  <a href="/app/papers" hx-get="/app/papers" hx-target="#page-shell" hx-select="#page-shell"
-                    hx-select-oob="#sidebar:outerHTML" hx-swap="outerHTML" hx-push-url="true"
-                    class="{{ if eq .PageName `papers` }}menu-active{{ end }}">Papers</a>
+                  <a
+                    href="/app/papers"
+                    hx-get="/app/papers"
+                    hx-target="#page-shell"
+                    hx-select="#page-shell"
+                    hx-select-oob="#sidebar:outerHTML"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                    class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
+                    >Papers</a
+                  >
                 </li>
               </ul>
             </details>
@@ -103,8 +124,12 @@
           {{ if .Session.IsValid }}
           <div class="divider"></div>
 
-          <div hx-get="/app/partials/sidebar/stacks-list" hx-trigger="load" hx-swap="outerHTML"
-            class="flex justify-center items-center">
+          <div
+            hx-get="/app/partials/sidebar/stacks-list"
+            hx-trigger="load"
+            hx-swap="outerHTML"
+            class="flex justify-center items-center"
+          >
             <span class="loading loading-spinner loading-sm"></span>
           </div>
           {{ end }}
@@ -128,9 +153,16 @@
             {{ if .Session.IsValid }}
 
             <li>
-              <a href="/app/settings" hx-get="/app/settings" hx-target="#page-shell" hx-select="#page-shell"
-                hx-select-oob="#sidebar:outerHTML" hx-swap="outerHTML" hx-push-url="true"
-                class="{{ if eq .PageName `settings` }}menu-active{{ end }}">
+              <a
+                href="/app/settings"
+                hx-get="/app/settings"
+                hx-target="#page-shell"
+                hx-select="#page-shell"
+                hx-select-oob="#sidebar:outerHTML"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                class="{{ if eq .PageName `settings` }}menu-active{{ end }}"
+              >
                 <svg data-src="https://unpkg.com/heroicons/20/solid/adjustments-vertical.svg" class="size-4"></svg>
                 Settings
               </a>
@@ -144,8 +176,15 @@
             </li>
             {{ else }}
             <li>
-              <a href="/app/auth" hx-get="/app/auth" hx-target="#page-shell" hx-select="#page-shell" hx-swap="outerHTML"
-                hx-push-url="true" class="btn btn-sm btn-primary">
+              <a
+                href="/app/auth"
+                hx-get="/app/auth"
+                hx-target="#page-shell"
+                hx-select="#page-shell"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                class="btn btn-sm btn-primary"
+              >
                 <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-left-on-rectangle.svg" class="size-4"></svg>
                 Login
               </a>
@@ -156,7 +195,10 @@
       </nav>
     </aside>
   </div>
-  <div id="toast-host" class="relative z-50"
-    hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"></div>
+  <div
+    id="toast-host"
+    class="relative z-50"
+    hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"
+  ></div>
 </body>
 {{ end }}
