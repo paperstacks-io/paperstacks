@@ -52,7 +52,7 @@
                 <label data-citation-style="{{ .Name }}"></label>
               </div>
             </div>
-            <button class="btn">Copy to Clipboard</button>
+            <button type="button" class="btn w-40" data-copy-citation>Copy to Clipboard</button>
           </div>
         </div>
       </div>
@@ -97,6 +97,20 @@
     for (const element of document.querySelectorAll(`[data-citation-style="${name}"]`)) {
       element.textContent = citation
     }
+  }
+
+  for (const button of document.querySelectorAll("[data-copy-citation]")) {
+    let resetTimer
+    button.addEventListener("click", async () => {
+      const citation = button.closest(".card").querySelector("[data-citation-style]").textContent
+      await navigator.clipboard.writeText(citation)
+
+      button.textContent = "Copied!"
+      clearTimeout(resetTimer)
+      resetTimer = setTimeout(() => {
+        button.textContent = "Copy to Clipboard"
+      }, 2000)
+    })
   }
 </script>
 
