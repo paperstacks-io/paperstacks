@@ -56,7 +56,12 @@
             <label class="label">IEEE</label>
 
             <div class="flex items-center gap-3">
-              <textarea class="textarea citation-textarea min-w-0 flex-1 resize-none" rows="3" readonly></textarea>
+              <textarea
+                class="textarea citation-textarea min-w-0 flex-1 resize-none"
+                data-citation-style="ieee"
+                rows="3"
+                readonly
+              ></textarea>
 
               <button
                 type="button"
@@ -75,7 +80,12 @@
             <label class="label">APA</label>
 
             <div class="flex items-center gap-3">
-              <textarea class="textarea citation-textarea min-w-0 flex-1 resize-none" rows="3" readonly></textarea>
+              <textarea
+                class="textarea citation-textarea min-w-0 flex-1 resize-none"
+                data-citation-style="apa"
+                rows="3"
+                readonly
+              ></textarea>
 
               <button
                 type="button"
@@ -110,27 +120,39 @@
     issued: { "date-parts": [[2026]] },
   }
 
-  const [styleResponse, localeResponse] = await Promise.all([
+  const [ieeeResponse, apaResponse, localeResponse] = await Promise.all([
     fetch("/app/assets/csl/ieee.csl"),
+    fetch("/app/assets/csl/apa.csl"),
     fetch("/app/assets/csl/locales-en-US.xml"),
   ])
 
-  if (!styleResponse.ok || !localeResponse.ok) {
-    throw new Error("Could not load the IEEE style or en-US locale")
+  if ([ieeeResponse, apaResponse, localeResponse].some((response) => !response.ok)) {
+    throw new Error("Could not load the IEEE and APA styles or en-US locale")
   }
 
-  const [style, locale] = await Promise.all([styleResponse.text(), localeResponse.text()])
+  const [ieee, apa, locale] = await Promise.all([
+    ieeeResponse.text(),
+    apaResponse.text(),
+    localeResponse.text(),
+  ])
   const items = { [exampleCSL.id]: exampleCSL }
-  const processor = new CSL.Engine(
-    {
-      retrieveLocale: () => locale,
-      retrieveItem: (id) => items[id],
-    },
-    style,
-  )
 
-  processor.updateItems([exampleCSL.id])
-  console.log(processor.makeBibliography()[1].join("").trim())
+  for (const [name, style] of Object.entries({ ieee, apa })) {
+    const processor = new CSL.Engine(
+      {
+        retrieveLocale: () => locale,
+        retrieveItem: (id) => items[id],
+      },
+      style,
+    )
+
+    processor.setOutputFormat("text")
+    processor.updateItems([exampleCSL.id])
+    document.querySelector(`[data-citation-style="${name}"]`).value = processor
+      .makeBibliography()[1]
+      .join("\n")
+      .trim()
+  }
 </script>
 
 {{ end }}
