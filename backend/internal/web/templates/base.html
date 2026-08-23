@@ -55,36 +55,24 @@
     <aside id="sidebar" class="drawer-side -z10">
       <label for="my-drawer" class="drawer-overlay"></label>
       <!-- sidebar menu -->
-      <nav class="bg-base-200 flex min-h-screen w-64 flex-col gap-2 px-2 pt-10">
+      <nav
+        class="bg-base-200 flex min-h-screen w-64 flex-col gap-2 px-2 pt-10"
+        hx-target="#page-shell"
+        hx-select-oob="#sidebar:outerHTML"
+        hx-swap="outerHTML"
+        hx-push-url="true"
+      >
         <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
         <ul class="menu w-full overflow-y-auto">
           <li>
-            <a
-              href="/app/"
-              hx-get="/app/"
-              hx-target="#page-shell"
-              hx-select="#page-shell"
-              hx-select-oob="#sidebar:outerHTML"
-              hx-swap="outerHTML"
-              hx-push-url="true"
-              class="{{ if eq .PageName `home` }}menu-active{{ end }}"
-            >
+            <a hx-get="/app/" class="{{ if eq .PageName `home` }}menu-active{{ end }}">
               <svg data-src="https://unpkg.com/heroicons/20/solid/home.svg" class="size-4"></svg>
               Home
             </a>
           </li>
 
           <li>
-            <a
-              href="/app/stacks/page"
-              hx-get="/app/stacks/page"
-              hx-target="#page-shell"
-              hx-select="#page-shell"
-              hx-select-oob="#sidebar:outerHTML"
-              hx-swap="outerHTML"
-              hx-push-url="true"
-              class="{{ if eq .PageName `stacks/page` }}menu-active{{ end }}"
-            >
+            <a hx-get="/app/stacks/page" class="{{ if eq .PageName `stacks/page` }}menu-active{{ end }}">
               <svg data-src="https://unpkg.com/heroicons/20/solid/rectangle-stack.svg" class="size-4"></svg>
               Stacks Overview
             </a>
@@ -97,17 +85,7 @@
               </summary>
               <ul>
                 <li>
-                  <a
-                    href="/app/papers"
-                    hx-get="/app/papers"
-                    hx-target="#page-shell"
-                    hx-select="#page-shell"
-                    hx-select-oob="#sidebar:outerHTML"
-                    hx-swap="outerHTML"
-                    hx-push-url="true"
-                    class="{{ if eq .PageName `papers` }}menu-active{{ end }}"
-                    >Papers</a
-                  >
+                  <a hx-get="/app/papers" class="{{ if eq .PageName `papers` }}menu-active{{ end }}">Papers</a>
                 </li>
               </ul>
             </details>
@@ -119,7 +97,9 @@
           <div
             hx-get="/app/partials/sidebar/stacks-list"
             hx-trigger="load"
+            hx-target="this"
             hx-swap="outerHTML"
+            hx-push-url="false"
             class="flex justify-center items-center"
           >
             <span class="loading loading-spinner loading-sm"></span>
@@ -145,16 +125,7 @@
             {{ if .Session.IsValid }}
 
             <li>
-              <a
-                href="/app/settings"
-                hx-get="/app/settings"
-                hx-target="#page-shell"
-                hx-select="#page-shell"
-                hx-select-oob="#sidebar:outerHTML"
-                hx-swap="outerHTML"
-                hx-push-url="true"
-                class="{{ if eq .PageName `settings` }}menu-active{{ end }}"
-              >
+              <a hx-get="/app/settings" class="{{ if eq .PageName `settings` }}menu-active{{ end }}">
                 <svg data-src="https://unpkg.com/heroicons/20/solid/adjustments-vertical.svg" class="size-4"></svg>
                 Settings
               </a>
@@ -168,15 +139,7 @@
             </li>
             {{ else }}
             <li>
-              <a
-                href="/app/auth"
-                hx-get="/app/auth"
-                hx-target="#page-shell"
-                hx-select="#page-shell"
-                hx-swap="outerHTML"
-                hx-push-url="true"
-                class="btn btn-sm btn-primary"
-              >
+              <a hx-get="/app/auth" class="btn btn-sm btn-primary">
                 <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-left-on-rectangle.svg" class="size-4"></svg>
                 Login
               </a>
