@@ -1,8 +1,8 @@
 // Package reader streams Crossref work records out of the annual public
 // data export: a directory of gzip-compressed JSONL files, one Crossref
-// "work" per line. It owns file-system traversal, gzip decompression and
-// line scanning; turning a line into the domain model is delegated to
-// the parser package.
+// "work" per line. It owns gzip decompression and line scanning (see
+// walk.go for directory traversal); turning a line into the domain
+// model is delegated to the parser package.
 package reader
 
 import (
@@ -11,8 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/domain"
@@ -87,36 +85,6 @@ func ReadFile(path string) (<-chan Record, error) {
 	return out, nil
 }
 
-// WalkDumpDir walks dir for Crossref dump files (named e.g. 0.jsonl.gz,
-// 1.jsonl.gz, …) and calls fn once per file, in lexicographic file-name
-// order. Only *.jsonl and *.jsonl.gz files are visited; fn is not called
-// for anything else.
-func WalkDumpDir(dir string, fn func(path string) error) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("read directory %s: %w", dir, err)
-	}
-
-	var names []string
-	for _, e := range entries {
-		if !e.IsDir() && isDumpFile(e.Name()) {
-			names = append(names, e.Name())
-		}
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		if err := fn(filepath.Join(dir, name)); err != nil {
-			return fmt.Errorf("processing %s: %w", name, err)
-		}
-	}
-	return nil
-}
-
 func isGzip(path string) bool {
 	return strings.HasSuffix(path, ".gz")
-}
-
-func isDumpFile(name string) bool {
-	return strings.HasSuffix(name, ".jsonl") || strings.HasSuffix(name, ".jsonl.gz")
 }
