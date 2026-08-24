@@ -1,0 +1,117 @@
+{{ define "stacks/cite" }}
+
+<header class="col-span-12 flex flex-col gap-4 lg:flex-row lg:items-end">
+  <div class="grow">
+    <div class="breadcrumbs text-xl">
+      <ul>
+        <li>
+          <a
+            href="/app/stacks/page"
+            hx-get="/app/stacks/page"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            Stacks
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-target="#page-shell"
+            hx-select="#page-shell"
+            hx-select-oob="#sidebar:outerHTML"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >
+            {{ .Stack.Name }}
+          </a>
+        </li>
+
+        <li>Cite</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body">
+    <h2 class="card-title">Cite: {{ .Title }}</h2>
+    <div class="grid gap-3">
+      {{ range .Styles }}
+      <div class="card bg-base-100 shadow-xs" data-citation-card>
+        <div class="card-body p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div class="font-bold">{{ .Label }}</div>
+              <div class="mt-2 text-sm leading-6">
+                <output data-citation>
+                  <span class="skeleton skeleton-text">Generating... <br /><br /> </span>
+                </output>
+              </div>
+            </div>
+            <button type="button" class="btn w-full sm:w-40" data-copy-citation>Copy to Clipboard</button>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<script type="module">
+  import CSL from "https://esm.sh/citeproc@2.4.63"
+
+  const paperCSL = {{ .CSL }}
+
+  const citationStyles = {{ .Styles }}
+  const [localeResponse, ...styleResponses] = await Promise.all([
+    fetch("/app/assets/csl/locales-en-US.xml"),
+    ...citationStyles.map(({ url }) => fetch(url)),
+  ])
+
+  if ([localeResponse, ...styleResponses].some((response) => !response.ok)) {
+    throw new Error("Could not load the citation styles or en-US locale")
+  }
+
+  const [locale, ...styles] = await Promise.all([
+    localeResponse.text(),
+    ...styleResponses.map((response) => response.text()),
+  ])
+  const items = { [paperCSL.id]: paperCSL }
+
+  const citations = document.querySelectorAll("[data-citation]")
+  for (const [index, citationElement] of citations.entries()) {
+    const processor = new CSL.Engine(
+      {
+        retrieveLocale: () => locale,
+        retrieveItem: (id) => items[id],
+      },
+      styles[index],
+    )
+
+    processor.setOutputFormat("text")
+    processor.updateItems([paperCSL.id])
+    citationElement.textContent = processor.makeBibliography()[1].join("\n").trim()
+  }
+
+  for (const button of document.querySelectorAll("[data-copy-citation]")) {
+    let resetTimer
+    button.addEventListener("click", async () => {
+      const citation = button.closest("[data-citation-card]").querySelector("[data-citation]").textContent
+      await navigator.clipboard.writeText(citation)
+
+      button.textContent = "Copied!"
+      clearTimeout(resetTimer)
+      resetTimer = setTimeout(() => {
+        button.textContent = "Copy to Clipboard"
+      }, 2000)
+    })
+  }
+</script>
+
+{{ end }}

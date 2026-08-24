@@ -159,7 +159,7 @@
                 <td class="text-right">
                   <div class="flex">
                     <a class="btn btn-ghost btn-xs">PDF</a>
-                    <button
+                    <a
                       class="btn btn-ghost btn-xs"
                       type="button"
                       hx-post="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/remove"
@@ -169,7 +169,20 @@
                       hx-on::click="event.stopPropagation()"
                     >
                       Remove
-                    </button>
+                    </a>
+                    <a
+                      class="btn btn-ghost btn-xs"
+                      type="button"
+                      href="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/cite"
+                      hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/cite"
+                      hx-on::click="event.stopPropagation()"
+                      hx-target="#page-shell"
+                      hx-select="#page-shell"
+                      hx-swap="outerHTML"
+                      hx-push-url="true"
+                    >
+                      Cite
+                    </a>
                   </div>
                 </td>
               </tr>

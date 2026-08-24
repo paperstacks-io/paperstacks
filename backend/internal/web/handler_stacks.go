@@ -50,6 +50,24 @@ type stacksListData struct {
 	Pagination    []PaginationItem
 }
 
+type citationStyleViewData struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+var citationStyles = []citationStyleViewData{
+	{Label: "IEEE", URL: "/app/assets/csl/ieee.csl"},
+	{Label: "APA", URL: "/app/assets/csl/apa.csl"},
+}
+
+type citationViewData struct {
+	pageData
+	Stack  stackDomain.Stack
+	Title  string
+	CSL    bibliography.CSLItem
+	Styles []citationStyleViewData
+}
+
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
 	return stacksListData{
 		Items:         result.Items,
@@ -255,6 +273,66 @@ func handleStackBibLaTeXImport(
 			logger.Error("render BibLaTeX import result", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+	})
+}
+
+func handleStacksPaperCitation(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		ctx := r.Context()
+		paperUUID := r.PathValue("paperUUID")
+		stackUUID := r.PathValue("stackUUID")
+
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			if errors.Is(err, paperDomain.ErrPaperNotFound) {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get paper by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			if errors.Is(err, stackDomain.ErrStackNotFound) {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := citationViewData{
+			pageData: newPageData(r, hankoAPIURL),
+			Stack:    stack,
+			Title:    paper.Title,
+			CSL:      bibliography.CSLItemFromPaper(paper),
+			Styles:   citationStyles,
+		}
+
+		renderTemplate(w, r, tmpl, data)
 	})
 }
 
