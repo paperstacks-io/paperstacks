@@ -61,6 +61,7 @@ var citationStyles = []citationStyleViewData{
 }
 
 type citationViewData struct {
+	pageData
 	Stack  stackDomain.Stack
 	Title  string
 	CSL    bibliography.CSLItem
@@ -278,6 +279,7 @@ func handleStackBibLaTeXImport(
 func handleStacksPaperCitation(
 	logger *slog.Logger,
 	tmpl *template.Template,
+	hankoAPIURL string,
 	paperService *paperApp.PaperService,
 	stackService *stackApp.StackService,
 ) http.Handler {
@@ -323,10 +325,11 @@ func handleStacksPaperCitation(
 		}
 
 		data := citationViewData{
-			Stack:  stack,
-			Title:  paper.Title,
-			CSL:    bibliography.CSLItemFromPaper(paper),
-			Styles: citationStyles,
+			pageData: newPageData(r, hankoAPIURL),
+			Stack:    stack,
+			Title:    paper.Title,
+			CSL:      bibliography.CSLItemFromPaper(paper),
+			Styles:   citationStyles,
 		}
 
 		renderTemplate(w, r, tmpl, data)
