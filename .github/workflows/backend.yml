@@ -3,12 +3,19 @@ name: Backend
 on:
   push:
     branches: ["main"]
+    tags: ["*"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,20 +28,10 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: "backend/go.mod"
-          cache: false
+          cache-dependency-path: "backend/go.sum"
 
-      - name: Restore cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Install dependencies
-        run: make deps
+      - name: Verify Go modules
+        run: go mod tidy && git diff --exit-code -- go.mod go.sum
 
       - name: Build
         run: make build
@@ -44,6 +41,16 @@ jobs:
 
       - name: Integration Test
         run: make test-integration
+
+      - name: Detect version tag
+        id: version
+        shell: bash
+        run: |
+          VERSION=""
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="$GITHUB_REF_NAME"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
   db-init-smoke:
     runs-on: ubuntu-latest
@@ -62,7 +69,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 24
           cache: "npm"
           cache-dependency-path: "backend/package-lock.json"
 
@@ -73,7 +80,10 @@ jobs:
         run: npm run fmt:check
 
   docker:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >
+      github.event_name == 'push' &&
+      github.ref_type == 'tag' &&
+      needs.build.outputs.version != ''
     needs: [build, format-frontend, db-init-smoke]
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -81,14 +91,15 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
       - name: Compute Docker build args
         id: build-args
         working-directory: ./backend
+        env:
+          APP_VERSION: ${{ needs.build.outputs.version }}
         run: make build-github-output >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v4
 
       - uses: docker/setup-buildx-action@v4
 
@@ -103,7 +114,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          platforms: linux/arm64
+          platforms: linux/arm64,linux/amd64
           push: true
           tags: |
             ghcr.io/paperstacks-io/paperstacks:latest
