@@ -5,8 +5,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+	"uuid"
 
-	"github.com/google/uuid"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
@@ -46,7 +46,7 @@ func NewStack(name string, owner userDomain.User) *Stack {
 	name = strings.TrimSpace(name)
 
 	return &Stack{
-		UUID:      uuid.NewString(),
+		UUID:      uuid.New().String(),
 		Name:      name,
 		Owner:     owner,
 		Papers:    []paperDomain.Paper{},

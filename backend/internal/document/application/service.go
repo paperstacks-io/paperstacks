@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"uuid"
 
-	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
@@ -91,7 +91,7 @@ func (s *DocumentService) Upload(
 	}
 
 	trimmedFileName := strings.TrimSpace(fileName)
-	docUUID := uuid.NewString()
+	docUUID := uuid.New().String()
 	storageKey := fmt.Sprintf("paper/%s/%s.pdf", paperUUID, docUUID)
 
 	err = s.storage.Put(ctx, storageKey, limitReader)
