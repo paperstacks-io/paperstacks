@@ -101,7 +101,7 @@ func (a testApplication) doGetRequest(t *testing.T, endpoint string) *http.Respo
 }
 
 // doPostRequest makes a POST request with JSON body and returns the response.
-func (a testApplication) doPostRequest(t *testing.T, endpoint string, body interface{}) *http.Response {
+func (a testApplication) doPostRequest(t *testing.T, endpoint string, body any) *http.Response {
 	t.Helper()
 
 	jsonBody, err := json.Marshal(body)
@@ -114,7 +114,7 @@ func (a testApplication) doPostRequest(t *testing.T, endpoint string, body inter
 }
 
 // doPutRequest makes a PUT request with JSON body and returns the response.
-func (a testApplication) doPutRequest(t *testing.T, endpoint string, body interface{}) *http.Response {
+func (a testApplication) doPutRequest(t *testing.T, endpoint string, body any) *http.Response {
 	t.Helper()
 
 	jsonBody, err := json.Marshal(body)
