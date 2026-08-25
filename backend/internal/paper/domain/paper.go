@@ -2,8 +2,7 @@ package domain
 
 import (
 	"strings"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // Paper represents a scientific publication with bibliographic metadata,

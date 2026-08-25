@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"uuid"
 
-	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
@@ -60,9 +60,9 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 		stack.UpdatedAt = now
 	}
 
-	err := uuid.Validate(stack.UUID)
+	_, err := uuid.Parse(stack.UUID)
 	if err != nil {
-		stack.UUID = uuid.NewString()
+		stack.UUID = uuid.New().String()
 	}
 
 	return s.repo.Create(ctx, stack)
