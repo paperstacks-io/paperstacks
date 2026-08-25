@@ -41,7 +41,7 @@ func assertBody(t *testing.T, resp *http.Response, expected string) {
 }
 
 // decodeJSON unmarshals the response body into the given value.
-func decodeJSON(t *testing.T, resp *http.Response, v interface{}) {
+func decodeJSON(t *testing.T, resp *http.Response, v any) {
 	t.Helper()
 
 	err := json.NewDecoder(resp.Body).Decode(v)
