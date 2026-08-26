@@ -5,10 +5,8 @@
       <ul>
         <li>
           <a
-            href="/app/stacks/page"
             hx-get="/app/stacks/page"
             hx-target="#page-shell"
-            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -18,10 +16,8 @@
         </li>
         <li>
           <a
-            href="/app/stacks/detail/{{ .Stack.UUID }}"
             hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
             hx-target="#page-shell"
-            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
