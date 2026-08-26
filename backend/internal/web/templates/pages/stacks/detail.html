@@ -6,10 +6,8 @@
       <ul>
         <li>
           <a
-            href="/app/stacks/page"
             hx-get="/app/stacks/page"
             hx-target="#page-shell"
-            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -28,10 +26,8 @@
     </a>
     <a
       class="btn btn-sm"
-      href="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
       hx-get="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
       hx-target="#page-shell"
-      hx-select="#page-shell"
       hx-select-oob="#sidebar:outerHTML"
       hx-swap="outerHTML"
       hx-push-url="true"
@@ -173,11 +169,9 @@
                     <a
                       class="btn btn-ghost btn-xs"
                       type="button"
-                      href="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/cite"
                       hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/cite"
                       hx-on::click="event.stopPropagation()"
                       hx-target="#page-shell"
-                      hx-select="#page-shell"
                       hx-swap="outerHTML"
                       hx-push-url="true"
                     >
