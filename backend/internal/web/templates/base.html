@@ -30,6 +30,7 @@
 
 <!-- App -->
 {{ define "app" }}
+
 <body>
   <div id="app-shell" class="drawer lg:drawer-open min-h-screen bg-base-200">
     <input id="my-drawer" type="checkbox" class="drawer-toggle" aria-label="Toggle sidebar" />
@@ -115,7 +116,7 @@
                 <div class="badge badge-outline font-mono px-4 py-3">{{ .AppVersion }}</div>
               </div>
 
-              <label class="swap swap-rotate">
+              <label id="theme-toggle" class="swap swap-rotate" hx-preserve>
                 <input type="checkbox" value="dark" data-set-theme aria-label="Toggle theme" />
                 <svg data-src="https://unpkg.com/heroicons/24/outline/sun.svg" class="swap-off h-6 w-6"></svg>
                 <svg data-src="https://unpkg.com/heroicons/24/outline/moon.svg" class="swap-on h-6 w-6"></svg>
