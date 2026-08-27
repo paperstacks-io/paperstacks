@@ -136,7 +136,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 	}
 }
 
-func TestHandleStackPaperRemoveRemovesPaperAndRedirectsToDetail(t *testing.T) {
+func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
 	stackService := newTestStackService()
@@ -161,8 +161,8 @@ func TestHandleStackPaperRemoveRemovesPaperAndRedirectsToDetail(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if got := rr.Header().Get("HX-Redirect"); got != "/app/stacks/detail/"+stack.UUID {
-		t.Fatalf("HX-Redirect = %q, want detail page redirect", got)
+	if got := rr.Header().Get("HX-Location"); got != "/app/stacks/detail/"+stack.UUID {
+		t.Fatalf("HX-Location = %q, want detail page redirect", got)
 	}
 
 	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
