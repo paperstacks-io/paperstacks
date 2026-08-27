@@ -15,7 +15,16 @@
 
     <script src="/app/assets/htmx.min.js" defer></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/theme-change@3/index.js"></script>
+    <script type="module">
+      import { themeChange } from "https://cdn.jsdelivr.net/npm/theme-change@3/+esm"
+
+      themeChange()
+
+      document.addEventListener("htmx:afterSwap", () => {
+        themeChange(false)
+      })
+    </script>
+
     <!-- svg loader for icons -->
     <script src="https://cdn.jsdelivr.net/npm/external-svg-loader@1.6.10/svg-loader.min.js" async></script>
     <script type="module">
@@ -30,6 +39,7 @@
 
 <!-- App -->
 {{ define "app" }}
+
 <body>
   <div id="app-shell" class="drawer lg:drawer-open min-h-screen bg-base-200">
     <input id="my-drawer" type="checkbox" class="drawer-toggle" aria-label="Toggle sidebar" />
