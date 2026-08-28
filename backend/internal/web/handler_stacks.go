@@ -574,7 +574,7 @@ func handleStackPaperRemove(
 
 		detailURL := "/app/stacks/detail/" + stackUUID
 		if isHTMX(r) {
-			hxRedirect(w, detailURL, http.StatusOK)
+			hxLocation(w, detailURL, http.StatusOK)
 			return
 		}
 
