@@ -177,7 +177,7 @@ func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	}
 }
 
-func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
+func TestHandleSidebarStackCreateNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
 	user := userDomain.NewUser("owner-sidebar-create", "sidebar@example.com")
@@ -193,15 +193,15 @@ func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
 	}
 
-	redirect := rr.Header().Get("HX-Redirect")
-	if !strings.HasPrefix(redirect, "/app/stacks/detail/") {
-		t.Fatalf("HX-Redirect = %q, want /app/stacks/detail/{uuid}", redirect)
+	location := rr.Header().Get("HX-Location")
+	if !strings.HasPrefix(location, "/app/stacks/detail/") {
+		t.Fatalf("HX-Location = %q, want /app/stacks/detail/{uuid}", location)
 	}
 
-	uuid := strings.TrimPrefix(redirect, "/app/stacks/detail/")
+	uuid := strings.TrimPrefix(location, "/app/stacks/detail/")
 	created, err := stackService.GetByUUID(req.Context(), uuid)
 	if err != nil {
-		t.Fatalf("created stack not found by redirect uuid %q: %v", uuid, err)
+		t.Fatalf("created stack not found by HX-Location UUID %q: %v", uuid, err)
 	}
 	if created.Name != "Sidebar Stack" {
 		t.Fatalf("created stack name = %q, want %q", created.Name, "Sidebar Stack")
