@@ -58,11 +58,11 @@
       <!-- sidebar menu -->
       <nav
         class="bg-base-200 flex min-h-screen w-64 flex-col gap-2 px-2 pt-10"
-        hx-target="#page-shell"
-        hx-select="#page-shell"
-        hx-select-oob="#sidebar:outerHTML"
-        hx-swap="outerHTML"
-        hx-push-url="true"
+        hx-target:inherited="#page-shell"
+        hx-select:inherited="#page-shell"
+        hx-select-oob:inherited="#sidebar:outerHTML"
+        hx-swap:inherited="outerHTML"
+        hx-push-url:inherited="true"
       >
         <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
         <ul class="menu w-full overflow-y-auto">
@@ -152,10 +152,6 @@
       </nav>
     </aside>
   </div>
-  <div
-    id="toast-host"
-    class="relative z-50"
-    hx-on::before-swap="if (!event.detail.successful) event.detail.shouldSwap = true"
-  ></div>
+  <div id="toast-host" class="relative z-50"></div>
 </body>
 {{ end }}
