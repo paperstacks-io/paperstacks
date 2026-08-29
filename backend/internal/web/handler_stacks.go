@@ -491,7 +491,7 @@ func handleSidebarStackCreate(
 			return
 		}
 
-		hxRedirect(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
+		hxLocation(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
 	})
 }
 
@@ -529,7 +529,7 @@ func handleStackDelete(
 		}
 
 		if isHTMX(r) {
-			hxRedirect(w, stacksPageURL, http.StatusOK)
+			hxLocation(w, stacksPageURL, http.StatusOK)
 			return
 		}
 
