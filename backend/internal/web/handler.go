@@ -15,6 +15,12 @@ import (
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
+const (
+	themeCookieName = "theme"
+	themeLight      = "light"
+	themeDark       = "dark"
+)
+
 type pageData struct {
 	Title       string
 	AppVersion  string
@@ -22,6 +28,7 @@ type pageData struct {
 	PageName    string
 	HankoAPIURL string
 	Session     commonauth.Session
+	Theme       string
 }
 
 func newPageData(r *http.Request, hankoAPIURL string) pageData {
@@ -36,6 +43,7 @@ func newPageData(r *http.Request, hankoAPIURL string) pageData {
 		PageName:    pageNameFromPath(r.URL.Path),
 		HankoAPIURL: hankoAPIURL,
 		Session:     *session,
+		Theme:       themeFromRequest(r),
 	}
 }
 
@@ -193,4 +201,37 @@ func handleLogout(
 
 		http.Redirect(w, r, "/app/", http.StatusSeeOther)
 	})
+}
+
+func handleTheme() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		theme := r.FormValue("theme")
+		if !isValidTheme(theme) {
+			http.Error(w, "invalid theme", http.StatusBadRequest)
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     themeCookieName,
+			Value:    theme,
+			Path:     "/",
+			MaxAge:   60 * 60 * 24 * 365,
+			SameSite: http.SameSiteLaxMode,
+		})
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+func themeFromRequest(r *http.Request) string {
+	cookie, err := r.Cookie(themeCookieName)
+	if err != nil || !isValidTheme(cookie.Value) {
+		return themeLight
+	}
+
+	return cookie.Value
+}
+
+func isValidTheme(theme string) bool {
+	return theme == themeLight || theme == themeDark
 }

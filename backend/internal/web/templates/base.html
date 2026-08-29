@@ -1,6 +1,6 @@
 {{ define "base" }}
 <!doctype html>
-<html data-theme="light" lang="en">
+<html data-theme="{{ .Theme }}" lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -116,9 +116,28 @@
                 <div class="badge badge-outline font-mono px-4 py-3">{{ .AppVersion }}</div>
               </div>
 
-              <label id="theme-toggle" class="swap swap-rotate" hx-preserve>
-                <input type="checkbox" value="dark" data-set-theme aria-label="Toggle theme" />
+              <label id="theme-toggle" class="swap swap-rotate">
+                {{ if eq .Theme "dark" }}
+                <input
+                  type="checkbox"
+                  checked
+                  hx-post="/app/theme"
+                  hx-vals='js:{theme: this.checked ? "dark" : "light"}'
+                  hx-on:change="document.documentElement.dataset.theme = this.checked ? 'dark' : 'light'"
+                  aria-label="Toggle theme"
+                />
+                {{ else }}
+                <input
+                  type="checkbox"
+                  hx-post="/app/theme"
+                  hx-vals='js:{theme: this.checked ? "dark" : "light"}'
+                  hx-on:change="document.documentElement.dataset.theme = this.checked ? 'dark' : 'light'"
+                  aria-label="Toggle theme"
+                />
+                {{ end }}
+
                 <svg data-src="https://unpkg.com/heroicons/24/outline/sun.svg" class="swap-off h-6 w-6"></svg>
+
                 <svg data-src="https://unpkg.com/heroicons/24/outline/moon.svg" class="swap-on h-6 w-6"></svg>
               </label>
             </div>
