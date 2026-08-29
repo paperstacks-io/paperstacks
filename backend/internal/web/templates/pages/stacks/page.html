@@ -48,7 +48,7 @@
     </div>
   </div>
   <div class="card-body gap-4">
-    <form id="stack_search_form" hx-post="/app/stacks/search" hx-trigger="load" hx-target="#stack-results">
+    <form id="stack_search_form" hx-post="/app/stacks/search" hx-trigger="load" hx-target:inherited="#stack-results">
       <div class="flex flex-col gap-3 lg:flex-row">
         <label class="input input-bordered flex items-center gap-2 w-full">
           <svg data-src="https://unpkg.com/heroicons/20/solid/magnifying-glass.svg" class="h-4 w-4 opacity-50"></svg>
