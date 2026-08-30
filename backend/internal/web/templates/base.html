@@ -15,9 +15,19 @@
 
     <script src="/app/assets/htmx.min.js" defer></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/theme-change@3/index.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/theme-change@3.0.4/index.js"
+      integrity="sha384-WIq5U8ZR5S38P9TYL9IL4k77w84CP98ePH8MwgYzstE4qK1UZ+RNSnFEln9MHWRV"
+      crossorigin="anonymous"
+    ></script>
+
     <!-- svg loader for icons -->
-    <script src="https://cdn.jsdelivr.net/npm/external-svg-loader@1.6.10/svg-loader.min.js" async></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/external-svg-loader@1.6.10/svg-loader.min.js"
+      integrity="sha384-ARYGZHWoVWGx89yhzmQDRMWwt0fynptc/DHZWUdlYt5YbSi2GI1BXwHU3FPoqMOK"
+      crossorigin="anonymous"
+      async
+    ></script>
     <script type="module">
       import { register } from "https://esm.run/@teamhanko/hanko-elements"
       window.hanko = register("{{.HankoAPIURL}}")
