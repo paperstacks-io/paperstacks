@@ -29,11 +29,14 @@ if [ ! -f "$PG_CRON_LIB" ] || [ ! -f "$PG_CRON_CONTROL" ]; then
 
     cd "${BUILD_DIR}/pg_cron-${PG_CRON_VERSION}"
 
-    make PG_CONFIG="$PG_CONFIG"
+make \
+    PG_CONFIG="$PG_CONFIG" \
+    with_llvm=no
 
-    make \
-        PG_CONFIG="$PG_CONFIG" \
-        install
+make \
+    PG_CONFIG="$PG_CONFIG" \
+    with_llvm=no \
+    install
 
     cd /
 
