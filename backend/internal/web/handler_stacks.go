@@ -578,7 +578,7 @@ func handleStackPaperRemove(
 			return
 		}
 
-		http.Redirect(w, r, detailURL, http.StatusSeeOther)
+		http.Redirect(w, r, detailURL, http.StatusOK)
 	})
 }
 
