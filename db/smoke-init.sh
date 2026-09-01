@@ -2,12 +2,14 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/.." && pwd)"
 
-image="${POSTGRES_IMAGE:-postgres:18-alpine}"
-container="paperstacks-db-smoke"
+compose_file="$script_dir/compose.yaml"
+compose_project="paperstacks-db-smoke"
 secrets_dir="$(mktemp -d)"
-container_runtime=""
+compose_override="$secrets_dir/compose.smoke.yaml"
+compose_cmd=()
+compose_args=()
+compose_started=false
 
 super_password="paperstacks-super-smoke"
 app_rw_password="paperstacks-rw-smoke"
@@ -15,38 +17,36 @@ app_ro_password="paperstacks-ro-smoke"
 
 on_exit() {
   status=$?
-  if [ "$status" -ne 0 ] &&
-    [ -n "$container_runtime" ] &&
-    "$container_runtime" inspect "$container" >/dev/null 2>&1; then
+  if [ "$status" -ne 0 ] && [ "$compose_started" = true ]; then
     echo "Postgres init smoke test failed; container logs follow:" >&2
-    "$container_runtime" logs "$container" >&2 || true
+    "${compose_cmd[@]}" "${compose_args[@]}" logs db >&2 || true
   fi
-  if [ -n "$container_runtime" ]; then
-    "$container_runtime" rm -f "$container" >/dev/null 2>&1 || true
+  if [ "$compose_started" = true ]; then
+    "${compose_cmd[@]}" "${compose_args[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   fi
   rm -rf "$secrets_dir"
   exit "$status"
 }
 trap on_exit EXIT
 
-select_container_runtime() {
-  if command -v docker >/dev/null 2>&1; then
-    container_runtime="docker"
-  elif command -v podman >/dev/null 2>&1; then
-    container_runtime="podman"
+select_compose_command() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    compose_cmd=(docker compose)
+  elif command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
+    compose_cmd=(podman compose)
   else
-    echo "docker or podman is required for the DB init smoke test" >&2
+    echo "docker compose or podman compose is required for the DB init smoke test" >&2
     exit 1
   fi
 }
 
 wait_for_postgres() {
   for _ in {1..60}; do
-    if "$container_runtime" exec "$container" pg_isready -h 127.0.0.1 -U postgres -d postgres >/dev/null 2>&1; then
+    if "${compose_cmd[@]}" "${compose_args[@]}" exec -T db pg_isready -h 127.0.0.1 -U postgres -d postgres >/dev/null 2>&1; then
       return 0
     fi
 
-    if [ "$("$container_runtime" inspect -f '{{.State.Running}}' "$container" 2>/dev/null || printf false)" != "true" ]; then
+    if [ -z "$("${compose_cmd[@]}" "${compose_args[@]}" ps --status running -q db)" ]; then
       echo "Postgres container exited before becoming ready" >&2
       return 1
     fi
@@ -64,9 +64,9 @@ psql_as() {
   local database="$3"
   shift 3
 
-  "$container_runtime" exec \
+  "${compose_cmd[@]}" "${compose_args[@]}" exec -T \
     -e PGPASSWORD="$password" \
-    "$container" \
+    db \
     psql \
     -h 127.0.0.1 \
     -U "$user" \
@@ -76,24 +76,28 @@ psql_as() {
     "$@"
 }
 
-select_container_runtime
+select_compose_command
+compose_args=(--project-name "$compose_project" --file "$compose_file" --file "$compose_override")
 
 printf '%s\n' "$super_password" >"$secrets_dir/db_super_password"
 printf '%s\n' "$app_rw_password" >"$secrets_dir/db_app_rw_password"
 printf '%s\n' "$app_ro_password" >"$secrets_dir/db_app_ro_password"
 
-"$container_runtime" rm -f "$container" >/dev/null 2>&1 || true
+cat >"$compose_override" <<EOF
+services:
+  db:
+    ports: !reset []
+secrets:
+  db_super_password:
+    file: $secrets_dir/db_super_password
+  db_app_rw_password:
+    file: $secrets_dir/db_app_rw_password
+  db_app_ro_password:
+    file: $secrets_dir/db_app_ro_password
+EOF
 
-"$container_runtime" run -d \
-  --name "$container" \
-  -e POSTGRES_PASSWORD_FILE=/run/secrets/db_super_password \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_DB=postgres \
-  -v "$repo_root/db/init-scripts:/docker-entrypoint-initdb.d:ro" \
-  -v "$secrets_dir/db_super_password:/run/secrets/db_super_password:ro" \
-  -v "$secrets_dir/db_app_rw_password:/run/secrets/db_app_rw_password:ro" \
-  -v "$secrets_dir/db_app_ro_password:/run/secrets/db_app_ro_password:ro" \
-  "$image" >/dev/null
+compose_started=true
+"${compose_cmd[@]}" "${compose_args[@]}" up -d --no-deps db >/dev/null
 
 wait_for_postgres
 

@@ -2,16 +2,39 @@ services:
   db:
     image: postgres:18-alpine
     restart: always
+
+    entrypoint:
+      - /bin/sh
+      - /db/install-pg-cron.sh
+
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=paperstacks
+      - -c
+      - cron.timezone=UTC
+      - -c
+      - cron.use_background_workers=on
+
     # set shared memory limit when using docker compose
     shm_size: 128mb
+
     ports:
       - "5432:5432"
+
     volumes:
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./procedures:/db/procedures:ro
+      - ./install-pg-cron.sh:/db/install-pg-cron.sh:ro
+
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/db_super_password
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
+      PG_CRON_VERSION: "1.6.7"
+
     secrets:
       - db_super_password
       - db_app_rw_password
