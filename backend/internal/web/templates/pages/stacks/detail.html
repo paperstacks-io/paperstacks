@@ -6,10 +6,8 @@
       <ul>
         <li>
           <a
-            href="/app/stacks/page"
             hx-get="/app/stacks/page"
             hx-target="#page-shell"
-            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -22,16 +20,21 @@
     </div>
   </div>
   <div class="flex flex-wrap gap-2">
-    <button
-      class="btn btn-sm"
-      type="button"
-      hx-get="/app/partials/toast/not-implemented"
-      hx-target="#toast-host"
-      hx-swap="innerHTML"
-    >
+    <a class="btn btn-sm" href="/app/stacks/detail/{{ .Stack.UUID }}/export/biblatex">
       <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
-      Export
-    </button>
+      Export as BibLaTeX
+    </a>
+    <a
+      class="btn btn-sm"
+      hx-get="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
+      hx-target="#page-shell"
+      hx-select-oob="#sidebar:outerHTML"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+    >
+      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-down-tray.svg" class="size-4"></svg>
+      Import from BibLaTeX
+    </a>
     <button class="btn btn-sm" type="button" onclick="modal_confirm_delete.showModal()">
       <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
       Delete
@@ -53,7 +56,7 @@
         hx-post="/app/stacks/detail/{{ .Stack.UUID }}/delete"
         hx-target="#toast-host"
         hx-swap="innerHTML"
-        hx-on::before-request="document.getElementById('modal_confirm_delete').close()"
+        hx-on::before:request="document.getElementById('modal_confirm_delete').close()"
       >
         Delete
       </button>
@@ -119,7 +122,7 @@
               <tr>
                 <th>Article</th>
                 <th>Authors</th>
-                <th>Year</th>
+                <th>Published</th>
                 <th></th>
               </tr>
             </thead>
@@ -128,37 +131,54 @@
               <tr
                 data-stack-paper-row
                 data-title="{{ .Title }}"
-                data-year="{{ .PublicationYear }}"
+                data-year="{{ .PublicationDate.Year }}"
                 data-uuid="{{ .UUID }}"
                 class="cursor-pointer hover:bg-base-200"
                 hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
-                hx-target="#stack-paper-info"
-                hx-swap="innerHTML"
+                hx-target:inherited="#stack-paper-info"
+                hx-swap:inherited="innerHTML"
               >
                 <td>
                   <div class="flex items-center gap-3">
                     <div>
                       <div class="font-bold">{{ .Title }}</div>
-                      <div class="text-base-content/60 text-sm">{{ .Metadata.PublishedIn }}</div>
+                      <div class="text-base-content/60 text-sm">
+                        {{ if .Metadata.JournalTitle }}{{ .Metadata.JournalTitle }}{{ else if .Metadata.BookTitle }}{{
+                        .Metadata.BookTitle }}{{ else if .Metadata.SeriesTitle }}{{ .Metadata.SeriesTitle }}{{ else if
+                        .Metadata.EventTitle }}{{ .Metadata.EventTitle }}{{ else }}{{ .Metadata.Institution }}{{ end }}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
-                <td>{{ .PublicationYear }}</td>
+                <td>{{ .PublicationDate }}</td>
                 <td class="text-right">
                   <div class="flex">
                     <a class="btn btn-ghost btn-xs">PDF</a>
-                    <button
+                    <a
                       class="btn btn-ghost btn-xs"
                       type="button"
-                      hx-post="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/remove"
+                      hx-delete="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
                       hx-target="#toast-host"
                       hx-swap="innerHTML"
-                      hx-disabled-elt="this"
+                      hx-disable="this"
+                      hx-confirm="Are you sure you want to remove the paper from this stack?"
                       hx-on::click="event.stopPropagation()"
                     >
                       Remove
-                    </button>
+                    </a>
+                    <a
+                      class="btn btn-ghost btn-xs"
+                      type="button"
+                      hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/cite"
+                      hx-on::click="event.stopPropagation()"
+                      hx-target="#page-shell"
+                      hx-select-oob="#sidebar:outerHTML"
+                      hx-swap="outerHTML"
+                      hx-push-url="true"
+                    >
+                      Cite
+                    </a>
                   </div>
                 </td>
               </tr>
@@ -190,8 +210,8 @@
             hx-trigger="change"
             hx-target="#toast-host"
             hx-swap="innerHTML"
-            hx-disabled-elt="this"
-            hx-on::after-request="if (!event.detail.successful) this.checked = !this.checked"
+            hx-disable="this"
+            hx-on::after:request="if (event.detail.ctx.response.status >= 400) this.checked = !this.checked"
             {{
             if
             .Stack.IsPublic

@@ -42,11 +42,13 @@ func run(
 	cfg config.Config,
 ) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	paperService := paperApp.NewPaperService(paperMem.NewRepository())
+	paperRepo := paperMem.NewRepository()
+	paperService := paperApp.NewPaperService(paperRepo)
 	doiService := doiApp.NewDOIService(nil)
-	userService := userApp.NewUserService(userMem.NewRepository(), cfg.HankoAPIURL, http.DefaultClient)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(), userService, paperService)
-	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, *userService, http.DefaultClient)
+	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
+	userService := userApp.NewUserService(userMem.NewRepository())
+	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
+	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 	docRepo := docMem.NewRepository()
 	docStorage := docMem.NewStorage()
 	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)

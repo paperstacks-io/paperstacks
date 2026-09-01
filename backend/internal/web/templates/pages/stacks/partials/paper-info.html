@@ -9,6 +9,18 @@
 </div>
 
 <fieldset class="fieldset">
+  <p class="label w-full whitespace-normal">
+    Access additional metadata, citations, and export formats on Crossref {{ if not .DOI }}(DOI must be set){{ end }}
+  </p>
+  <a
+    href="https://search.crossref.org/?from_ui=yes&q={{ .DOI }}"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="btn btn-sm {{ if not .DOI }}btn-disabled{{ end }}"
+    >View on Crossref</a
+  >
+</fieldset>
+<fieldset class="fieldset">
   <label class="label">Title</label>
   <input class="input w-full" value="{{ .Title }}" aria-label="title" />
 </fieldset>
@@ -21,22 +33,54 @@
   />
 </fieldset>
 <fieldset class="fieldset">
-  <label class="label">Year</label>
-  <input class="input w-full" value="{{ .PublicationYear }}" aria-label="paper year" />
+  <label class="label">Publication date</label>
+  <input class="input w-full" value="{{ .PublicationDate }}" aria-label="publication date" />
 </fieldset>
 
 <fieldset class="fieldset">
   <label class="label">DOI</label>
   <div class="join">
     <input type="text" name="doi" class="input input-sm join-item" value="{{ .DOI }}" />
-    <a href="https://doi.org/{{ .DOI }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm join-item">Open</a>
+    <a
+      href="https://doi.org/{{ .DOI }}"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="btn btn-sm join-item {{ if not .DOI }}btn-disabled{{ end }}"
+      >Open</a
+    >
   </div>
 </fieldset>
 
-<fieldset class="fieldset">
-  <label class="label">Published in</label>
-  <input class="input w-full" value="{{ .Metadata.PublishedIn }}" aria-label="metadata published in" />
-</fieldset>
+<div class="grid gap-2 sm:grid-cols-2">
+  <fieldset class="fieldset">
+    <label class="label">Journal title</label>
+    <input class="input w-full" value="{{ .Metadata.JournalTitle }}" aria-label="metadata journal title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Journal abbreviation</label>
+    <input class="input w-full" value="{{ .Metadata.JournalAbbrev }}" aria-label="metadata journal abbreviation" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Book title</label>
+    <input class="input w-full" value="{{ .Metadata.BookTitle }}" aria-label="metadata book title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Series title</label>
+    <input class="input w-full" value="{{ .Metadata.SeriesTitle }}" aria-label="metadata series title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Event title</label>
+    <input class="input w-full" value="{{ .Metadata.EventTitle }}" aria-label="metadata event title" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Event place</label>
+    <input class="input w-full" value="{{ .Metadata.EventLocation }}" aria-label="metadata event location" />
+  </fieldset>
+  <fieldset class="fieldset">
+    <label class="label">Institution</label>
+    <input class="input w-full" value="{{ .Metadata.Institution }}" aria-label="metadata institution" />
+  </fieldset>
+</div>
 
 <div class="grid gap-2 sm:grid-cols-2">
   <fieldset class="fieldset">

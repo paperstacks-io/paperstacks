@@ -1,0 +1,152 @@
+{{ define "stacks/partials/biblatex-import-results" }}
+
+<!-- Stats -->
+<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-12 shadow-xs">
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Already in stack</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .AlreadyInStack }}</div>
+    <div class="stat-desc">No changes needed</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/arrow-down-tray.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Existing papers added</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .ExistingPaperAdded }}</div>
+    <div class="stat-desc">Found in Paperstacks and added to this stack</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/plus-circle.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">New papers created</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .CreatedPaperAndAdded}}</div>
+    <div class="stat-desc">Created in Paperstacks and added to this stack</div>
+  </div>
+  <div class="stat">
+    <div class="stat-figure">
+      <svg data-src="https://unpkg.com/heroicons/24/outline/exclamation-triangle.svg" class="size-7 opacity-40"></svg>
+    </div>
+    <div class="stat-title">Failed imports</div>
+    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .Failed}}</div>
+    <div class="stat-desc">Could not be imported</div>
+  </div>
+</section>
+
+{{ if .Failed }}
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <div class="flex flex-col gap-2">
+      <h2 class="card-title">Failed imports</h2>
+    </div>
+  </div>
+  <div class="px-6 pt-4 pb-6">
+    <div class="space-y-3">
+      {{ range .Failed }}
+      <div role="alert" class="alert alert-error alert-soft items-start">
+        <svg
+          data-src="https://unpkg.com/heroicons/24/outline/exclamation-triangle.svg"
+          class="size-5 shrink-0"
+          aria-hidden="true"
+        ></svg>
+        <div>
+          <h3 class="font-semibold">Entry <code>{{ .SourceKey }}</code></h3>
+          {{ with .Paper.Title }}
+          <p class="text-sm">{{ . }}</p>
+          {{ end }}
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
+            {{ range .Errors }}
+            <li>{{ if .Field }}<span class="font-semibold">{{ .Field }}:</span> {{ end }}{{ .Message }}</li>
+            {{ end }}
+          </ul>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }}
+
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <h2 class="card-title">Successful imports</h2>
+  </div>
+  <div class="px-6 pt-4 pb-6">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Authors</th>
+          <th>Published</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .AlreadyInStack}}
+        <tr>
+          <td>
+            <div class="font-bold">{{ .Title }}</div>
+          </td>
+          <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+          <td>{{ .PublicationDate.Year }}</td>
+          <td><div class="badge badge-info w-32">In Stack</div></td>
+        </tr>
+        {{ end }} {{ range .ExistingPaperAdded}}
+        <tr>
+          <td>
+            <div class="font-bold">{{ .Title }}</div>
+          </td>
+          <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+          <td>{{ .PublicationDate.Year }}</td>
+          <td>
+            <div class="badge badge-success w-32">Added</div>
+          </td>
+        </tr>
+        {{ end }} {{ range .CreatedPaperAndAdded}}
+        <tr>
+          <td>
+            <div class="font-bold">{{ .Title }}</div>
+          </td>
+          <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+          <td>{{ .PublicationDate.Year }}</td>
+          <td>
+            <div class="badge badge-success w-32">New & Added</div>
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{{ if .CreatedWarnings}}
+<section class="card bg-base-200 col-span-12 shadow-xs">
+  <div class="card-body pb-0">
+    <div class="flex flex-col gap-2">
+      <h2 class="card-title">Warnings from created papers</h2>
+    </div>
+  </div>
+  <div class="px-6 pt-4 pb-6">
+    <div class="space-y-3">
+      {{ range .CreatedWarnings }}
+      <div role="alert" class="alert alert-warning alert-soft items-start">
+        <svg
+          data-src="https://unpkg.com/heroicons/24/outline/exclamation-triangle.svg"
+          class="size-5 shrink-0"
+          aria-hidden="true"
+        ></svg>
+        <div>
+          <h3 class="font-semibold">Entry <code>{{ .EntryKey }}</code></h3>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
+            <li>{{ if .Field }}<span class="font-semibold">{{ .Field }}:</span> {{ end }}{{ .Message }}</li>
+          </ul>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }} {{ end }}

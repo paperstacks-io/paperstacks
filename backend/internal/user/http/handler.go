@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
+	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	"github.com/paperstacks.io/paperstacks/internal/user/application"
 	"github.com/paperstacks.io/paperstacks/internal/user/domain"
@@ -83,31 +84,13 @@ func handleListUserStacks(
 
 func handleListCurrentUserStacks(
 	logger *slog.Logger,
-	userService *application.UserService,
 	stackService *stackApplication.StackService,
 ) nethttp.Handler {
 	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
-		token, ok := bearerToken(r.Header.Get("Authorization"))
-		if !ok {
-			nethttp.Error(w, "missing bearer token", nethttp.StatusUnauthorized)
-			return
-		}
-
-		user, err := userService.ResolveByAuthToken(r.Context(), token)
+		session, _ := commonauth.SessionFromContext(r.Context())
+		stacks, err := stackService.List(r.Context(), session.UserID)
 		if err != nil {
-			if errors.Is(err, domain.ErrInvalidAuthToken) {
-				nethttp.Error(w, domain.ErrInvalidAuthToken.Error(), nethttp.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
-			nethttp.Error(w, err.Error(), nethttp.StatusInternalServerError)
-			return
-		}
-
-		stacks, err := stackService.List(r.Context(), user.ExternalID)
-		if err != nil {
-			logger.Error("read current user stacks", "userId", user.ExternalID, "error", err)
+			logger.Error("read current user stacks", "userId", session.UserID, "error", err)
 			nethttp.Error(w, err.Error(), nethttp.StatusInternalServerError)
 			return
 		}
@@ -123,20 +106,10 @@ func handleListCurrentUserStacks(
 
 func handleGetCurrentUser(logger *slog.Logger, service *application.UserService) nethttp.Handler {
 	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
-		token, ok := bearerToken(r.Header.Get("Authorization"))
-		if !ok {
-			nethttp.Error(w, "missing bearer token", nethttp.StatusUnauthorized)
-			return
-		}
-
-		user, err := service.ResolveByAuthToken(r.Context(), token)
+		session, _ := commonauth.SessionFromContext(r.Context())
+		user, err := service.GetByExternalID(r.Context(), session.UserID)
 		if err != nil {
-			if errors.Is(err, domain.ErrInvalidAuthToken) {
-				nethttp.Error(w, domain.ErrInvalidAuthToken.Error(), nethttp.StatusUnauthorized)
-				return
-			}
-
-			logger.Error("read current user", "error", err)
+			logger.Error("read current user", "userId", session.UserID, "error", err)
 			nethttp.Error(w, err.Error(), nethttp.StatusInternalServerError)
 			return
 		}
@@ -148,14 +121,4 @@ func handleGetCurrentUser(logger *slog.Logger, service *application.UserService)
 			return
 		}
 	})
-}
-
-func bearerToken(header string) (string, bool) {
-	token, ok := strings.CutPrefix(strings.TrimSpace(header), "Bearer ")
-	if !ok {
-		return "", false
-	}
-
-	token = strings.TrimSpace(token)
-	return token, token != ""
 }

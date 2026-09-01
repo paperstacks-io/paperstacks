@@ -4,16 +4,16 @@ package integration
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 )
 
 func TestIntegrationSearchPapersQueryParams(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	type testCase struct {
 		query             string
@@ -29,7 +29,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 		// sort
 		{query: "", sortBy: "-title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "a9d7c335"},
 		{query: "", sortBy: "+title", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "df34d6d8"},
-		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "bc884ec1"},
+		{query: "", sortBy: "-year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "67132cd6"},
 		{query: "", sortBy: "+year", page: 0, pageSize: 100, HTTPStatusCode: http.StatusOK, expectedLen: 100, expectedFirstUUID: "5966a651"},
 		// title
 		{query: "we tried", sortBy: "", page: 1, pageSize: 0, HTTPStatusCode: http.StatusOK, expectedLen: 1, expectedFirstUUID: "3df8adca"},
@@ -49,7 +49,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.query+"_"+tc.sortBy, func(t *testing.T) {
-			u, err := url.Parse(testAPIPath + "/api/papers")
+			u, err := url.Parse(app.baseURL + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
 			}
@@ -69,7 +69,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 			}
 			u.RawQuery = q.Encode()
 
-			resp := doGetRequest(t, u.String())
+			resp := app.doGetRequest(t, u.String())
 			defer resp.Body.Close()
 
 			assertStatusCode(t, resp, tc.HTTPStatusCode)
@@ -101,7 +101,7 @@ func TestIntegrationSearchPapersQueryParams(t *testing.T) {
 }
 
 func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	type testCase struct {
 		name             string
@@ -123,7 +123,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			pageSize:         50,
 			expectedPage:     "1",
 			expectedPageSize: "50",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "true",
 		},
 		{
@@ -133,7 +133,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			pageSize:         50,
 			expectedPage:     "2",
 			expectedPageSize: "50",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "false",
 		},
 		{
@@ -141,14 +141,14 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			query:            "gui",
 			expectedPage:     "1",
 			expectedPageSize: "10",
-			expectedTotal:    "62",
+			expectedTotal:    "63",
 			expectedHasNext:  "true",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			u, err := url.Parse(testAPIPath + "/api/papers")
+			u, err := url.Parse(app.baseURL + "/api/papers")
 			if err != nil {
 				t.Fatalf("failed to parse url: %v", err)
 			}
@@ -168,7 +168,7 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 			}
 			u.RawQuery = q.Encode()
 
-			resp := doGetRequest(t, u.String())
+			resp := app.doGetRequest(t, u.String())
 			defer resp.Body.Close()
 
 			assertStatusCode(t, resp, http.StatusOK)
@@ -197,10 +197,10 @@ func TestIntegrationSearchPapersPaginationHeaders(t *testing.T) {
 }
 
 func TestIntegrationListPapers(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
-	endpoint := testAPIPath + "/api/papers"
-	resp := doGetRequest(t, endpoint)
+	endpoint := app.baseURL + "/api/papers"
+	resp := app.doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusOK)
@@ -214,11 +214,11 @@ func TestIntegrationListPapers(t *testing.T) {
 }
 
 func TestIntegrationGetPaperByUUID(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	uuid := "36583bb4-8cdc-554e-bcf5-f67b60d0b290"
-	endpoint := testAPIPath + "/api/papers/" + uuid
-	resp := doGetRequest(t, endpoint)
+	endpoint := app.baseURL + "/api/papers/" + uuid
+	resp := app.doGetRequest(t, endpoint)
 	defer resp.Body.Close()
 
 	assertStatusCode(t, resp, http.StatusOK)
@@ -232,26 +232,38 @@ func TestIntegrationGetPaperByUUID(t *testing.T) {
 }
 
 func TestIntegrationDeletePaper(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
 	uuid := "0f324174-926b-585d-b121-3a1e3f7fee0b"
-	endpoint := testAPIPath + "/api/papers/" + uuid
-	resp := doDeleteRequest(t, endpoint)
+	endpoint := app.baseURL + "/api/papers/" + uuid
+	resp := app.doDeleteRequest(t, endpoint)
 	assertStatusCode(t, resp, http.StatusNoContent)
 
-	resp = doGetRequest(t, endpoint)
+	resp = app.doGetRequest(t, endpoint)
 	assertStatusCode(t, resp, http.StatusNotFound)
 }
 
 func TestIntegrationSavePaper(t *testing.T) {
-	setupIntegrationTest(t)
+	app := startApplication(t)
 
-	paper := domain.Paper{
-		DOI:   "10.1109/some_DOI",
-		Title: "Test article",
+	paper := paperHttp.PaperRequest{
+		DOI:             "10.1109/some_DOI",
+		Title:           "Test article",
+		PublicationDate: paperHttp.PublicationDate{Year: 2026, Month: 8, Day: 13},
+		Type:            "journal-article",
+		Metadata: paperHttp.MetadataRequest{
+			JournalTitle:  "Journal Title",
+			JournalAbbrev: "J. Title",
+			BookTitle:     "Book Title",
+			SeriesTitle:   "Series Title",
+			EventTitle:    "Conference Title",
+			EventPlace:    "Gothenburg",
+			Institution:   "Example University",
+			ISSN:          []string{" 1234-5678 ", "8765-4321"},
+		},
 	}
-	endpoint := testAPIPath + "/api/papers"
-	resp := doPostRequest(t, endpoint, paper)
+	endpoint := app.baseURL + "/api/papers"
+	resp := app.doPostRequest(t, endpoint, paper)
 	defer resp.Body.Close()
 	assertStatusCode(t, resp, http.StatusCreated)
 
@@ -264,5 +276,35 @@ func TestIntegrationSavePaper(t *testing.T) {
 	decodeJSON(t, resp, &created)
 	if created.UUID == "" {
 		t.Fatal("expected UUID to be not empty")
+	}
+
+	if created.PublicationDate != paper.PublicationDate {
+		t.Fatalf("created publication date = %#v, want %#v", created.PublicationDate, paper.PublicationDate)
+	}
+
+	if created.Type != paper.Type {
+		t.Fatalf("created publication type = %q, want %q", created.Type, paper.Type)
+	}
+
+	if got, want := created.Metadata.ISSN, []string{"1234-5678", "8765-4321"}; !slices.Equal(got, want) {
+		t.Fatalf("created ISSN = %q, want %q", got, want)
+	}
+
+	for _, field := range []struct {
+		name string
+		got  string
+		want string
+	}{
+		{name: "journal title", got: created.Metadata.JournalTitle, want: paper.Metadata.JournalTitle},
+		{name: "journal abbreviation", got: created.Metadata.JournalAbbrev, want: paper.Metadata.JournalAbbrev},
+		{name: "book title", got: created.Metadata.BookTitle, want: paper.Metadata.BookTitle},
+		{name: "series title", got: created.Metadata.SeriesTitle, want: paper.Metadata.SeriesTitle},
+		{name: "event title", got: created.Metadata.EventTitle, want: paper.Metadata.EventTitle},
+		{name: "event place", got: created.Metadata.EventPlace, want: paper.Metadata.EventPlace},
+		{name: "institution", got: created.Metadata.Institution, want: paper.Metadata.Institution},
+	} {
+		if field.got != field.want {
+			t.Errorf("created metadata %s = %q, want %q", field.name, field.got, field.want)
+		}
 	}
 }

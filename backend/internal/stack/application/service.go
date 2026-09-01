@@ -6,8 +6,9 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"uuid"
 
-	"github.com/google/uuid"
+	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
@@ -17,28 +18,31 @@ const (
 	defaultSearchPage     = 1
 	defaultSearchPageSize = 10
 	maxSearchPageSize     = 100
+	defaultStackName      = "Default"
 )
 
 type PaperGetter interface {
 	GetByUUID(ctx context.Context, uuid string) (paperDomain.Paper, error)
-}
-
-type UserGetter interface {
-	GetByExternalID(ctx context.Context, externalID string) (userDomain.User, error)
+	GetByDOI(ctx context.Context, doi string) (paperDomain.Paper, error)
+	Create(ctx context.Context, paper paperDomain.Paper) (paperDomain.Paper, error)
 }
 
 type StackService struct {
 	repo        domain.Repository
-	userGetter  UserGetter
 	paperGetter PaperGetter
 }
 
-func NewStackService(repo domain.Repository, userGetter UserGetter, paperGetter PaperGetter) *StackService {
+func NewStackService(repo domain.Repository, paperGetter PaperGetter) *StackService {
 	return &StackService{
 		repo:        repo,
-		userGetter:  userGetter,
 		paperGetter: paperGetter,
 	}
+}
+
+type ImportResult struct {
+	AlreadyInStack       []paperDomain.Paper
+	ExistingPaperAdded   []paperDomain.Paper
+	CreatedPaperAndAdded []paperDomain.Paper
 }
 
 // Create validates and stores a new stack.
@@ -56,30 +60,45 @@ func (s *StackService) Create(ctx context.Context, stack domain.Stack) error {
 		stack.UpdatedAt = now
 	}
 
-	err := uuid.Validate(stack.UUID)
+	_, err := uuid.Parse(stack.UUID)
 	if err != nil {
-		stack.UUID = uuid.NewString()
+		stack.UUID = uuid.New().String()
 	}
 
 	return s.repo.Create(ctx, stack)
 }
 
-// CreateByName validates and stores a new stack.
-// It initializes missing timestamps and generates a UUID if necessary.
-//
+// CreateByName validates and stores a new stack for owner.
 // It returns an error if the stack is invalid or could not be stored.
-func (s *StackService) CreateByName(ctx context.Context, name string, userID string) (domain.Stack, error) {
-	user, err := s.userGetter.GetByExternalID(ctx, userID)
-	if err != nil {
-		return domain.Stack{}, err
-	}
-
-	stack := domain.NewStack(name, user)
+func (s *StackService) CreateByName(ctx context.Context, name string, owner userDomain.User) (domain.Stack, error) {
+	stack := domain.NewStack(name, owner)
 	if err := stack.Validate(); err != nil {
 		return domain.Stack{}, err
 	}
 
 	return *stack, s.repo.Create(ctx, *stack)
+}
+
+// EnsureDefault creates the user's default stack when it does not already exist.
+func (s *StackService) EnsureDefault(ctx context.Context, user userDomain.User) error {
+	stacks, err := s.List(ctx, user.ExternalID)
+	if err != nil {
+		return err
+	}
+
+	for _, stack := range stacks {
+		if strings.EqualFold(stack.Name, defaultStackName) {
+			return nil
+		}
+	}
+
+	stack := domain.NewStack(defaultStackName, user)
+	err = s.Create(ctx, *stack)
+	if errors.Is(err, domain.ErrStackAlreadyExists) {
+		return nil
+	}
+
+	return err
 }
 
 // Update validates and updates an existing stack.
@@ -147,6 +166,46 @@ func (s *StackService) AddPaper(ctx context.Context, stackUUID string, paperUUID
 	}
 
 	return s.repo.AddPaper(ctx, stackUUID, paper)
+}
+
+// Import adds candidates to a stack, reusing papers with matching DOIs and creating missing papers.
+func (s *StackService) Import(ctx context.Context, stackUUID string, candidates []bibliography.PaperEntry) (ImportResult, error) {
+	stack, err := s.repo.GetByUUID(ctx, stackUUID)
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	result := ImportResult{}
+
+	for _, candidate := range candidates {
+		inStackPaper, foundInStack := stack.ContainsPaperWithDOI(candidate.Paper.DOI)
+		if foundInStack {
+			result.AlreadyInStack = append(result.AlreadyInStack, inStackPaper)
+			continue
+		}
+
+		paper, err := s.paperGetter.GetByDOI(ctx, candidate.Paper.DOI)
+		created := errors.Is(err, paperDomain.ErrPaperNotFound)
+		if created {
+			paper, err = s.paperGetter.Create(ctx, candidate.Paper)
+		}
+		if err != nil {
+			return result, err
+		}
+
+		if err := s.repo.AddPaper(ctx, stackUUID, paper); err != nil {
+			return result, err
+		}
+
+		stack.Papers = append(stack.Papers, paper)
+		if created {
+			result.CreatedPaperAndAdded = append(result.CreatedPaperAndAdded, paper)
+		} else {
+			result.ExistingPaperAdded = append(result.ExistingPaperAdded, paper)
+		}
+	}
+
+	return result, nil
 }
 
 // RemovePaper removes a paper from the specified stack.

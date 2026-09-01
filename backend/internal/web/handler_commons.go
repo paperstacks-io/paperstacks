@@ -31,6 +31,11 @@ func hxRedirect(w http.ResponseWriter, location string, status int) {
 	w.WriteHeader(status)
 }
 
+func hxLocation(w http.ResponseWriter, location string, status int) {
+	w.Header().Set("HX-Location", location)
+	w.WriteHeader(status)
+}
+
 func currentHTMXPath(r *http.Request) string {
 	currentPath := r.URL.Path
 	if hxCurrentURL := r.Header.Get("HX-Current-URL"); hxCurrentURL != "" {

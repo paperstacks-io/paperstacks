@@ -3,19 +3,28 @@ package web
 import (
 	"errors"
 	"html/template"
+	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
+	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 )
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
 
 const stacksPageURL = "/app/stacks/page"
+
+const (
+	oneMiB int64 = 1 << 20
+	tenMiB int64 = 10 << 20
+)
 
 type papersListData struct {
 	Items         []paperDomain.Paper
@@ -39,6 +48,24 @@ type stacksListData struct {
 	NextPage      int
 	SearchOptions stackDomain.SearchOptions
 	Pagination    []PaginationItem
+}
+
+type citationStyleViewData struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+var citationStyles = []citationStyleViewData{
+	{Label: "IEEE", URL: "/app/assets/csl/ieee.csl"},
+	{Label: "APA", URL: "/app/assets/csl/apa.csl"},
+}
+
+type citationViewData struct {
+	pageData
+	Stack  stackDomain.Stack
+	Title  string
+	CSL    bibliography.CSLItem
+	Styles []citationStyleViewData
 }
 
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
@@ -101,6 +128,208 @@ func handleStacksDetailPage(
 			SelectedPaper: selectedPaper,
 			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
 			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
+		}
+
+		renderTemplate(w, r, tmpl, data)
+	})
+}
+
+func handleStackBibLaTeXExport(
+	logger *slog.Logger,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stackUUID := r.PathValue("uuid")
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			if errors.Is(err, stackDomain.ErrStackNotFound) {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack for BibLaTeX export", "stackUUID", stackUUID, "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		document, err := bibliography.ExportBibLaTeX(stack.Papers)
+		if err != nil {
+			logger.Error("export stack as BibLaTeX", "stackUUID", stackUUID, "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-bibtex; charset=utf-8")
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+			"filename": stack.Name + ".bib",
+		}))
+		_, _ = w.Write(document)
+	})
+}
+
+func handleStackBibLaTeXImport(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			_ = renderErrorToast(w, tmpl, "Please log in before importing papers.")
+			return
+		}
+
+		stackUUID := r.PathValue("uuid")
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			if !errors.Is(err, stackDomain.ErrStackNotFound) {
+				logger.Error("get stack before BibLaTeX import", "stackUUID", stackUUID, "error", err.Error())
+			}
+			_ = renderErrorToast(w, tmpl, "The requested stack could not be found.")
+			return
+		}
+		if stack.Owner.ExternalID != session.UserID {
+			_ = renderErrorToast(w, tmpl, "You are not allowed to import papers into this stack.")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, tenMiB+oneMiB)
+		if err := r.ParseMultipartForm(oneMiB); err != nil {
+			if r.MultipartForm != nil {
+				_ = r.MultipartForm.RemoveAll()
+			}
+			_ = renderErrorToast(w, tmpl, "Upload a .bib file no larger than 10 MiB.")
+			return
+		}
+		defer r.MultipartForm.RemoveAll()
+
+		file, _, err := r.FormFile("bib_file")
+		if err != nil {
+			_ = renderErrorToast(w, tmpl, "Choose a .bib file to import.")
+			return
+		}
+		defer file.Close()
+
+		source, err := io.ReadAll(io.LimitReader(file, tenMiB+1))
+		if err != nil {
+			logger.Error("read BibLaTeX upload", "stackUUID", stackUUID, "error", err.Error())
+			_ = renderErrorToast(w, tmpl, "The uploaded file could not be read.")
+			return
+		}
+
+		switch {
+		case len(source) == 0:
+			_ = renderErrorToast(w, tmpl, "The uploaded .bib file is empty.")
+			return
+		case int64(len(source)) > tenMiB:
+			_ = renderErrorToast(w, tmpl, "Choose a .bib file no larger than 10 MiB.")
+			return
+		}
+
+		candidates, importErr := bibliography.ImportBibLaTeX(source)
+		if importErr != nil {
+			if errors.Is(importErr, bibliography.ErrInvalidBibLaTeX) {
+				_ = renderErrorToast(w, tmpl, "The file is not valid BibLaTeX. Check its syntax and try again.")
+			} else {
+				logger.Error("import BibLaTeX", "stackUUID", stackUUID, "error", importErr.Error())
+				_ = renderErrorToast(w, tmpl, "The import stopped because of a server error.")
+			}
+			return
+		}
+
+		result, err := stackService.Import(ctx, stackUUID, candidates.Imported)
+
+		warnings := []bibliography.Diagnostic{}
+		for _, created := range result.CreatedPaperAndAdded {
+			for _, candiate := range candidates.Imported {
+				if created.DOI == candiate.Paper.DOI {
+					warnings = append(warnings, candiate.Warnings...)
+				}
+			}
+		}
+
+		data := struct {
+			AlreadyInStack       []paperDomain.Paper
+			CreatedPaperAndAdded []paperDomain.Paper
+			ExistingPaperAdded   []paperDomain.Paper
+			Failed               []bibliography.PaperEntry
+			CreatedWarnings      []bibliography.Diagnostic
+		}{
+			AlreadyInStack:       result.AlreadyInStack,
+			CreatedPaperAndAdded: result.CreatedPaperAndAdded,
+			ExistingPaperAdded:   result.ExistingPaperAdded,
+			Failed:               candidates.Failed,
+			CreatedWarnings:      warnings,
+		}
+		if err != nil {
+			logger.Error("stack service import failed", "stackUUID", stackUUID, "error", err.Error())
+			_ = renderErrorToast(w, tmpl, "The import stopped because of a server error.")
+
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/biblatex-import-results", data); err != nil {
+			logger.Error("render BibLaTeX import result", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+	})
+}
+
+func handleStacksPaperCitation(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	hankoAPIURL string,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		ctx := r.Context()
+		paperUUID := r.PathValue("paperUUID")
+		stackUUID := r.PathValue("stackUUID")
+
+		if paperUUID == "" {
+			http.Error(w, "missing paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		if stackUUID == "" {
+			http.Error(w, "missing stack uuid", http.StatusBadRequest)
+			return
+		}
+
+		paper, err := paperService.GetByUUID(ctx, paperUUID)
+		if err != nil {
+			if errors.Is(err, paperDomain.ErrPaperNotFound) {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get paper by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		stack, err := stackService.GetByUUID(ctx, stackUUID)
+		if err != nil {
+			if errors.Is(err, stackDomain.ErrStackNotFound) {
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			}
+
+			logger.Error("get stack by UUID", "error", err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		data := citationViewData{
+			pageData: newPageData(r, hankoAPIURL),
+			Stack:    stack,
+			Title:    paper.Title,
+			CSL:      bibliography.CSLItemFromPaper(paper),
+			Styles:   citationStyles,
 		}
 
 		renderTemplate(w, r, tmpl, data)
@@ -227,6 +456,7 @@ func handleStacksStatsByOwner(
 func handleSidebarStackCreate(
 	logger *slog.Logger,
 	tmpl *template.Template,
+	userService *userApp.UserService,
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -238,8 +468,15 @@ func handleSidebarStackCreate(
 			return
 		}
 
+		owner, err := userService.GetByExternalID(ctx, session.UserID)
+		if err != nil {
+			logger.Error("read sidebar stack owner", "userId", session.UserID, "error", err)
+			renderErrorToast(w, tmpl, "Failed to create stack: "+err.Error())
+			return
+		}
+
 		name := r.FormValue("name")
-		stack, err := stackService.CreateByName(ctx, name, session.UserID)
+		stack, err := stackService.CreateByName(ctx, name, owner)
 		if err != nil {
 			logger.Error("create sidebar stack", "error", err.Error())
 
@@ -254,7 +491,7 @@ func handleSidebarStackCreate(
 			return
 		}
 
-		hxRedirect(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
+		hxLocation(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
 	})
 }
 
@@ -292,7 +529,7 @@ func handleStackDelete(
 		}
 
 		if isHTMX(r) {
-			hxRedirect(w, stacksPageURL, http.StatusOK)
+			hxLocation(w, stacksPageURL, http.StatusOK)
 			return
 		}
 
@@ -337,11 +574,11 @@ func handleStackPaperRemove(
 
 		detailURL := "/app/stacks/detail/" + stackUUID
 		if isHTMX(r) {
-			hxRedirect(w, detailURL, http.StatusOK)
+			hxLocation(w, detailURL, http.StatusOK)
 			return
 		}
 
-		http.Redirect(w, r, detailURL, http.StatusSeeOther)
+		http.Redirect(w, r, detailURL, http.StatusOK)
 	})
 }
 

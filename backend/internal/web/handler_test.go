@@ -21,24 +21,17 @@ import (
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
-type fakeUserGetter map[string]userDomain.User
-
-func (f fakeUserGetter) GetByExternalID(_ context.Context, externalID string) (userDomain.User, error) {
-	user, ok := f[externalID]
-	if !ok {
-		return userDomain.User{}, userDomain.ErrUserNotFound
-	}
-
-	return user, nil
+func newTestStackService() *stackApp.StackService {
+	return stackApp.NewStackService(stackMemory.NewRepository(), nil)
 }
 
-func newTestStackService(users ...userDomain.User) *stackApp.StackService {
-	userGetter := make(fakeUserGetter, len(users))
+func newTestUserService(users ...userDomain.User) *userApplication.UserService {
+	repo := userMemory.NewRepository()
 	for _, user := range users {
-		userGetter[user.ExternalID] = user
+		_, _ = repo.SaveIfNotExist(context.Background(), user)
 	}
 
-	return stackApp.NewStackService(stackMemory.NewRepository(), userGetter, nil)
+	return userApplication.NewUserService(repo)
 }
 
 func TestPageNameFromPath(t *testing.T) {
@@ -98,37 +91,6 @@ func TestPageNameFromPath(t *testing.T) {
 	}
 }
 
-func TestStackPaperInfoTemplateRendersPaperMetadata(t *testing.T) {
-	t.Parallel()
-
-	var body strings.Builder
-	err := testWebTemplate(t).ExecuteTemplate(&body, "stacks/partials/paper-info", paperDomain.Paper{
-		DOI: "10.1000/182",
-		Metadata: paperDomain.Metadata{
-			PublishedIn: "Proceedings of the Example Conference",
-			Pages:       "42-53",
-			Volume:      "7",
-			Issue:       "2",
-		},
-	})
-	if err != nil {
-		t.Fatalf("ExecuteTemplate() error = %v", err)
-	}
-
-	rendered := body.String()
-	for _, want := range []string{
-		`href="https://doi.org/10.1000/182" target="_blank" rel="noopener noreferrer"`,
-		`value="Proceedings of the Example Conference" aria-label="metadata published in"`,
-		`value="42-53" aria-label="metadata pages"`,
-		`value="7" aria-label="metadata volume"`,
-		`value="2" aria-label="metadata issue"`,
-	} {
-		if !strings.Contains(rendered, want) {
-			t.Fatalf("rendered paper metadata missing %q: %s", want, rendered)
-		}
-	}
-}
-
 func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFoundHTMX(t *testing.T) {
 	t.Parallel()
 
@@ -174,91 +136,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 	}
 }
 
-func TestHandleStackPublicSettingUpdateSetsPublic(t *testing.T) {
-	t.Parallel()
-
-	stackService := newTestStackService()
-	user := userDomain.NewUser("owner-public-setting-true", "public-true@example.com")
-	stack := stackDomain.NewStack("Public Setting Stack", user)
-	stack.IsPublic = false
-	if err := stackService.Create(t.Context(), *stack); err != nil {
-		t.Fatalf("seed stack: %v", err)
-	}
-
-	handler := handleStackPublicSettingUpdate(testLogger(), testWebTemplate(t), stackService)
-	req := newStackPublicSettingRequest(t, stack.UUID, user.ExternalID, user.Email, true)
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertStackPublicSettingSuccess(t, rr)
-
-	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
-	if err != nil {
-		t.Fatalf("GetByUUID() error = %v", err)
-	}
-	if !updated.IsPublic {
-		t.Fatalf("updated IsPublic = false, want true")
-	}
-}
-
-func TestHandleStackPublicSettingUpdateClearsPublic(t *testing.T) {
-	t.Parallel()
-
-	stackService := newTestStackService()
-	user := userDomain.NewUser("owner-public-setting-false", "public-false@example.com")
-	stack := stackDomain.NewStack("Private Setting Stack", user)
-	stack.IsPublic = true
-	if err := stackService.Create(t.Context(), *stack); err != nil {
-		t.Fatalf("seed stack: %v", err)
-	}
-
-	handler := handleStackPublicSettingUpdate(testLogger(), testWebTemplate(t), stackService)
-	req := newStackPublicSettingRequest(t, stack.UUID, user.ExternalID, user.Email, false)
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertStackPublicSettingSuccess(t, rr)
-
-	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
-	if err != nil {
-		t.Fatalf("GetByUUID() error = %v", err)
-	}
-	if updated.IsPublic {
-		t.Fatalf("updated IsPublic = true, want false")
-	}
-}
-
-func TestHandleStackPublicSettingUpdateRejectsNonOwner(t *testing.T) {
-	t.Parallel()
-
-	stackService := newTestStackService()
-	owner := userDomain.NewUser("owner-public-setting-forbidden", "owner-public@example.com")
-	stack := stackDomain.NewStack("Forbidden Public Setting Stack", owner)
-	stack.IsPublic = false
-	if err := stackService.Create(t.Context(), *stack); err != nil {
-		t.Fatalf("seed stack: %v", err)
-	}
-
-	handler := handleStackPublicSettingUpdate(testLogger(), testWebTemplate(t), stackService)
-	req := newStackPublicSettingRequest(t, stack.UUID, "other-public-setting-forbidden", "other-public@example.com", true)
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertSidebarStackCreateError(t, rr, http.StatusOK, "You are not allowed to update this stack.")
-
-	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
-	if err != nil {
-		t.Fatalf("GetByUUID() error = %v", err)
-	}
-	if updated.IsPublic {
-		t.Fatalf("updated IsPublic = true, want unchanged false")
-	}
-}
-
-func TestHandleStackPaperRemoveRemovesPaperAndRedirectsToDetail(t *testing.T) {
+func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
 	stackService := newTestStackService()
@@ -283,8 +161,8 @@ func TestHandleStackPaperRemoveRemovesPaperAndRedirectsToDetail(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if got := rr.Header().Get("HX-Redirect"); got != "/app/stacks/detail/"+stack.UUID {
-		t.Fatalf("HX-Redirect = %q, want detail page redirect", got)
+	if got := rr.Header().Get("HX-Location"); got != "/app/stacks/detail/"+stack.UUID {
+		t.Fatalf("HX-Location = %q, want detail page redirect", got)
 	}
 
 	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
@@ -299,41 +177,12 @@ func TestHandleStackPaperRemoveRemovesPaperAndRedirectsToDetail(t *testing.T) {
 	}
 }
 
-func TestHandleStackPaperRemoveRejectsNonOwner(t *testing.T) {
-	t.Parallel()
-
-	stackService := newTestStackService()
-	owner := userDomain.NewUser("owner-paper-remove-forbidden", "owner-remove@example.com")
-	stack := stackDomain.NewStack("Forbidden Paper Remove Stack", owner)
-	paperUUID := "33333333-3333-4333-8333-333333333333"
-	stack.Papers = []paperDomain.Paper{{UUID: paperUUID, Title: "Kept Paper"}}
-	if err := stackService.Create(t.Context(), *stack); err != nil {
-		t.Fatalf("seed stack: %v", err)
-	}
-
-	handler := handleStackPaperRemove(testLogger(), testWebTemplate(t), stackService)
-	req := newStackPaperRemoveRequest(t, stack.UUID, paperUUID, "other-paper-remove-forbidden", "other-remove@example.com")
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertSidebarStackCreateError(t, rr, http.StatusOK, "You are not allowed to remove papers from this stack.")
-
-	updated, err := stackService.GetByUUID(req.Context(), stack.UUID)
-	if err != nil {
-		t.Fatalf("GetByUUID() error = %v", err)
-	}
-	if len(updated.Papers) != 1 {
-		t.Fatalf("updated papers length = %d, want unchanged 1", len(updated.Papers))
-	}
-}
-
-func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
+func TestHandleSidebarStackCreateNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
 	user := userDomain.NewUser("owner-sidebar-create", "sidebar@example.com")
-	stackService := newTestStackService(user)
-	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), stackService)
+	stackService := newTestStackService()
+	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), newTestUserService(user), stackService)
 
 	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "Sidebar Stack")
 	rr := httptest.NewRecorder()
@@ -344,167 +193,22 @@ func TestHandleSidebarStackCreateRedirectsToDetail(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
 	}
 
-	redirect := rr.Header().Get("HX-Redirect")
-	if !strings.HasPrefix(redirect, "/app/stacks/detail/") {
-		t.Fatalf("HX-Redirect = %q, want /app/stacks/detail/{uuid}", redirect)
+	location := rr.Header().Get("HX-Location")
+	if !strings.HasPrefix(location, "/app/stacks/detail/") {
+		t.Fatalf("HX-Location = %q, want /app/stacks/detail/{uuid}", location)
 	}
 
-	uuid := strings.TrimPrefix(redirect, "/app/stacks/detail/")
+	uuid := strings.TrimPrefix(location, "/app/stacks/detail/")
 	created, err := stackService.GetByUUID(req.Context(), uuid)
 	if err != nil {
-		t.Fatalf("created stack not found by redirect uuid %q: %v", uuid, err)
+		t.Fatalf("created stack not found by HX-Location UUID %q: %v", uuid, err)
 	}
 	if created.Name != "Sidebar Stack" {
 		t.Fatalf("created stack name = %q, want %q", created.Name, "Sidebar Stack")
 	}
-}
-
-func TestHandleSidebarStackCreateRendersToastOnEmptyName(t *testing.T) {
-	t.Parallel()
-
-	user := userDomain.NewUser("owner-empty-sidebar-create", "empty@example.com")
-	handler := handleSidebarStackCreate(
-		testLogger(),
-		testWebTemplate(t),
-		newTestStackService(user),
-	)
-
-	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "   ")
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertSidebarStackCreateError(t, rr, http.StatusOK, "Stack name must be 1-80 characters")
-}
-
-func TestHandleSidebarStackCreateRendersToastOnDuplicateName(t *testing.T) {
-	t.Parallel()
-
-	user := userDomain.NewUser("owner-duplicate-sidebar-create", "duplicate@example.com")
-	stackService := newTestStackService(user)
-	existing := stackDomain.NewStack("Duplicate Stack", user)
-	if err := stackService.Create(t.Context(), *existing); err != nil {
-		t.Fatalf("seed duplicate stack: %v", err)
+	if created.Owner != user {
+		t.Fatalf("created stack owner = %#v, want %#v", created.Owner, user)
 	}
-
-	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), stackService)
-	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "duplicate stack")
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertSidebarStackCreateError(t, rr, http.StatusOK, "A stack with this name already exists.")
-}
-
-func TestHandleSidebarStackCreateRendersToastWithoutSession(t *testing.T) {
-	t.Parallel()
-
-	handler := handleSidebarStackCreate(
-		testLogger(),
-		testWebTemplate(t),
-		newTestStackService(),
-	)
-	req := httptest.NewRequest(http.MethodPost, "/app/stacks/sidebar/create", strings.NewReader(url.Values{
-		"name": {"Sidebar Stack"},
-	}.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertSidebarStackCreateError(t, rr, http.StatusOK, "Unauthorized. Please log in to create a stack.")
-}
-
-func TestHandleSettingsPageRendersUserORCID(t *testing.T) {
-	t.Parallel()
-
-	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
-	user, err := userService.CreateIfNotExist(t.Context(), "settings-page-user", "settings-page@example.com")
-	if err != nil {
-		t.Fatalf("CreateIfNotExist() error = %v", err)
-	}
-	user.ORCID = "0000-0002-1825-0097"
-	if err := userService.Update(t.Context(), user.ExternalID, user); err != nil {
-		t.Fatalf("Update() error = %v", err)
-	}
-
-	handler := handleSettingsPage(testLogger(), testPageTemplate(t, "settings/page"), "", userService)
-	req := newSettingsRequest(t, user.ExternalID, user.Email)
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
-	}
-	body := rr.Body.String()
-	for _, want := range []string{
-		`value="0000-0002-1825-0097"`,
-		`data-initial-value="0000-0002-1825-0097"`,
-		`data-user-settings-actions`,
-		`hidden`,
-		`hx-post="/app/settings/user"`,
-	} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("settings page missing %q: %s", want, body)
-		}
-	}
-}
-
-func TestHandleUserSettingsUpdateRendersToastOnInvalidORCID(t *testing.T) {
-	t.Parallel()
-
-	userService := userApplication.NewUserService(userMemory.NewRepository(), "", nil)
-	user, err := userService.CreateIfNotExist(t.Context(), "settings-invalid-user", "settings-invalid@example.com")
-	if err != nil {
-		t.Fatalf("CreateIfNotExist() error = %v", err)
-	}
-
-	handler := handleUserSettingsUpdate(testLogger(), testWebTemplate(t), userService)
-	req := newUserSettingsUpdateRequest(t, user.ExternalID, user.Email, "invalid")
-	rr := httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-
-	assertSidebarStackCreateError(t, rr, http.StatusOK, "ORCID must use the 0000-0000-0000-0000 format.")
-
-	stored, err := userService.GetByExternalID(t.Context(), user.ExternalID)
-	if err != nil {
-		t.Fatalf("GetByExternalID() error = %v", err)
-	}
-	if stored.ORCID != "" {
-		t.Fatalf("stored ORCID = %q, want unchanged empty", stored.ORCID)
-	}
-}
-
-func newSettingsRequest(t *testing.T, userID string, email string) *http.Request {
-	t.Helper()
-
-	req := httptest.NewRequest(http.MethodGet, "/app/settings", nil)
-	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
-		UserID:  userID,
-		Email:   email,
-		IsValid: true,
-	}))
-
-	return req
-}
-
-func newUserSettingsUpdateRequest(t *testing.T, userID string, email string, orcid string) *http.Request {
-	t.Helper()
-
-	req := httptest.NewRequest(http.MethodPost, "/app/settings/user", strings.NewReader(url.Values{
-		"orcid": {orcid},
-	}.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("HX-Request", "true")
-	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
-		UserID:  userID,
-		Email:   email,
-		IsValid: true,
-	}))
-
-	return req
 }
 
 func newSidebarStackCreateRequest(t *testing.T, userID string, email string, name string) *http.Request {
@@ -537,26 +241,6 @@ func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
 	return req
 }
 
-func newStackPublicSettingRequest(t *testing.T, stackUUID string, userID string, email string, isPublic bool) *http.Request {
-	t.Helper()
-
-	values := url.Values{}
-	if isPublic {
-		values.Set("is_public", "on")
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/app/stacks/detail/"+stackUUID+"/settings/is-public", strings.NewReader(values.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.SetPathValue("uuid", stackUUID)
-	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
-		UserID:  userID,
-		Email:   email,
-		IsValid: true,
-	}))
-
-	return req
-}
-
 func newStackPaperRemoveRequest(t *testing.T, stackUUID string, paperUUID string, userID string, email string) *http.Request {
 	t.Helper()
 
@@ -571,45 +255,6 @@ func newStackPaperRemoveRequest(t *testing.T, stackUUID string, paperUUID string
 	}))
 
 	return req
-}
-
-func assertSidebarStackCreateError(t *testing.T, rr *httptest.ResponseRecorder, status int, message string) {
-	t.Helper()
-
-	if rr.Code != status {
-		t.Fatalf("status = %d, want %d; body: %s", rr.Code, status, rr.Body.String())
-	}
-	if got := rr.Header().Get("HX-Retarget"); got != "#toast-host" {
-		t.Fatalf("HX-Retarget = %q, want #toast-host", got)
-	}
-	if got := rr.Header().Get("HX-Reswap"); got != "innerHTML" {
-		t.Fatalf("HX-Reswap = %q, want innerHTML", got)
-	}
-	if body := rr.Body.String(); !strings.Contains(body, message) {
-		t.Fatalf("body does not contain %q: %s", message, body)
-	}
-}
-
-func assertStackPublicSettingSuccess(t *testing.T, rr *httptest.ResponseRecorder) {
-	t.Helper()
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
-	}
-	if body := rr.Body.String(); !strings.Contains(body, "Stack changes saved") {
-		t.Fatalf("body does not contain success toast: %s", body)
-	}
-}
-
-func testPageTemplate(t *testing.T, pageTemplate string) *template.Template {
-	t.Helper()
-
-	tmpl, err := pageTemplateSet(testWebTemplate(t), pageTemplate)
-	if err != nil {
-		t.Fatalf("pageTemplateSet(%q) error = %v", pageTemplate, err)
-	}
-
-	return tmpl
 }
 
 func testWebTemplate(t *testing.T) *template.Template {

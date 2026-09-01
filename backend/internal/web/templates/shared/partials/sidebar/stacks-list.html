@@ -16,12 +16,11 @@
 {{ $page := .PageName }} {{ range .Items}}
 <li>
   <a
-    href="/app/stacks/detail/{{ .UUID }}"
     hx-get="/app/stacks/detail/{{ .UUID }}"
     hx-target="#page-shell"
-    hx-select="#page-shell"
     hx-select-oob="#sidebar:outerHTML"
     hx-swap="outerHTML"
+    hx-select="#page-shell"
     hx-push-url="true"
     class="justify-between {{ if eq $page (printf `stacks/detail/%s` .UUID) }}menu-active{{ end }}"
   >

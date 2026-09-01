@@ -4,13 +4,18 @@ import (
 	"context"
 	"testing"
 
+	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
-const existingPaperUUID = "36583bb4-8cdc-554e-bcf5-f67b60d0b290"
+const (
+	existingPaperUUID = "36583bb4-8cdc-554e-bcf5-f67b60d0b290"
+	existingPaperDOI  = "10.1000/existing"
+	createdPaperUUID  = "11111111-1111-4111-8111-111111111111"
+)
 
 type fakePaperGetter struct {
 	papers map[string]paperDomain.Paper
@@ -24,16 +29,43 @@ func (f fakePaperGetter) GetByUUID(ctx context.Context, uuid string) (paperDomai
 
 	return paper, nil
 }
+func (f fakePaperGetter) GetByDOI(_ context.Context, doi string) (paperDomain.Paper, error) {
+	for _, paper := range f.papers {
+		if paper.DOI == doi {
+			return paper, nil
+		}
+	}
+	return paperDomain.Paper{}, paperDomain.ErrPaperNotFound
+}
+
+func (f fakePaperGetter) Create(_ context.Context, paper paperDomain.Paper) (paperDomain.Paper, error) {
+	paper.UUID = createdPaperUUID
+	f.papers[paper.UUID] = paper
+	return paper, nil
+}
 
 func newTestStackService() *StackService {
-	return NewStackService(memory.NewRepository(), nil, fakePaperGetter{
+	return NewStackService(memory.NewRepository(), fakePaperGetter{
 		papers: map[string]paperDomain.Paper{
 			existingPaperUUID: {
 				UUID:  existingPaperUUID,
+				DOI:   existingPaperDOI,
 				Title: "Existing Paper",
 			},
 		},
 	})
+}
+
+type duplicateDefaultStackRepository struct {
+	domain.Repository
+}
+
+func (duplicateDefaultStackRepository) List(context.Context, string) ([]domain.Stack, error) {
+	return nil, nil
+}
+
+func (duplicateDefaultStackRepository) Create(context.Context, domain.Stack) error {
+	return domain.ErrStackAlreadyExists
 }
 
 func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
@@ -65,6 +97,52 @@ func TestServiceCreateNormalizesAndValidatesStack(t *testing.T) {
 
 	if created.Owner.ExternalID != "0" {
 		t.Fatalf("Create() did not associate the stack with the correct user")
+	}
+}
+
+func TestEnsureDefaultCreatesOnePrivateEmptyStack(t *testing.T) {
+	t.Parallel()
+
+	service := newTestStackService()
+	user := userDomain.User{ExternalID: "default-user", Email: "default@example.com"}
+
+	if err := service.EnsureDefault(context.Background(), user); err != nil {
+		t.Fatalf("EnsureDefault() error = %v", err)
+	}
+	if err := service.EnsureDefault(context.Background(), user); err != nil {
+		t.Fatalf("second EnsureDefault() error = %v", err)
+	}
+
+	stacks, err := service.List(context.Background(), user.ExternalID)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(stacks) != 1 {
+		t.Fatalf("List() returned %d stacks, want 1", len(stacks))
+	}
+
+	stack := stacks[0]
+	if stack.Name != defaultStackName {
+		t.Fatalf("default stack name = %q, want %q", stack.Name, defaultStackName)
+	}
+	if stack.Owner != user {
+		t.Fatalf("default stack owner = %#v, want %#v", stack.Owner, user)
+	}
+	if stack.IsPublic {
+		t.Fatal("default stack is public, want private")
+	}
+	if len(stack.Papers) != 0 {
+		t.Fatalf("default stack papers = %#v, want empty", stack.Papers)
+	}
+}
+
+func TestEnsureDefaultAcceptsConcurrentCreation(t *testing.T) {
+	t.Parallel()
+
+	service := NewStackService(duplicateDefaultStackRepository{Repository: memory.NewRepository()}, nil)
+
+	if err := service.EnsureDefault(context.Background(), userDomain.User{ExternalID: "default-user"}); err != nil {
+		t.Fatalf("EnsureDefault() error = %v, want nil", err)
 	}
 }
 
@@ -253,6 +331,68 @@ func TestServiceAddPaperReturnsErrorForUnknownPaper(t *testing.T) {
 
 	if len(stack.Papers) != initialPaperCount {
 		t.Fatalf("Stack has %d papers, want %d", len(stack.Papers), initialPaperCount)
+	}
+}
+
+func TestServiceImportUsesExistingAndCreatesMissingPapers(t *testing.T) {
+	t.Parallel()
+
+	service := newTestStackService()
+	stack := domain.NewStack("Imported Papers", userDomain.User{ExternalID: "user"})
+	if err := service.Create(context.Background(), *stack); err != nil {
+		t.Fatal(err)
+	}
+
+	newPaper := paperDomain.Paper{
+		DOI:             "10.1000/new",
+		Title:           "New Paper",
+		Authors:         []paperDomain.Author{{NameFirst: "Jane", NameLast: "Doe"}},
+		PublicationDate: paperDomain.Date{Year: 2026},
+		Type:            paperDomain.PublicationTypeJournalArticle,
+	}
+	candidates := []bibliography.PaperEntry{
+		{Paper: paperDomain.Paper{DOI: existingPaperDOI}},
+		{Paper: newPaper},
+		{Paper: newPaper},
+	}
+
+	result, err := service.Import(context.Background(), stack.UUID, candidates)
+	if err != nil {
+		t.Fatalf("Import() error = %v", err)
+	}
+	if len(result.AlreadyInStack) != 1 || result.AlreadyInStack[0].UUID != createdPaperUUID {
+		t.Errorf("AlreadyInStack = %v, want created paper", result.AlreadyInStack)
+	}
+	if len(result.ExistingPaperAdded) != 1 || result.ExistingPaperAdded[0].UUID != existingPaperUUID {
+		t.Errorf("ExistingPaperAdded = %v, want existing paper", result.ExistingPaperAdded)
+	}
+	if len(result.CreatedPaperAndAdded) != 1 || result.CreatedPaperAndAdded[0].UUID != createdPaperUUID {
+		t.Errorf("CreatedPaperAndAdded = %v, want created paper", result.CreatedPaperAndAdded)
+	}
+
+	result, err = service.Import(context.Background(), stack.UUID, candidates)
+	if err != nil {
+		t.Fatalf("second Import() error = %v", err)
+	}
+	if len(result.AlreadyInStack) != len(candidates) {
+		t.Errorf("second Import() AlreadyInStack count = %d, want %d", len(result.AlreadyInStack), len(candidates))
+	}
+	if len(result.ExistingPaperAdded) != 0 || len(result.CreatedPaperAndAdded) != 0 {
+		t.Errorf("second Import() unexpectedly added papers: %+v", result)
+	}
+
+	got, err := service.GetByUUID(context.Background(), stack.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Papers) != 2 {
+		t.Fatalf("stack contains %d papers, want 2", len(got.Papers))
+	}
+	if got.Papers[0].UUID != existingPaperUUID {
+		t.Errorf("existing paper UUID = %q, want %q", got.Papers[0].UUID, existingPaperUUID)
+	}
+	if got.Papers[1].UUID != createdPaperUUID {
+		t.Errorf("created paper UUID = %q, want %q", got.Papers[1].UUID, createdPaperUUID)
 	}
 }
 

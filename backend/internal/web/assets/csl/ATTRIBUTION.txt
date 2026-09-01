@@ -1,0 +1,24 @@
+IEEE citation style (ieee.csl)
+
+Source: https://github.com/citation-style-language/styles/blob/1ccf4696be22ea0b55f83cc9163bde3061fddb0a/ieee.csl
+Author: Michael Berkowitz
+Contributors: Listed in the <info> section of ieee.csl
+License: Creative Commons Attribution-ShareAlike 3.0 Unported
+License URL: https://creativecommons.org/licenses/by-sa/3.0/
+Changes: None
+
+APA citation style (apa.csl)
+
+Source: https://github.com/citation-style-language/styles/blob/32078ede72b9224e1ed02c546668e20ee7c75585/apa.csl
+Authors: Brenton M. Wiernik and Andrew Dunning
+License: Creative Commons Attribution-ShareAlike 3.0 Unported
+License URL: https://creativecommons.org/licenses/by-sa/3.0/
+Changes: None
+
+English (United States) CSL locale (locales-en-US.xml)
+
+Source: https://github.com/citation-style-language/locales/blob/c8b03ca9535a8613f191c91dd51f4b36c0656523/locales-en-US.xml
+Translators: Andrew Dunning, Sebastian Karcher, Rintze M. Zelle, Denis Meier, and Brenton M. Wiernik
+License: Creative Commons Attribution-ShareAlike 3.0 Unported
+License URL: https://creativecommons.org/licenses/by-sa/3.0/
+Changes: None

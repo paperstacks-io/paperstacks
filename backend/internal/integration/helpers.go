@@ -1,93 +1,11 @@
 package integration
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
-
-	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
-
-func setupIntegrationTest(t *testing.T) {
-	t.Helper()
-
-	integrationTestMu.Lock()
-
-	if testRepo == nil {
-		integrationTestMu.Unlock()
-		t.Fatal("integration test repository is not initialized")
-	}
-
-	testRepo = memory.NewRepository()
-	t.Cleanup(integrationTestMu.Unlock)
-}
-
-// doRequest makes an HTTP request and returns the response.
-// The caller is responsible for closing resp.Body.
-func doRequest(t *testing.T, method, endpoint string, body io.Reader, headers map[string]string) *http.Response {
-	t.Helper()
-
-	req, err := http.NewRequestWithContext(context.Background(), method, endpoint, body)
-	if err != nil {
-		t.Fatalf("failed to prepare request: %v", err)
-	}
-
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("failed to make request: %v", err)
-	}
-
-	return resp
-}
-
-// doGetRequest makes a GET request and returns the response.
-func doGetRequest(t *testing.T, endpoint string) *http.Response {
-	t.Helper()
-
-	headers := map[string]string{"Accept": "application/json"}
-	return doRequest(t, http.MethodGet, endpoint, nil, headers)
-}
-
-// doPostRequest makes a POST request with JSON body and returns the response.
-func doPostRequest(t *testing.T, endpoint string, body interface{}) *http.Response {
-	t.Helper()
-
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("failed to marshal request body: %v", err)
-	}
-
-	headers := map[string]string{"Content-Type": "application/json"}
-	return doRequest(t, http.MethodPost, endpoint, bytes.NewBuffer(jsonBody), headers)
-}
-
-// doPutRequest makes a PUT request with JSON body and returns the response.
-func doPutRequest(t *testing.T, endpoint string, body interface{}) *http.Response {
-	t.Helper()
-
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("failed to marshal request body: %v", err)
-	}
-
-	headers := map[string]string{"Content-Type": "application/json"}
-	return doRequest(t, http.MethodPut, endpoint, bytes.NewBuffer(jsonBody), headers)
-}
-
-// doDeleteRequest makes a DELETE request and returns the response.
-func doDeleteRequest(t *testing.T, endpoint string) *http.Response {
-	t.Helper()
-
-	headers := map[string]string{"Accept": "application/json"}
-	return doRequest(t, http.MethodDelete, endpoint, nil, headers)
-}
 
 // assertStatusCode checks if the response status code matches the expected value.
 func assertStatusCode(t *testing.T, resp *http.Response, expected int) {
@@ -123,7 +41,7 @@ func assertBody(t *testing.T, resp *http.Response, expected string) {
 }
 
 // decodeJSON unmarshals the response body into the given value.
-func decodeJSON(t *testing.T, resp *http.Response, v interface{}) {
+func decodeJSON(t *testing.T, resp *http.Response, v any) {
 	t.Helper()
 
 	err := json.NewDecoder(resp.Body).Decode(v)

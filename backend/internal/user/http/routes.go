@@ -19,9 +19,10 @@ func AddUserRoute(
 	sessionService commonauth.SessionService,
 ) {
 	defaultMiddle := middleware.NewDefault(logger, sessionService)
+	requireAuthMiddle := commonauth.RequireAuthAPIMiddleware()
 
-	mux.Handle(http.MethodGet+" /users/me", defaultMiddle(handleGetCurrentUser(logger, userService)))
-	mux.Handle(http.MethodGet+" /users/me/stacks", defaultMiddle(handleListCurrentUserStacks(logger, userService, stackService)))
+	mux.Handle(http.MethodGet+" /users/me", defaultMiddle(requireAuthMiddle(handleGetCurrentUser(logger, userService))))
+	mux.Handle(http.MethodGet+" /users/me/stacks", defaultMiddle(requireAuthMiddle(handleListCurrentUserStacks(logger, stackService))))
 	mux.Handle(http.MethodGet+" /users/{userId}", defaultMiddle(handleGetUserByID(logger, userService)))
 	mux.Handle(http.MethodGet+" /users/{userId}/stacks", defaultMiddle(handleListUserStacks(logger, userService, stackService)))
 }

@@ -1,0 +1,23 @@
+name: Cleanup untagged images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete untagged container versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --paginate '/orgs/paperstacks-io/packages/container/paperstacks/versions?per_page=100' \
+            --jq '.[] | select((.metadata.container.tags | length) == 0) | .id' |
+          while IFS= read -r version_id; do
+            echo "Deleting version $version_id"
+            gh api --method DELETE "/orgs/paperstacks-io/packages/container/paperstacks/versions/$version_id"
+          done

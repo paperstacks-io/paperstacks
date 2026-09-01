@@ -12,9 +12,13 @@
         <div class="text-xs uppercase font-semibold opacity-60 grow">
           {{ range .Authors }} {{ .FullName }}; {{ end }}
         </div>
-        <div class="text-xs font-bold flex-none">{{ .PublicationYear }}</div>
+        <div class="text-xs font-bold flex-none">{{ .PublicationDate }}</div>
       </div>
-      <div>{{ .Metadata.PublishedIn }}</div>
+      <div>
+        {{ if .Metadata.JournalTitle }}{{ .Metadata.JournalTitle }}{{ else if .Metadata.BookTitle }}{{
+        .Metadata.BookTitle }}{{ else if .Metadata.SeriesTitle }}{{ .Metadata.SeriesTitle }}{{ else if
+        .Metadata.EventTitle }}{{ .Metadata.EventTitle }}{{ else }}{{ .Metadata.Institution }}{{ end }}
+      </div>
     </div>
 
     <div class="flex-none">

@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 	"testing"
+	"uuid"
 
-	"github.com/google/uuid"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
@@ -17,6 +17,7 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 	_, err := service.Create(context.Background(), domain.Paper{
 		DOI:   " 10.1000/example ",
 		Title: " Example Paper ",
+		Type:  " journal-article ",
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -38,6 +39,40 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 
 	if got.Title != "Example Paper" {
 		t.Fatalf("stored title = %q, want %q", got.Title, "Example Paper")
+	}
+
+	if got.Type != domain.PublicationTypeJournalArticle {
+		t.Fatalf("stored type = %q, want %q", got.Type, domain.PublicationTypeJournalArticle)
+	}
+}
+
+func TestServiceCreateRejectsInvalidPublicationDate(t *testing.T) {
+	t.Parallel()
+
+	service := NewPaperService(memory.NewRepository())
+
+	_, err := service.Create(context.Background(), domain.Paper{
+		DOI:             "10.1000/example",
+		Title:           "Example Paper",
+		PublicationDate: domain.Date{Year: 2025, Month: 2, Day: 29},
+	})
+	if err != domain.ErrInvalidPaper {
+		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidPaper)
+	}
+}
+
+func TestServiceCreateRejectsInvalidPublicationType(t *testing.T) {
+	t.Parallel()
+
+	service := NewPaperService(memory.NewRepository())
+
+	_, err := service.Create(context.Background(), domain.Paper{
+		DOI:   "10.1000/example",
+		Title: "Example Paper",
+		Type:  "article",
+	})
+	if err != domain.ErrInvalidPaper {
+		t.Fatalf("Create() error = %v, want %v", err, domain.ErrInvalidPaper)
 	}
 }
 

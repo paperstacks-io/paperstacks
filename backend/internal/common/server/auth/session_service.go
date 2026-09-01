@@ -7,11 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
-	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
+	"github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
+
+type UserProvisioner interface {
+	Provision(ctx context.Context, externalID, email string) (domain.User, error)
+}
 
 type HankoSessionService struct {
 	apiURL     string
@@ -20,19 +25,19 @@ type HankoSessionService struct {
 	mu    sync.RWMutex
 	cache map[string]*Session
 
-	userService userApp.UserService
+	userProvisioner UserProvisioner
 }
 
-func NewHankoSessionService(apiURL string, userService userApp.UserService, httpClient *http.Client) *HankoSessionService {
+func NewHankoSessionService(apiURL string, userProvisioner UserProvisioner, httpClient *http.Client) *HankoSessionService {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 
 	return &HankoSessionService{
-		apiURL:      apiURL,
-		httpClient:  httpClient,
-		cache:       make(map[string]*Session),
-		userService: userService,
+		apiURL:          strings.TrimRight(strings.TrimSpace(apiURL), "/"),
+		userProvisioner: userProvisioner,
+		httpClient:      httpClient,
+		cache:           make(map[string]*Session),
 	}
 }
 
@@ -64,7 +69,7 @@ func (s *HankoSessionService) ResolveSession(ctx context.Context, token string) 
 	s.mu.Lock()
 	s.cache[token] = session
 	s.mu.Unlock()
-	_, err = s.userService.CreateIfNotExist(ctx, session.UserID, session.Email)
+	_, err = s.userProvisioner.Provision(ctx, session.UserID, session.Email)
 	if err != nil {
 		return session, err
 	}

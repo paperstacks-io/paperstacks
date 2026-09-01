@@ -3,35 +3,41 @@ package http
 import "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 
 type PaperRequest struct {
-	UUID                       string          `json:"uuid"`
-	DOI                        string          `json:"DOI"`
-	Title                      string          `json:"title"`
-	TitleShort                 string          `json:"title-short"`
-	Authors                    []AuthorRequest `json:"authors"`
-	PublicationYear            string          `json:"publication-year"`
-	PublicationStatus          string          `json:"publication-status"`
-	PublicationStatusTimestamp string          `json:"publication-status-timestamp"`
-	Abstract                   string          `json:"abstract"`
-	Keywords                   []string        `json:"keywords"`
-	Type                       string          `json:"type"`
-	PDFs                       []string        `json:"pdfs"`
-	Metadata                   MetadataRequest `json:"metadata"`
+	UUID                       string                 `json:"uuid"`
+	DOI                        string                 `json:"DOI"`
+	Title                      string                 `json:"title"`
+	TitleShort                 string                 `json:"title-short"`
+	Authors                    []AuthorRequest        `json:"authors"`
+	PublicationDate            PublicationDate        `json:"publication-date"`
+	PublicationStatus          string                 `json:"publication-status"`
+	PublicationStatusTimestamp string                 `json:"publication-status-timestamp"`
+	Abstract                   string                 `json:"abstract"`
+	Keywords                   []string               `json:"keywords"`
+	Type                       domain.PublicationType `json:"type"`
+	PDFs                       []string               `json:"pdfs"`
+	Metadata                   MetadataRequest        `json:"metadata"`
 }
 
 type PaperResponse struct {
-	UUID                       string           `json:"uuid"`
-	DOI                        string           `json:"DOI"`
-	Title                      string           `json:"title"`
-	TitleShort                 string           `json:"title-short"`
-	Authors                    []AuthorResponse `json:"authors"`
-	PublicationYear            string           `json:"publication-year"`
-	PublicationStatus          string           `json:"publication-status"`
-	PublicationStatusTimestamp string           `json:"publication-status-timestamp"`
-	Abstract                   string           `json:"abstract"`
-	Keywords                   []string         `json:"keywords"`
-	Type                       string           `json:"type"`
-	PDFs                       []string         `json:"pdfs"`
-	Metadata                   MetadataResponse `json:"metadata"`
+	UUID                       string                 `json:"uuid"`
+	DOI                        string                 `json:"DOI"`
+	Title                      string                 `json:"title"`
+	TitleShort                 string                 `json:"title-short"`
+	Authors                    []AuthorResponse       `json:"authors"`
+	PublicationDate            PublicationDate        `json:"publication-date"`
+	PublicationStatus          string                 `json:"publication-status"`
+	PublicationStatusTimestamp string                 `json:"publication-status-timestamp"`
+	Abstract                   string                 `json:"abstract"`
+	Keywords                   []string               `json:"keywords"`
+	Type                       domain.PublicationType `json:"type"`
+	PDFs                       []string               `json:"pdfs"`
+	Metadata                   MetadataResponse       `json:"metadata"`
+}
+
+type PublicationDate struct {
+	Year  int `json:"year"`
+	Month int `json:"month"`
+	Day   int `json:"day"`
 }
 
 type AuthorRequest struct {
@@ -52,11 +58,18 @@ type AuthorResponse struct {
 
 type MetadataRequest struct {
 	Publisher           string   `json:"publisher"`
-	PublishedIn         string   `json:"published-in"`
+	JournalTitle        string   `json:"journal-title"`
+	JournalAbbrev       string   `json:"journal-abbrev"`
+	BookTitle           string   `json:"book-title"`
+	SeriesTitle         string   `json:"series-title"`
+	EventTitle          string   `json:"event-title"`
+	EventPlace          string   `json:"event-place"`
+	Institution         string   `json:"institution"`
 	Pages               string   `json:"pages"`
 	Volume              string   `json:"volume"`
 	Issue               string   `json:"issue"`
 	ISBN                []string `json:"ISBN"`
+	ISSN                []string `json:"ISSN"`
 	References          []string `json:"references"`
 	License             string   `json:"license"`
 	Copyright           string   `json:"copyright"`
@@ -67,11 +80,18 @@ type MetadataRequest struct {
 
 type MetadataResponse struct {
 	Publisher           string   `json:"publisher"`
-	PublishedIn         string   `json:"published-in"`
+	JournalTitle        string   `json:"journal-title"`
+	JournalAbbrev       string   `json:"journal-abbrev"`
+	BookTitle           string   `json:"book-title"`
+	SeriesTitle         string   `json:"series-title"`
+	EventTitle          string   `json:"event-title"`
+	EventPlace          string   `json:"event-place"`
+	Institution         string   `json:"institution"`
 	Pages               string   `json:"pages"`
 	Volume              string   `json:"volume"`
 	Issue               string   `json:"issue"`
 	ISBN                []string `json:"ISBN"`
+	ISSN                []string `json:"ISSN"`
 	References          []string `json:"references"`
 	License             string   `json:"license"`
 	Copyright           string   `json:"copyright"`
@@ -92,7 +112,7 @@ func (r PaperRequest) toDomain() domain.Paper {
 		Title:                      r.Title,
 		TitleShort:                 r.TitleShort,
 		Authors:                    authors,
-		PublicationYear:            r.PublicationYear,
+		PublicationDate:            r.PublicationDate.toDomain(),
 		PublicationStatus:          r.PublicationStatus,
 		PublicationStatusTimestamp: r.PublicationStatusTimestamp,
 		Abstract:                   r.Abstract,
@@ -115,7 +135,7 @@ func NewPaperResponse(p domain.Paper) PaperResponse {
 		Title:                      p.Title,
 		TitleShort:                 p.TitleShort,
 		Authors:                    authors,
-		PublicationYear:            p.PublicationYear,
+		PublicationDate:            NewPublicationDate(p.PublicationDate),
 		PublicationStatus:          p.PublicationStatus,
 		PublicationStatusTimestamp: p.PublicationStatusTimestamp,
 		Abstract:                   p.Abstract,
@@ -133,6 +153,22 @@ func NewPaperResponses(papers []domain.Paper) []PaperResponse {
 	}
 
 	return out
+}
+
+func (d PublicationDate) toDomain() domain.Date {
+	return domain.Date{
+		Year:  d.Year,
+		Month: d.Month,
+		Day:   d.Day,
+	}
+}
+
+func NewPublicationDate(d domain.Date) PublicationDate {
+	return PublicationDate{
+		Year:  d.Year,
+		Month: d.Month,
+		Day:   d.Day,
+	}
 }
 
 func (r AuthorRequest) toDomain() domain.Author {
@@ -158,11 +194,18 @@ func NewAuthorResponse(a domain.Author) AuthorResponse {
 func (r MetadataRequest) toDomain() domain.Metadata {
 	return domain.Metadata{
 		Publisher:           r.Publisher,
-		PublishedIn:         r.PublishedIn,
+		JournalTitle:        r.JournalTitle,
+		JournalAbbrev:       r.JournalAbbrev,
+		BookTitle:           r.BookTitle,
+		SeriesTitle:         r.SeriesTitle,
+		EventTitle:          r.EventTitle,
+		EventLocation:       r.EventPlace,
+		Institution:         r.Institution,
 		Pages:               r.Pages,
 		Volume:              r.Volume,
 		Issue:               r.Issue,
 		ISBN:                r.ISBN,
+		ISSN:                r.ISSN,
 		References:          r.References,
 		License:             r.License,
 		Copyright:           r.Copyright,
@@ -175,11 +218,18 @@ func (r MetadataRequest) toDomain() domain.Metadata {
 func NewMetadataResponse(m domain.Metadata) MetadataResponse {
 	return MetadataResponse{
 		Publisher:           m.Publisher,
-		PublishedIn:         m.PublishedIn,
+		JournalTitle:        m.JournalTitle,
+		JournalAbbrev:       m.JournalAbbrev,
+		BookTitle:           m.BookTitle,
+		SeriesTitle:         m.SeriesTitle,
+		EventTitle:          m.EventTitle,
+		EventPlace:          m.EventLocation,
+		Institution:         m.Institution,
 		Pages:               m.Pages,
 		Volume:              m.Volume,
 		Issue:               m.Issue,
 		ISBN:                m.ISBN,
+		ISSN:                m.ISSN,
 		References:          m.References,
 		License:             m.License,
 		Copyright:           m.Copyright,
