@@ -47,49 +47,68 @@ func (im *Importer) Run(ctx context.Context) error {
 	bar := newProgressBar(os.Stderr, total)
 	bar.Set(0)
 
-	var totalFiles, totalRecords, totalErrors int
-
-	walkErr := reader.WalkDumpDir(im.cfg.Dir, func(path string) error {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
-		fileRecords, fileErrors, err := im.importFile(ctx, path, &totalRecords, &totalErrors, bar)
-		totalFiles++
-
-		if err != nil {
-			im.log.Error("file failed", slog.String("file", path), slog.String("error", err.Error()))
-			// A single bad file shouldn't abort the whole run — only
-			// stop the walk if we were interrupted.
-			return ctx.Err()
-		}
-
-		im.log.Debug("file complete",
-			slog.String("file", path),
-			slog.Int("records", fileRecords),
-			slog.Int("errors", fileErrors),
-			slog.Int("total_records", totalRecords),
-			slog.Duration("elapsed", time.Since(start)),
-		)
-		return nil
-	})
+	stats := &runStats{im: im, ctx: ctx, bar: bar, start: start}
+	walkErr := reader.WalkDumpDir(im.cfg.Dir, stats.visitFile)
 
 	bar.Done()
 	im.log.Info("import finished",
-		slog.Int("files", totalFiles),
-		slog.Int("records", totalRecords),
-		slog.Int("errors", totalErrors),
+		slog.Int("files", stats.files),
+		slog.Int("records", stats.records),
+		slog.Int("errors", stats.errors),
 		slog.Duration("elapsed", time.Since(start)),
 	)
 
 	return walkErr
 }
 
+// runStats tracks the running totals for a single Importer.Run call and
+// drives the per-file processing that reader.WalkDumpDir invokes. It's
+// its own type, separate from Importer, because these counters are
+// scoped to one run rather than to the Importer's lifetime.
+type runStats struct {
+	im    *Importer
+	ctx   context.Context
+	bar   *progressBar
+	start time.Time
+
+	files   int
+	records int
+	errors  int
+}
+
+// visitFile is called by reader.WalkDumpDir once per dump file, in
+// WalkDumpDir's file-name order. A single bad file (e.g. corrupt gzip)
+// doesn't abort the walk — only ctx cancellation does.
+func (s *runStats) visitFile(path string) error {
+	if err := s.ctx.Err(); err != nil {
+		return err
+	}
+
+	fileRecords, fileErrors, err := s.importFile(path)
+	s.files++
+
+	if err != nil {
+		s.im.log.Error("file failed", slog.String("file", path), slog.String("error", err.Error()))
+		// A single bad file shouldn't abort the whole run — only stop
+		// the walk if we were interrupted.
+		return s.ctx.Err()
+	}
+
+	s.im.log.Debug("file complete",
+		slog.String("file", path),
+		slog.Int("records", fileRecords),
+		slog.Int("errors", fileErrors),
+		slog.Int("total_records", s.records),
+		slog.Duration("elapsed", time.Since(s.start)),
+	)
+	return nil
+}
+
 // importFile drains one dump file's records, tallying successes and
-// per-line parse errors into totalRecords/totalErrors and redrawing bar
-// after every line. A non-nil error means either the file couldn't be
-// opened/decompressed, or the run was interrupted.
-func (im *Importer) importFile(ctx context.Context, path string, totalRecords, totalErrors *int, bar *progressBar) (records, errs int, err error) {
+// per-line parse errors into s.records/s.errors and redrawing the
+// progress bar after every line. A non-nil error means either the file
+// couldn't be opened/decompressed, or the run was interrupted.
+func (s *runStats) importFile(path string) (records, errs int, err error) {
 	ch, err := reader.ReadFile(path)
 	if err != nil {
 		return 0, 0, fmt.Errorf("open file: %w", err)
@@ -98,20 +117,20 @@ func (im *Importer) importFile(ctx context.Context, path string, totalRecords, t
 	for rec := range ch {
 		if rec.Err != nil {
 			errs++
-			*totalErrors++
-			im.log.Warn("parse error",
+			s.errors++
+			s.im.log.Warn("parse error",
 				slog.String("file", path),
 				slog.Int("line", rec.LineNumber),
 				slog.String("error", rec.Err.Error()),
 			)
 		} else {
 			records++
-			*totalRecords++
+			s.records++
 		}
 
-		bar.Set(*totalRecords + *totalErrors)
+		s.bar.Set(s.records + s.errors)
 
-		if err := ctx.Err(); err != nil {
+		if err := s.ctx.Err(); err != nil {
 			return records, errs, err
 		}
 	}
