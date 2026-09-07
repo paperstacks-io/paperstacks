@@ -41,11 +41,6 @@ func New(cfg Config, log *slog.Logger, papers *paperapp.PaperService) *Importer 
 // ctx cancellation does.
 func (im *Importer) Run(ctx context.Context) error {
 	im.log.Info("crawler import starting", slog.String("dir", im.cfg.Dir))
-	allPapers, err := im.paperService.List(ctx)
-	if err != nil {
-		return fmt.Errorf("paper service: %w", err)
-	}
-	im.log.Info("existing papers before import", slog.Int("amount", len(allPapers)))
 	start := time.Now()
 
 	total, err := reader.CountRecords(ctx, im.cfg.Dir)
@@ -69,8 +64,6 @@ func (im *Importer) Run(ctx context.Context) error {
 		slog.Int("errors", stats.errors),
 		slog.Duration("elapsed", time.Since(start)),
 	)
-	allPapers, _ = im.paperService.List(ctx)
-	im.log.Info("existing papers after import", slog.Int("amount", len(allPapers)))
 
 	return walkErr
 }

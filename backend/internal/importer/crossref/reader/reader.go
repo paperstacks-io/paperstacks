@@ -29,8 +29,7 @@ type Record struct {
 // parsed record.
 //
 // Errors for individual malformed lines are reported as Record.Err entries
-// and do not abort the file; a fatal I/O error (e.g. a truncated gzip stream)
-// is passed to visit as a final Record with a nil Paper.
+// and do not abort the file. Fatal I/O errors are returned.
 func WalkFile(path string, visit func(Record) error) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -73,7 +72,7 @@ func WalkFile(path string, visit func(Record) error) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return visit(Record{Err: fmt.Errorf("scan %s: %w", path, err)})
+		return fmt.Errorf("scan %s: %w", path, err)
 	}
 	return nil
 }
