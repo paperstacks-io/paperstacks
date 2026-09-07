@@ -6,8 +6,7 @@
 //
 //	go run ./cmd/crawler -dir /path/to/dump
 //
-// Persistence isn't wired up yet — this currently reports what would be
-// imported (record and error counts) without writing anywhere.
+// Records are stored in memory for the command's lifetime.
 package main
 
 import (
@@ -20,6 +19,8 @@ import (
 	"syscall"
 
 	"github.com/paperstacks.io/paperstacks/internal/importer"
+	paperapp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	papermemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
 
 func main() {
@@ -49,9 +50,8 @@ func run(ctx context.Context) error {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 
-	imp := importer.New(importer.Config{
-		Dir: *dir,
-	}, log)
+	paperService := paperapp.NewPaperService(papermemory.NewRepository())
+	imp := importer.New(importer.Config{Dir: *dir}, log, paperService)
 
 	return imp.Run(ctx)
 }

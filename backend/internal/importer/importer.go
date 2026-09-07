@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
+	crossref "github.com/paperstacks.io/paperstacks/internal/importer/crossref/domain"
 	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/reader"
+	paperapp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paper "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 // Config holds the parameters needed to run a Crossref dump import.
@@ -21,13 +25,14 @@ type Config struct {
 // Importer walks a directory of Crossref dump files, parses every
 // record, and reports import statistics.
 type Importer struct {
-	cfg Config
-	log *slog.Logger
+	cfg          Config
+	log          *slog.Logger
+	paperService *paperapp.PaperService
 }
 
 // New constructs an Importer for the given configuration.
-func New(cfg Config, log *slog.Logger) *Importer {
-	return &Importer{cfg: cfg, log: log}
+func New(cfg Config, log *slog.Logger, papers *paperapp.PaperService) *Importer {
+	return &Importer{cfg: cfg, log: log, paperService: papers}
 }
 
 // Run walks cfg.Dir, parses every record in every dump file, and shows
@@ -36,6 +41,11 @@ func New(cfg Config, log *slog.Logger) *Importer {
 // ctx cancellation does.
 func (im *Importer) Run(ctx context.Context) error {
 	im.log.Info("crawler import starting", slog.String("dir", im.cfg.Dir))
+	allPapers, err := im.paperService.List(ctx)
+	if err != nil {
+		return fmt.Errorf("paper service: %w", err)
+	}
+	im.log.Info("existing papers before import", slog.Int("amount", len(allPapers)))
 	start := time.Now()
 
 	total, err := reader.CountRecords(ctx, im.cfg.Dir)
@@ -59,6 +69,8 @@ func (im *Importer) Run(ctx context.Context) error {
 		slog.Int("errors", stats.errors),
 		slog.Duration("elapsed", time.Since(start)),
 	)
+	allPapers, _ = im.paperService.List(ctx)
+	im.log.Info("existing papers after import", slog.Int("amount", len(allPapers)))
 
 	return walkErr
 }
@@ -120,6 +132,15 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 				slog.Int("line", rec.LineNumber),
 				slog.String("error", rec.Err.Error()),
 			)
+		} else if _, err := s.im.paperService.Create(s.ctx, toPaper(rec.Paper)); err != nil {
+			errs++
+			s.errors++
+			s.im.log.Warn("create paper",
+				slog.String("file", path),
+				slog.Int("line", rec.LineNumber),
+				slog.String("doi", rec.Paper.DOI),
+				slog.String("error", err.Error()),
+			)
 		} else {
 			records++
 			s.records++
@@ -132,4 +153,48 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 		return records, errs, fmt.Errorf("read file: %w", err)
 	}
 	return records, errs, nil
+}
+
+func toPaper(source *crossref.Paper) paper.Paper {
+	target := paper.Paper{
+		DOI:             source.DOI,
+		Title:           source.Title,
+		Abstract:        source.Abstract,
+		Type:            paper.PublicationType(source.Type),
+		PublicationDate: paper.Date{Year: source.Issued.Year, Month: source.Issued.Month, Day: source.Issued.Day},
+		Metadata: paper.Metadata{
+			Publisher:     source.Publisher,
+			JournalTitle:  source.ContainerTitle,
+			JournalAbbrev: source.ShortContainerTitle,
+			Pages:         source.Page,
+			Volume:        source.Volume,
+			Issue:         source.Issue,
+			DataSource:    source.Source,
+		},
+	}
+	if target.Type == "proceedings-article" {
+		target.Type = paper.PublicationTypeConferenceArticle
+	}
+	if !target.Type.IsValid() {
+		target.Type = ""
+	}
+	if !source.Indexed.IsZero() {
+		target.Metadata.DataSourceTimestamp = source.Indexed.Format(time.RFC3339)
+	}
+
+	for _, author := range source.Authors {
+		target.Authors = append(target.Authors, paper.Author{
+			NameFirst:   author.GivenName,
+			NameLast:    author.FamilyName,
+			Affiliation: strings.Join(author.Affiliations, "; "),
+			ORCID:       author.ORCID,
+		})
+	}
+	for _, issn := range source.ISSNs {
+		target.Metadata.ISSN = append(target.Metadata.ISSN, issn.Value)
+	}
+	for _, isbn := range source.ISBNs {
+		target.Metadata.ISBN = append(target.Metadata.ISBN, isbn.Value)
+	}
+	return target
 }
