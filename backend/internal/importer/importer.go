@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -35,29 +34,16 @@ func New(cfg Config, log *slog.Logger, papers *paperapp.PaperService) *Importer 
 	return &Importer{cfg: cfg, log: log, paperService: papers}
 }
 
-// Run walks cfg.Dir, parses every record in every dump file, and shows
-// a progress bar of records processed against the total record count.
-// A single bad file (e.g. corrupt gzip) does not abort the run; only
-// ctx cancellation does.
+// Run walks cfg.Dir, parses every record in every dump file, and logs each
+// completed file. A single bad file (e.g. corrupt gzip) does not abort the
+// run; only ctx cancellation does.
 func (im *Importer) Run(ctx context.Context) error {
 	im.log.Info("crawler import starting", slog.String("dir", im.cfg.Dir))
 	start := time.Now()
 
-	total, err := reader.CountRecords(ctx, im.cfg.Dir)
-	if err != nil {
-		return fmt.Errorf("count records: %w", err)
-	}
-	im.log.Info("counted records", slog.Int("total", total), slog.Duration("elapsed", time.Since(start)))
-
-	bar := newProgressBar(os.Stderr, total)
-	bar.Set(0)
-
-	stats := &runStats{im: im, ctx: ctx, bar: bar, start: start}
+	stats := &runStats{im: im, ctx: ctx, start: start}
 	walkErr := reader.WalkDumpDir(im.cfg.Dir, stats.visitFile)
 
-	if bar.tty {
-		fmt.Fprintln(bar.out)
-	}
 	im.log.Info("import finished",
 		slog.Int("files", stats.files),
 		slog.Int("records", stats.records),
@@ -75,7 +61,6 @@ func (im *Importer) Run(ctx context.Context) error {
 type runStats struct {
 	im    *Importer
 	ctx   context.Context
-	bar   *progressBar
 	start time.Time
 
 	files   int
@@ -101,7 +86,7 @@ func (s *runStats) visitFile(path string) error {
 		return s.ctx.Err()
 	}
 
-	s.im.log.Debug("file complete",
+	s.im.log.Info("file complete",
 		slog.String("file", path),
 		slog.Int("records", fileRecords),
 		slog.Int("errors", fileErrors),
@@ -112,9 +97,8 @@ func (s *runStats) visitFile(path string) error {
 }
 
 // importFile drains one dump file's records, tallying successes and
-// per-line parse errors into s.records/s.errors and redrawing the
-// progress bar after every line. A non-nil error means either the file
-// couldn't be opened/decompressed, or the run was interrupted.
+// per-line errors into s.records/s.errors. A non-nil error means either the
+// file couldn't be opened/decompressed, or the run was interrupted.
 func (s *runStats) importFile(path string) (records, errs int, err error) {
 	err = reader.WalkFile(path, func(rec reader.Record) error {
 		if rec.Err != nil {
@@ -139,7 +123,6 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 			s.records++
 		}
 
-		s.bar.Set(s.records + s.errors)
 		return s.ctx.Err()
 	})
 	if err != nil {
