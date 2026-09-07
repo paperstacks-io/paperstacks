@@ -25,64 +25,56 @@ type Record struct {
 	Err        error
 }
 
-// ReadFile opens a single .jsonl or .jsonl.gz file and sends each parsed
-// record to the returned channel. The channel is closed once every line
-// has been processed or a fatal I/O error occurs.
+// WalkFile opens a single .jsonl or .jsonl.gz file and calls visit for each
+// parsed record.
 //
-// Errors for individual malformed lines are reported as Record.Err
-// entries and do not abort the file; a fatal I/O error (e.g. a truncated
-// gzip stream) is sent as a final Record with a nil Paper, after which
-// the channel is closed.
-func ReadFile(path string) (<-chan Record, error) {
+// Errors for individual malformed lines are reported as Record.Err entries
+// and do not abort the file; a fatal I/O error (e.g. a truncated gzip stream)
+// is passed to visit as a final Record with a nil Paper.
+func WalkFile(path string, visit func(Record) error) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open %s: %w", path, err)
+		return fmt.Errorf("open %s: %w", path, err)
 	}
+	defer f.Close()
 
 	var r io.Reader = f
 	if isGzip(path) {
 		gz, err := gzip.NewReader(f)
 		if err != nil {
-			f.Close()
-			return nil, fmt.Errorf("open gzip stream %s: %w", path, err)
+			return fmt.Errorf("open gzip stream %s: %w", path, err)
 		}
 		r = gz
 	}
 
-	out := make(chan Record, 256) // buffered to decouple I/O from downstream processing
+	scanner := bufio.NewScanner(r)
+	// Crossref records — especially ones with long reference lists —
+	// can exceed the scanner's 64 KB default token size.
+	const maxTokenSize = 16 * 1024 * 1024
+	scanner.Buffer(make([]byte, 64*1024), maxTokenSize)
 
-	go func() {
-		defer f.Close()
-		defer close(out)
-
-		scanner := bufio.NewScanner(r)
-		// Crossref records — especially ones with long reference lists —
-		// can exceed the scanner's 64 KB default token size.
-		const maxTokenSize = 16 * 1024 * 1024
-		scanner.Buffer(make([]byte, 64*1024), maxTokenSize)
-
-		lineNum := 0
-		for scanner.Scan() {
-			lineNum++
-			line := scanner.Bytes()
-			if len(line) == 0 {
-				continue
-			}
-
-			paper, err := parser.Parse(line)
-			if err != nil {
-				out <- Record{LineNumber: lineNum, Err: fmt.Errorf("line %d: %w", lineNum, err)}
-				continue
-			}
-			out <- Record{Paper: paper, LineNumber: lineNum}
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
 		}
 
-		if err := scanner.Err(); err != nil {
-			out <- Record{Err: fmt.Errorf("scan %s: %w", path, err)}
+		paper, err := parser.Parse(line)
+		record := Record{Paper: paper, LineNumber: lineNum}
+		if err != nil {
+			record.Err = fmt.Errorf("line %d: %w", lineNum, err)
 		}
-	}()
+		if err := visit(record); err != nil {
+			return err
+		}
+	}
 
-	return out, nil
+	if err := scanner.Err(); err != nil {
+		return visit(Record{Err: fmt.Errorf("scan %s: %w", path, err)})
+	}
+	return nil
 }
 
 func isGzip(path string) bool {

@@ -111,12 +111,7 @@ func (s *runStats) visitFile(path string) error {
 // progress bar after every line. A non-nil error means either the file
 // couldn't be opened/decompressed, or the run was interrupted.
 func (s *runStats) importFile(path string) (records, errs int, err error) {
-	ch, err := reader.ReadFile(path)
-	if err != nil {
-		return 0, 0, fmt.Errorf("open file: %w", err)
-	}
-
-	for rec := range ch {
+	err = reader.WalkFile(path, func(rec reader.Record) error {
 		if rec.Err != nil {
 			errs++
 			s.errors++
@@ -131,11 +126,10 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 		}
 
 		s.bar.Set(s.records + s.errors)
-
-		if err := s.ctx.Err(); err != nil {
-			return records, errs, err
-		}
+		return s.ctx.Err()
+	})
+	if err != nil {
+		return records, errs, fmt.Errorf("read file: %w", err)
 	}
-
 	return records, errs, nil
 }
