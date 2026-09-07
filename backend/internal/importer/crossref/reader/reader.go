@@ -44,6 +44,7 @@ func WalkFile(path string, visit func(Record) error) error {
 		if err != nil {
 			return fmt.Errorf("open gzip stream %s: %w", path, err)
 		}
+		defer gz.Close()
 		r = gz
 	}
 
