@@ -2,6 +2,7 @@ package domain
 
 import (
 	"strings"
+	"time"
 	"uuid"
 )
 
@@ -95,9 +96,30 @@ func (p Paper) Validate() error {
 		return ErrInvalidPaper
 	}
 
-	if !p.Type.IsValid() {
+	if !p.Type.IsValid() ||
+		!isValidPublicationStatus(strings.TrimSpace(p.PublicationStatus)) ||
+		!isValidTimestamp(strings.TrimSpace(p.PublicationStatusTimestamp)) ||
+		!isValidTimestamp(strings.TrimSpace(p.Metadata.DataSourceTimestamp)) {
 		return ErrInvalidPaper
 	}
 
 	return nil
+}
+
+func isValidPublicationStatus(status string) bool {
+	switch status {
+	case "", "draft", "submitted", "under_review", "accepted", "rejected", "camera_ready", "published", "preprint", "withdrawn":
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidTimestamp(timestamp string) bool {
+	if timestamp == "" {
+		return true
+	}
+
+	_, err := time.Parse(time.RFC3339, timestamp)
+	return err == nil
 }
