@@ -50,7 +50,9 @@ func (im *Importer) Run(ctx context.Context) error {
 	stats := &runStats{im: im, ctx: ctx, bar: bar, start: start}
 	walkErr := reader.WalkDumpDir(im.cfg.Dir, stats.visitFile)
 
-	bar.Done()
+	if bar.tty {
+		fmt.Fprintln(bar.out)
+	}
 	im.log.Info("import finished",
 		slog.Int("files", stats.files),
 		slog.Int("records", stats.records),

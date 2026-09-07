@@ -2,7 +2,6 @@ package importer
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -17,19 +16,15 @@ const progressRedrawInterval = 150 * time.Millisecond
 // a terminal (e.g. redirected to a file or pipe) it prints plain
 // periodic lines instead, so it never leaks raw escape codes into logs.
 type progressBar struct {
-	out        io.Writer
+	out        *os.File
 	total      int
 	width      int
 	tty        bool
 	lastRender time.Time
 }
 
-func newProgressBar(out io.Writer, total int) *progressBar {
-	b := &progressBar{out: out, total: total, width: 30}
-	if f, ok := out.(*os.File); ok {
-		b.tty = isTerminal(f)
-	}
-	return b
+func newProgressBar(out *os.File, total int) *progressBar {
+	return &progressBar{out: out, total: total, width: 30, tty: isTerminal(out)}
 }
 
 // Set redraws the bar for the given current count. Redraws are
@@ -62,13 +57,6 @@ func (b *progressBar) render(current int) string {
 
 	bar := strings.Repeat("#", filled) + strings.Repeat("-", b.width-filled)
 	return fmt.Sprintf("[%s] %d/%d (%3.0f%%)", bar, current, b.total, frac*100)
-}
-
-// Done finalizes the bar, moving the cursor past it onto a new line.
-func (b *progressBar) Done() {
-	if b.tty {
-		fmt.Fprintln(b.out)
-	}
 }
 
 func isTerminal(f *os.File) bool {
