@@ -50,21 +50,23 @@ func run(
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 	docRepo := docMem.NewRepository()
-	docStorage := docMem.NewStorage()
-	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)
 
+	var objectStore objectstorage.Store
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
-		objectStore, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
+		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
 		if err != nil {
 			logger.Error("ObjectStorage config error", "error", err)
 			return err
 		}
 
-		if err := objectStore.Check(ctx); err != nil {
+		if err := s3Store.Check(ctx); err != nil {
 			logger.Error("ObjectStorage check error", "error", err)
 			return err
 		}
+		objectStore = s3Store
 	}
+
+	documentService := docApp.NewDocumentService(docRepo, objectStore, paperService)
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
