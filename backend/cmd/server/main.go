@@ -36,6 +36,7 @@ import (
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
+	userPostgres "github.com/paperstacks.io/paperstacks/internal/user/repository/postgres"
 	"github.com/paperstacks.io/paperstacks/internal/web"
 )
 
@@ -47,6 +48,7 @@ func run(
 	hasDB := cfg.DatabaseURL != ""
 
 	var paperService *paperApp.PaperService
+	var userService *userApp.UserService
 	if hasDB {
 		db, err := sql.Open("pgx", cfg.DatabaseURL)
 		if err != nil {
@@ -58,13 +60,14 @@ func run(
 		}
 
 		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db))
+		userService = userApp.NewUserService(userPostgres.NewRepository(db))
 	} else {
 		paperService = paperApp.NewPaperService(paperMem.NewRepository())
+		userService = userApp.NewUserService(userMem.NewRepository())
 	}
 
 	doiService := doiApp.NewDOIService(nil)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
-	userService := userApp.NewUserService(userMem.NewRepository())
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 	docRepo := docMem.NewRepository()
