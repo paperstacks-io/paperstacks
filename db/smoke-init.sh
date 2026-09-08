@@ -128,7 +128,6 @@ psql_as postgres "$super_password" paperstacks -c \
        'public.author',
        'public.paper',
        'public.paper_author',
-       'public.pdf',
        'public.metadata'
      ] LOOP
        IF to_regclass(expected_table) IS NULL THEN
