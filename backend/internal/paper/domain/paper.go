@@ -7,7 +7,7 @@ import (
 )
 
 // Paper represents a scientific publication with bibliographic metadata,
-// authors, and associated documents such as PDFs.
+// authors, and an associated PDF.
 type Paper struct {
 	// UUID (Version 4) is uniquely identifies a paper across the whole application
 	UUID string
@@ -46,8 +46,8 @@ type Paper struct {
 	// Type classifies the bibliographic kind of the Paper.
 	Type PublicationType
 
-	// PDFs contains URIs pointing to PDF versions of the paper.
-	PDFs []string
+	// PDFURL contains the URI of the paper's PDF.
+	PDFURL string
 
 	// Metadata contains detailed bibliographic metadata for the publication.
 	Metadata Metadata
@@ -67,9 +67,7 @@ func (p Paper) Normalize() Paper {
 		p.Authors[i] = p.Authors[i].Normalize()
 	}
 
-	for i := range p.PDFs {
-		p.PDFs[i] = strings.TrimSpace(p.PDFs[i])
-	}
+	p.PDFURL = strings.TrimSpace(p.PDFURL)
 
 	for i := range p.Keywords {
 		p.Keywords[i] = strings.TrimSpace(p.Keywords[i])

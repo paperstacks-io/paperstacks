@@ -8,7 +8,6 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/document/application"
-	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -49,9 +48,9 @@ func handleUploadDocument(
 				return
 			}
 
-			uploadedDocument, err := service.Upload(ctx, paperUUID, fileName, session.UserID, file)
+			uploadedDocument, err := service.Upload(ctx, paperUUID, fileName, session.UserID, file, fileHeader.Size)
 			if err != nil {
-				if errors.Is(err, domain.ErrFileSizeExceeded) || errors.Is(err, domain.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
+				if errors.Is(err, application.ErrFileSizeExceeded) || errors.Is(err, application.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}

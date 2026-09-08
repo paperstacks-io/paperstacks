@@ -81,6 +81,7 @@ CREATE TABLE public.paper (
 	publication_status_timestamp timestamptz,
 	abstract text,
 	keywords text[],
+	pdf_url text,
 	CONSTRAINT paper_doi_uq UNIQUE (doi),
 	CONSTRAINT paper_pk PRIMARY KEY (uuid),
 	CONSTRAINT paper_publication_year_ck CHECK (publication_year IS NULL OR publication_year >= 1),
@@ -90,7 +91,7 @@ CREATE TABLE public.paper (
 	CONSTRAINT paper_publication_day_month_ck CHECK (publication_day IS NULL OR publication_month IS NOT NULL)
 );
 
-COMMENT ON TABLE public.paper IS E'Represents a paper with multiple possible PDFs';
+COMMENT ON TABLE public.paper IS E'Represents a paper with an associated PDF';
 
 CREATE TABLE public.stack (
 	uuid uuid NOT NULL,
@@ -159,22 +160,6 @@ COMMENT ON CONSTRAINT stack_paper_paper_fk ON public.stack_paper IS
 E'Deleting a paper removes its relationships to stacks; the stacks remain';
 
 CREATE INDEX stack_paper_uuid_paper_idx ON public.stack_paper (uuid_paper);
-
-CREATE TABLE public.pdf (
-	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-	pdf_url text,
-	uuid_paper uuid NOT NULL,
-	position integer NOT NULL,
-	CONSTRAINT pdf_pk PRIMARY KEY (key),
-	CONSTRAINT pdf_paper_position_uq UNIQUE (uuid_paper, position)
-);
-
-ALTER TABLE public.pdf ADD CONSTRAINT pdf_paper_fk
-FOREIGN KEY (uuid_paper)
-REFERENCES public.paper (uuid)
-ON DELETE CASCADE ON UPDATE CASCADE;
-
-CREATE INDEX pdf_uuid_paper_idx ON public.pdf (uuid_paper);
 
 CREATE TABLE public.metadata (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
