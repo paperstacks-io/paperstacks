@@ -26,7 +26,9 @@ const paperColumns = `
 	publication_status::text,
 	publication_status_timestamp,
 	abstract,
-	keywords`
+	keywords,
+	pdf_url
+`
 
 const metadataColumns = `
 	uuid_paper::text,
@@ -227,8 +229,9 @@ func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper
 			publication_status = $8,
 			publication_status_timestamp = $9,
 			abstract = $10,
-			keywords = $11
-		WHERE uuid = $12`, args...)
+			keywords = $11,
+			pdf_url = $12
+		WHERE uuid = $13`, args...)
 	if err != nil {
 		return wrapError("update paper", err)
 	}
@@ -242,9 +245,6 @@ func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper
 
 	if err := removePaperAuthors(ctx, tx, uuid); err != nil {
 		return wrapError("replace paper authors", err)
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM public.pdf WHERE uuid_paper = $1`, uuid); err != nil {
-		return wrapError("replace paper PDFs", err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM public.metadata WHERE uuid_paper = $1`, uuid); err != nil {
 		return wrapError("replace paper metadata", err)
@@ -302,9 +302,6 @@ func (r *Repository) hydrate(ctx context.Context, papers []domain.Paper) error {
 	if err := loadMetadata(ctx, r.db, byUUID, uuids); err != nil {
 		return err
 	}
-	if err := loadPDFs(ctx, r.db, byUUID, uuids); err != nil {
-		return err
-	}
 	return loadAuthors(ctx, r.db, byUUID, uuids)
 }
 
@@ -330,7 +327,7 @@ type rowScanner interface {
 
 func scanPaper(row rowScanner) (domain.Paper, error) {
 	var paper domain.Paper
-	var doi, title, titleShort, paperType, publicationStatus, abstract sql.NullString
+	var doi, title, titleShort, paperType, publicationStatus, abstract, pdfURL sql.NullString
 	var year, month, day sql.NullInt16
 	var statusTimestamp sql.NullTime
 
@@ -347,6 +344,7 @@ func scanPaper(row rowScanner) (domain.Paper, error) {
 		&statusTimestamp,
 		&abstract,
 		pgTypes.SQLScanner(&paper.Keywords),
+		&pdfURL,
 	)
 	if err != nil {
 		return domain.Paper{}, err
@@ -360,6 +358,7 @@ func scanPaper(row rowScanner) (domain.Paper, error) {
 	paper.PublicationStatus = publicationStatus.String
 	paper.PublicationStatusTimestamp = formatTimestamp(statusTimestamp)
 	paper.Abstract = abstract.String
+	paper.PDFURL = pdfURL.String
 
 	return paper, nil
 }
@@ -437,31 +436,6 @@ func scanMetadata(row rowScanner) (string, domain.Metadata, error) {
 	return uuid, metadata, nil
 }
 
-func loadPDFs(ctx context.Context, db *sql.DB, papers map[string]*domain.Paper, uuids []string) error {
-	rows, err := db.QueryContext(ctx, `
-		SELECT uuid_paper::text, pdf_url
-		FROM public.pdf
-		WHERE uuid_paper = ANY($1::uuid[])
-		ORDER BY uuid_paper ASC, position ASC`, pgtype.FlatArray[string](uuids))
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var uuid string
-		var url sql.NullString
-		if err := rows.Scan(&uuid, &url); err != nil {
-			return err
-		}
-		if paper := papers[uuid]; paper != nil {
-			paper.PDFs = append(paper.PDFs, url.String)
-		}
-	}
-
-	return rows.Err()
-}
-
 func loadAuthors(ctx context.Context, db *sql.DB, papers map[string]*domain.Paper, uuids []string) error {
 	rows, err := db.QueryContext(ctx, `
 		SELECT pa.uuid_paper::text, a.name_first, a.name_middle, a.name_last, af.name, a.orcid
@@ -504,8 +478,8 @@ func insertPaper(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
-			paper_type, publication_status, publication_status_timestamp, abstract, keywords
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, args...)
+			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_url
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`, args...)
 	return err
 }
 
@@ -527,14 +501,12 @@ func paperArguments(paper domain.Paper) ([]any, error) {
 		statusTimestamp,
 		nullString(paper.Abstract),
 		pgtype.FlatArray[string](paper.Keywords),
+		nullString(paper.PDFURL),
 	}, nil
 }
 
 func insertChildren(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
 	if err := insertMetadata(ctx, tx, paper.UUID, paper.Metadata); err != nil {
-		return err
-	}
-	if err := insertPDFs(ctx, tx, paper.UUID, paper.PDFs); err != nil {
 		return err
 	}
 	return insertAuthors(ctx, tx, paper.UUID, paper.Authors)
@@ -575,15 +547,6 @@ func insertMetadata(ctx context.Context, tx *sql.Tx, uuid string, metadata domai
 		timestamp,
 	)
 	return err
-}
-
-func insertPDFs(ctx context.Context, tx *sql.Tx, uuid string, pdfs []string) error {
-	for position, url := range pdfs {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO public.pdf (pdf_url, uuid_paper, position) VALUES ($1, $2, $3)`, nullString(url), uuid, position); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func insertAuthors(ctx context.Context, tx *sql.Tx, uuid string, authors []domain.Author) error {
