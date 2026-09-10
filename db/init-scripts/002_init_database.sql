@@ -17,6 +17,8 @@ CREATE TABLE public.author (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	name_middle text,
 	name_first text,
+	name_last text,
+	orcid text,
 	key_affiliation bigint,
 	CONSTRAINT author_pk PRIMARY KEY (key)
 );
@@ -72,6 +74,8 @@ CREATE TABLE public.paper (
 	title text,
 	title_short text,
 	publication_year smallint,
+	publication_month smallint,
+	publication_day smallint,
 	paper_type public.paper_type,
 	publication_status public.publication_status,
 	publication_status_timestamp timestamptz,
@@ -79,7 +83,12 @@ CREATE TABLE public.paper (
 	keywords text[],
 	pdf_url text,
 	CONSTRAINT paper_doi_uq UNIQUE (doi),
-	CONSTRAINT paper_pk PRIMARY KEY (uuid)
+	CONSTRAINT paper_pk PRIMARY KEY (uuid),
+	CONSTRAINT paper_publication_year_ck CHECK (publication_year IS NULL OR publication_year >= 1),
+	CONSTRAINT paper_publication_month_ck CHECK (publication_month IS NULL OR publication_month BETWEEN 1 AND 12),
+	CONSTRAINT paper_publication_day_ck CHECK (publication_day IS NULL OR publication_day BETWEEN 1 AND 31),
+	CONSTRAINT paper_publication_month_year_ck CHECK (publication_month IS NULL OR publication_year IS NOT NULL),
+	CONSTRAINT paper_publication_day_month_ck CHECK (publication_day IS NULL OR publication_month IS NOT NULL)
 );
 
 COMMENT ON TABLE public.paper IS E'Represents a paper with an associated PDF';
@@ -108,7 +117,9 @@ ON public.stack (owner_external_id, lower(name));
 CREATE TABLE public.paper_author (
 	uuid_paper uuid NOT NULL,
 	key_author bigint NOT NULL,
-	CONSTRAINT paper_author_pk PRIMARY KEY (uuid_paper, key_author)
+	position integer NOT NULL,
+	CONSTRAINT paper_author_pk PRIMARY KEY (uuid_paper, key_author),
+	CONSTRAINT paper_author_paper_position_uq UNIQUE (uuid_paper, position)
 );
 
 ALTER TABLE public.paper_author ADD CONSTRAINT paper_author_paper_fk
@@ -150,7 +161,6 @@ E'Deleting a paper removes its relationships to stacks; the stacks remain';
 
 CREATE INDEX stack_paper_uuid_paper_idx ON public.stack_paper (uuid_paper);
 
-
 CREATE TABLE public.metadata (
 	key bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
 	publisher text,
@@ -161,19 +171,20 @@ CREATE TABLE public.metadata (
 	event_title text,
 	event_place text,
 	institution text,
-	volume smallint,
-	issue smallint,
+	volume text,
+	issue text,
 	datasource text,
 	datasource_timestamp timestamptz,
 	reference text[],
 	isbn text[],
 	issn text[],
-	pages smallint,
+	pages text,
 	license text,
 	copyright text,
 	funding text,
 	uuid_paper uuid NOT NULL,
-	CONSTRAINT metadata_pk PRIMARY KEY (key)
+	CONSTRAINT metadata_pk PRIMARY KEY (key),
+	CONSTRAINT metadata_paper_uq UNIQUE (uuid_paper)
 );
 COMMENT ON COLUMN public.metadata.volume IS E'volume of publication';
 COMMENT ON COLUMN public.metadata.issue IS E'issue of publication';
@@ -192,6 +203,5 @@ FOREIGN KEY (uuid_paper)
 REFERENCES public.paper (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE INDEX metadata_uuid_paper_idx ON public.metadata (uuid_paper);
 
 COMMIT;

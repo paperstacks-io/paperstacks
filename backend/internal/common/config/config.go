@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Host          string
 	Port          string
+	DatabaseURL   string
 	HankoAPIURL   string
 	ObjectStorage objectstorage.Config
 }
@@ -21,6 +22,7 @@ func New() Config {
 	return Config{
 		Host:        getEnvOrDefault("HOST", "127.0.0.1"),
 		Port:        getEnvOrDefault("PORT", "8080"),
+		DatabaseURL: getEnvOrDefault("DATABASE_URL", ""),
 		HankoAPIURL: getEnvOrDefault("HANKO_API_URL", ""),
 		ObjectStorage: objectstorage.Config{
 			Endpoint:        getEnvOrDefault("S3_ENDPOINT_URL", ""),
