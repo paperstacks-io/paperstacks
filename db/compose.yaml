@@ -26,7 +26,6 @@ services:
 
     volumes:
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
-      - ./procedures:/db/procedures:ro
       - ./install-pg-cron.sh:/db/install-pg-cron.sh:ro
 
     environment:

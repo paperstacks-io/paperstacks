@@ -7,25 +7,16 @@ BEGIN;
 SET ROLE app_owner;
 SET search_path TO public;
 
-CREATE OR REPLACE PROCEDURE public.cleanup_soft_deleted_entries(
-    p_retention interval DEFAULT interval '30 days'
-)
+CREATE OR REPLACE PROCEDURE public.cleanup_soft_deleted_entries()
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-    v_cutoff timestamptz;
+    retention CONSTANT interval := interval '30 days';
+    v_cutoff timestamptz := statement_timestamp() - retention;
 BEGIN
 
-    IF p_retention IS NULL
-       OR p_retention < interval '0 seconds'
-    THEN
-        RAISE EXCEPTION
-            'Retention period must be a non-negative interval';
-    END IF;
-
-    v_cutoff := statement_timestamp() - p_retention;
 
     -- paper_author uses ON DELETE RESTRICT.
     DELETE FROM public.paper_author AS pa
@@ -48,17 +39,14 @@ END;
 $$;
 
 COMMENT ON PROCEDURE
-public.cleanup_soft_deleted_entries(interval)
+public.cleanup_soft_deleted_entries()
 IS
-'Permanently deletes papers and stacks whose deleted_at timestamp is older than the retention period.';
+'Permanently deletes papers and stacks whose deleted_at timestamp is older than the fixed 30 day retention period.';
 
+-- Override the routine grants inherited from the default privileges in 001_init.sql.
 REVOKE ALL
-ON PROCEDURE public.cleanup_soft_deleted_entries(interval)
-FROM PUBLIC;
-
-GRANT EXECUTE
-ON PROCEDURE public.cleanup_soft_deleted_entries(interval)
-TO app_rw;
+ON PROCEDURE public.cleanup_soft_deleted_entries()
+FROM PUBLIC, app_rw, app_ro;
 
 RESET ROLE;
 

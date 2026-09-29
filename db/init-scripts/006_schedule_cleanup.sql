@@ -5,5 +5,5 @@
 SELECT cron.schedule(
     'soft-delete-cleanup',
     '0 3 * * *',
-    $$CALL public.cleanup_soft_deleted_entries(interval '30 days');$$
+    $$CALL public.cleanup_soft_deleted_entries();$$
 );

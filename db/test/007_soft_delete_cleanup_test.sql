@@ -2,14 +2,12 @@
 
 \connect paperstacks
 
--- Integration test for 006_soft_delete_cleanup.sql.
+-- Integration test for 005_create_soft_delete_cleanup_procedure.sql.
 -- It verifies both the pg_cron registration and the hard-cleanup behavior.
 -- All test data is rolled back at the end.
 
-SET ROLE app_rw;
-
--- Verify that this user can see the cron job it owns and that it has the
--- expected schedule/database.
+-- Run as postgres, the login that registers and executes the cron job.
+-- Verify the schedule, database, command and execution role.
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -18,6 +16,8 @@ BEGIN
         WHERE jobname = 'soft-delete-cleanup'
           AND schedule = '0 3 * * *'
           AND database = 'paperstacks'
+          AND command = 'CALL public.cleanup_soft_deleted_entries();'
+          AND username = current_user
           AND active = true
     ) THEN
         RAISE EXCEPTION 'Test failed: soft-delete-cleanup cron job is missing or misconfigured';
@@ -26,6 +26,18 @@ END
 $$;
 
 BEGIN;
+
+DO $$
+BEGIN
+    IF to_regprocedure('public.cleanup_soft_deleted_entries(interval)') IS NOT NULL THEN
+        RAISE EXCEPTION 'Test failed: configurable retention overload still exists';
+    END IF;
+    IF has_function_privilege('app_rw', 'public.cleanup_soft_deleted_entries()', 'EXECUTE')
+       OR has_function_privilege('app_ro', 'public.cleanup_soft_deleted_entries()', 'EXECUTE') THEN
+        RAISE EXCEPTION 'Test failed: application roles can execute administrative cleanup';
+    END IF;
+END
+$$;
 
 -- One expired pair (>30 days) and one recent pair (<30 days).
 INSERT INTO public.app_user (external_id, email)
@@ -99,9 +111,9 @@ VALUES
     ('Expired Publisher', '33333333-3333-3333-3333-333333333333'),
     ('Recent Publisher', '44444444-4444-4444-4444-444444444444');
 
--- Call through the same app role used by pg_cron. SECURITY DEFINER causes the
+-- Call through the same postgres login used by pg_cron. SECURITY DEFINER causes the
 -- cleanup body to execute with app_owner privileges.
-CALL public.cleanup_soft_deleted_entries(interval '30 days');
+CALL public.cleanup_soft_deleted_entries();
 
 DO $$
 BEGIN
@@ -179,6 +191,32 @@ BEGIN
           AND uuid_paper = '44444444-4444-4444-4444-444444444444'
     ) THEN
         RAISE EXCEPTION 'Test failed: recent stack_paper relation was removed too early';
+    END IF;
+END
+$$;
+
+-- Keep setup and CALL in one statement so the exact cutoff cannot drift.
+DO $$
+DECLARE
+    boundary_paper uuid := '77777777-7777-7777-7777-777777777777';
+    boundary_stack uuid := '88888888-8888-8888-8888-888888888888';
+    active_paper uuid := '99999999-9999-9999-9999-999999999999';
+    active_stack uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+BEGIN
+    INSERT INTO public.paper (uuid, doi, title, deleted_at)
+    VALUES
+        (boundary_paper, '10.0000/cleanup-boundary', 'Boundary paper', statement_timestamp() - interval '30 days'),
+        (active_paper, '10.0000/cleanup-active', 'Active paper', NULL);
+    INSERT INTO public.stack (uuid, name, owner_external_id, deleted_at)
+    VALUES
+        (boundary_stack, 'Boundary stack', 'cleanup-test-user', statement_timestamp() - interval '30 days'),
+        (active_stack, 'Active stack', 'cleanup-test-user', NULL);
+
+    CALL public.cleanup_soft_deleted_entries();
+
+    IF (SELECT count(*) FROM public.paper WHERE uuid IN (boundary_paper, active_paper)) <> 2
+       OR (SELECT count(*) FROM public.stack WHERE uuid IN (boundary_stack, active_stack)) <> 2 THEN
+        RAISE EXCEPTION 'Test failed: active entities or entities at the exact 30 day cutoff were removed';
     END IF;
 END
 $$;
