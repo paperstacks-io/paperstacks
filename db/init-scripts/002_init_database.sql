@@ -82,6 +82,10 @@ CREATE TABLE public.paper (
 	abstract text,
 	keywords text[],
 	pdf_url text,
+	created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+	updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+	created_by text REFERENCES public.app_user (external_id) ON DELETE SET NULL ON UPDATE CASCADE,
+	updated_by text REFERENCES public.app_user (external_id) ON DELETE SET NULL ON UPDATE CASCADE,
 	CONSTRAINT paper_doi_uq UNIQUE (doi),
 	CONSTRAINT paper_pk PRIMARY KEY (uuid),
 	CONSTRAINT paper_publication_year_ck CHECK (publication_year IS NULL OR publication_year >= 1),
@@ -98,8 +102,10 @@ CREATE TABLE public.stack (
 	name text NOT NULL,
 	owner_external_id text NOT NULL,
 	is_public boolean NOT NULL DEFAULT false,
-	created_at timestamptz NOT NULL DEFAULT now(),
-	updated_at timestamptz NOT NULL DEFAULT now(),
+	created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+	updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+	created_by text REFERENCES public.app_user (external_id) ON DELETE SET NULL ON UPDATE CASCADE,
+	updated_by text REFERENCES public.app_user (external_id) ON DELETE SET NULL ON UPDATE CASCADE,
 	CONSTRAINT stack_pk PRIMARY KEY (uuid)
 );
 
@@ -204,4 +210,38 @@ REFERENCES public.paper (uuid)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 
+COMMENT ON COLUMN public.paper.created_at IS 'Database record creation instant; unrelated to publication time.';
+COMMENT ON COLUMN public.paper.updated_at IS 'Start of the latest SQL statement updating this row.';
+COMMENT ON COLUMN public.paper.created_by IS 'Creating app_user external ID; NULL for unknown/system actors or deleted users.';
+COMMENT ON COLUMN public.paper.updated_by IS 'Last editing app_user external ID, supplied on each write; NULL for unknown/system actors or deleted users.';
+COMMENT ON COLUMN public.stack.created_at IS 'Database record creation instant.';
+COMMENT ON COLUMN public.stack.updated_at IS 'Start of the latest SQL statement updating this row.';
+COMMENT ON COLUMN public.stack.created_by IS 'Creating app_user external ID; independent of current stack ownership.';
+COMMENT ON COLUMN public.stack.updated_by IS 'Last editing app_user external ID, supplied on each write; NULL for unknown/system actors or deleted users.';
+
+CREATE INDEX paper_created_by_idx ON public.paper (created_by);
+CREATE INDEX paper_updated_by_idx ON public.paper (updated_by);
+CREATE INDEX stack_created_by_idx ON public.stack (created_by);
+CREATE INDEX stack_updated_by_idx ON public.stack (updated_by);
+
+CREATE FUNCTION public.set_record_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+    NEW.updated_at := statement_timestamp();
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER paper_record_updated_at
+BEFORE UPDATE ON public.paper
+FOR EACH ROW EXECUTE FUNCTION public.set_record_updated_at();
+
+CREATE TRIGGER stack_record_updated_at
+BEFORE UPDATE ON public.stack
+FOR EACH ROW EXECUTE FUNCTION public.set_record_updated_at();
+
+RESET ROLE;
 COMMIT;

@@ -64,7 +64,7 @@ psql_as() {
   local database="$3"
   shift 3
 
-  "$container_runtime" exec \
+  "$container_runtime" exec -i \
     -e PGPASSWORD="$password" \
     "$container" \
     psql \
@@ -171,5 +171,10 @@ fi
 
 psql_as app_rw "$app_rw_password" paperstacks -c \
   "DELETE FROM public.affiliation WHERE name = 'Smoke Test Lab Updated';"
+
+for sql_test in "$script_dir"/test/*_test.sql; do
+  echo "Running SQL test: $(basename "$sql_test")"
+  psql_as postgres "$super_password" paperstacks -f - <"$sql_test"
+done
 
 echo "DB init smoke test passed"
