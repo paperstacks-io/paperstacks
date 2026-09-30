@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,6 +21,8 @@ import (
 type Config struct {
 	// Dir is the directory containing *.jsonl[.gz] dump files.
 	Dir string
+	// LogDir is the directory the per-run import log file is created in.
+	LogDir string
 }
 
 // Importer walks a directory of Crossref dump files, parses every
@@ -41,6 +45,14 @@ func (im *Importer) Run(ctx context.Context) error {
 	im.log.Info("crawler import starting", slog.String("dir", im.cfg.Dir))
 	start := time.Now()
 
+	logFile, err := createLogFile(im.cfg.LogDir, start)
+	if err != nil {
+		return err
+	}
+	defer logFile.Close()
+
+	im.log.Info("import log file created", slog.String("file", logFile.Name()))
+
 	stats := &runStats{im: im, ctx: ctx, start: start}
 	walkErr := reader.WalkDumpDir(im.cfg.Dir, stats.visitFile)
 
@@ -52,6 +64,20 @@ func (im *Importer) Run(ctx context.Context) error {
 	)
 
 	return walkErr
+}
+
+// createLogFile creates dir if needed and an empty log file in it named
+// after start, e.g. 20250315-143005-importer-log.txt.
+func createLogFile(dir string, start time.Time) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, fmt.Errorf("create log directory: %w", err)
+	}
+	name := start.Format("20060102-150405") + "-importer-log.txt"
+	f, err := os.Create(filepath.Join(dir, name))
+	if err != nil {
+		return nil, fmt.Errorf("create log file: %w", err)
+	}
+	return f, nil
 }
 
 // runStats tracks the running totals for a single Importer.Run call and
