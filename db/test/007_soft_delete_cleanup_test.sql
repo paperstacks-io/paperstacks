@@ -43,18 +43,20 @@ $$;
 INSERT INTO public.app_user (external_id, email)
 VALUES ('cleanup-test-user', 'cleanup-test@example.invalid');
 
-INSERT INTO public.paper (uuid, doi, title, deleted_at)
+INSERT INTO public.paper (uuid, doi, title, pdf_url, deleted_at)
 VALUES
 (
     '33333333-3333-3333-3333-333333333333',
     '10.0000/cleanup-expired',
     'Expired cleanup test paper',
+    'https://example.invalid/expired.pdf',
     now() - interval '31 days'
 ),
 (
     '44444444-4444-4444-4444-444444444444',
     '10.0000/cleanup-recent',
     'Recent cleanup test paper',
+    'https://example.invalid/recent.pdf',
     now() - interval '29 days'
 );
 
@@ -85,7 +87,7 @@ VALUES
 );
 
 -- Add dependent data to verify both explicit cleanup (paper_author) and
--- existing ON DELETE CASCADE behavior (pdf and metadata).
+-- existing ON DELETE CASCADE behavior (metadata).
 DO $$
 DECLARE
     v_author_key bigint;
@@ -94,17 +96,12 @@ BEGIN
     VALUES ('Cleanup Test Author')
     RETURNING key INTO v_author_key;
 
-    INSERT INTO public.paper_author (uuid_paper, key_author)
+    INSERT INTO public.paper_author (uuid_paper, key_author, position)
     VALUES
-        ('33333333-3333-3333-3333-333333333333', v_author_key),
-        ('44444444-4444-4444-4444-444444444444', v_author_key);
+        ('33333333-3333-3333-3333-333333333333', v_author_key, 1),
+        ('44444444-4444-4444-4444-444444444444', v_author_key, 1);
 END
 $$;
-
-INSERT INTO public.pdf (pdf_url, uuid_paper)
-VALUES
-    ('https://example.invalid/expired.pdf', '33333333-3333-3333-3333-333333333333'),
-    ('https://example.invalid/recent.pdf', '44444444-4444-4444-4444-444444444444');
 
 INSERT INTO public.metadata (publisher, uuid_paper)
 VALUES
@@ -148,13 +145,6 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM public.pdf
-        WHERE uuid_paper = '33333333-3333-3333-3333-333333333333'
-    ) THEN
-        RAISE EXCEPTION 'Test failed: expired PDF still exists';
-    END IF;
-
-    IF EXISTS (
         SELECT 1 FROM public.metadata
         WHERE uuid_paper = '33333333-3333-3333-3333-333333333333'
     ) THEN
@@ -166,6 +156,7 @@ BEGIN
         SELECT 1 FROM public.paper
         WHERE uuid = '44444444-4444-4444-4444-444444444444'
           AND deleted_at IS NOT NULL
+          AND pdf_url = 'https://example.invalid/recent.pdf'
     ) THEN
         RAISE EXCEPTION 'Test failed: recent soft-deleted paper was removed too early';
     END IF;

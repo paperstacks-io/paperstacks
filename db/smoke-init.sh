@@ -132,7 +132,6 @@ psql_as postgres "$super_password" paperstacks -c \
        'public.author',
        'public.paper',
        'public.paper_author',
-       'public.pdf',
        'public.metadata'
      ] LOOP
        IF to_regclass(expected_table) IS NULL THEN
@@ -152,7 +151,7 @@ psql_as postgres "$super_password" paperstacks -c \
        SELECT 1
        FROM pg_tables
        WHERE schemaname = 'public'
-         AND tablename IN ('affiliation', 'author', 'paper', 'paper_author', 'pdf', 'metadata')
+         AND tablename IN ('affiliation', 'author', 'paper', 'paper_author', 'metadata')
          AND tableowner <> 'app_owner'
      ) THEN
        RAISE EXCEPTION 'one or more application tables are not owned by app_owner';
