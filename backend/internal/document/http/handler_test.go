@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/document/application"
 	documentHttp "github.com/paperstacks.io/paperstacks/internal/document/http"
@@ -36,6 +37,28 @@ func (m mockSessionService) LogoutSession(ctx context.Context, token string) err
 	return nil
 }
 
+type mockObjectStorage struct{}
+
+func (m mockObjectStorage) Put(ctx context.Context, input objectstorage.PutObjectInput) (objectstorage.ObjectInfo, error) {
+	return objectstorage.ObjectInfo{
+		Key:         input.Key,
+		Size:        input.Size,
+		ContentType: input.ContentType,
+	}, nil
+}
+
+func (m mockObjectStorage) Get(ctx context.Context, key string) (*objectstorage.Object, error) {
+	return nil, nil
+}
+
+func (m mockObjectStorage) Delete(ctx context.Context, key string) error {
+	return nil
+}
+
+func (m mockObjectStorage) Exists(ctx context.Context, key string) (bool, error) {
+	return true, nil
+}
+
 func setupTestRouter(t *testing.T) (http.Handler, *application.DocumentService) {
 	paperRepo := paperMemory.NewRepository()
 	_, err := paperRepo.Save(context.Background(), paperDomain.Paper{
@@ -49,7 +72,7 @@ func setupTestRouter(t *testing.T) (http.Handler, *application.DocumentService) 
 	paperService := paperApplication.NewPaperService(paperRepo)
 
 	docRepo := documentMemory.NewRepository()
-	docStorage := documentMemory.NewStorage()
+	docStorage := mockObjectStorage{}
 	docService := application.NewDocumentService(docRepo, docStorage, paperService)
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))

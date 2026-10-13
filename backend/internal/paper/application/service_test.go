@@ -76,6 +76,44 @@ func TestServiceCreateRejectsInvalidPublicationType(t *testing.T) {
 	}
 }
 
+func TestServiceCreateRejectsInvalidStatusAndTimestamps(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name    string
+		paper   domain.Paper
+		wantErr bool
+	}{
+		{
+			name:    "unknown status",
+			paper:   domain.Paper{DOI: "10.1000/status", Title: "Example Paper", PublicationStatus: "prepublished"},
+			wantErr: true,
+		},
+		{
+			name:    "invalid publication status timestamp",
+			paper:   domain.Paper{DOI: "10.1000/status-time", Title: "Example Paper", PublicationStatusTimestamp: "not-a-timestamp"},
+			wantErr: true,
+		},
+		{
+			name:    "invalid metadata datasource timestamp",
+			paper:   domain.Paper{DOI: "10.1000/datasource-time", Title: "Example Paper", Metadata: domain.Metadata{DataSourceTimestamp: "not-a-timestamp"}},
+			wantErr: true,
+		},
+		{
+			name:  "known status and timestamps",
+			paper: domain.Paper{DOI: "10.1000/valid", Title: "Example Paper", PublicationStatus: " published ", PublicationStatusTimestamp: "2026-09-07T12:00:00Z", Metadata: domain.Metadata{DataSourceTimestamp: "2026-09-07T12:00:00Z"}},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			service := NewPaperService(memory.NewRepository())
+			_, err := service.Create(context.Background(), test.paper)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("Create() error = %v, want error: %t", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestServiceUpdateRejectsMismatchedUUID(t *testing.T) {
 	t.Parallel()
 

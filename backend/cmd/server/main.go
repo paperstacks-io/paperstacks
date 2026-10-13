@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -27,6 +28,7 @@ import (
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
+	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
@@ -34,6 +36,7 @@ import (
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
+	userPostgres "github.com/paperstacks.io/paperstacks/internal/user/repository/postgres"
 	"github.com/paperstacks.io/paperstacks/internal/web"
 )
 
@@ -42,29 +45,49 @@ func run(
 	cfg config.Config,
 ) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	paperRepo := paperMem.NewRepository()
-	paperService := paperApp.NewPaperService(paperRepo)
+	hasDB := cfg.DatabaseURL != ""
+
+	var paperService *paperApp.PaperService
+	var userService *userApp.UserService
+	if hasDB {
+		db, err := sql.Open("pgx", cfg.DatabaseURL)
+		if err != nil {
+			return fmt.Errorf("open database: %w", err)
+		}
+		defer db.Close()
+		if err := db.PingContext(ctx); err != nil {
+			return fmt.Errorf("ping database: %w", err)
+		}
+
+		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db))
+		userService = userApp.NewUserService(userPostgres.NewRepository(db))
+	} else {
+		paperService = paperApp.NewPaperService(paperMem.NewRepository())
+		userService = userApp.NewUserService(userMem.NewRepository())
+	}
+
 	doiService := doiApp.NewDOIService(nil)
 	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
-	userService := userApp.NewUserService(userMem.NewRepository())
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 	docRepo := docMem.NewRepository()
-	docStorage := docMem.NewStorage()
-	documentService := docApp.NewDocumentService(docRepo, docStorage, paperService)
 
+	var objectStore objectstorage.Store
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
-		objectStore, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
+		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
 		if err != nil {
 			logger.Error("ObjectStorage config error", "error", err)
 			return err
 		}
 
-		if err := objectStore.Check(ctx); err != nil {
+		if err := s3Store.Check(ctx); err != nil {
 			logger.Error("ObjectStorage check error", "error", err)
 			return err
 		}
+		objectStore = s3Store
 	}
+
+	documentService := docApp.NewDocumentService(docRepo, objectStore, paperService)
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
@@ -134,9 +157,15 @@ const bannerLogo = `
 `
 
 func banner(w io.Writer, cfg config.Config) {
-	storageStatus := "Not configured or invalid configuration"
+	notConfigured := "Not configured or invalid configuration"
+	storageStatus := notConfigured
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
 		storageStatus = cfg.ObjectStorage.Endpoint
+	}
+
+	dbStatus := notConfigured
+	if cfg.DatabaseURL != "" {
+		dbStatus = cfg.DatabaseURL
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
@@ -148,6 +177,7 @@ func banner(w io.Writer, cfg config.Config) {
 	fmt.Fprintln(tw)
 	fmt.Fprintln(tw, "  Hanko API URL:\t"+cfg.HankoAPIURL)
 	fmt.Fprintln(tw, "  Object Storage URL:\t"+storageStatus)
+	fmt.Fprintln(tw, "  Database URL:\t"+dbStatus)
 	fmt.Fprintln(tw)
 
 	_ = tw.Flush()

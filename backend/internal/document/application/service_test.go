@@ -8,24 +8,46 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/paperstacks.io/paperstacks/internal/document/domain"
+	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
 
-func setupTestService(t *testing.T) (*DocumentService, *memory.Repository, *memory.Storage, *paperMemory.Repository) {
+type mockObjectStorage struct{}
+
+func (m mockObjectStorage) Put(ctx context.Context, input objectstorage.PutObjectInput) (objectstorage.ObjectInfo, error) {
+	return objectstorage.ObjectInfo{
+		Key:         input.Key,
+		Size:        input.Size,
+		ContentType: input.ContentType,
+	}, nil
+}
+
+func (m mockObjectStorage) Get(ctx context.Context, key string) (*objectstorage.Object, error) {
+	return nil, nil
+}
+
+func (m mockObjectStorage) Delete(ctx context.Context, key string) error {
+	return nil
+}
+
+func (m mockObjectStorage) Exists(ctx context.Context, key string) (bool, error) {
+	return true, nil
+}
+
+func setupTestService(t *testing.T) (*DocumentService, *memory.Repository, *paperMemory.Repository) {
 	repo := memory.NewRepository()
-	storage := memory.NewStorage()
+	storage := mockObjectStorage{}
 	paperRepo := paperMemory.NewRepository()
 	paperService := paperApp.NewPaperService(paperRepo)
 	service := NewDocumentService(repo, storage, paperService)
-	return service, repo, storage, paperRepo
+	return service, repo, paperRepo
 }
 
 func TestUploadSuccess(t *testing.T) {
-	service, repo, _, paperRepo := setupTestService(t)
+	service, repo, paperRepo := setupTestService(t)
 
 	ctx := context.Background()
 
@@ -39,7 +61,7 @@ func TestUploadSuccess(t *testing.T) {
 	pdfContent := []byte("%PDF-1.4\ncontent")
 	r := bytes.NewReader(pdfContent)
 
-	doc, err := service.Upload(ctx, "paper-uuid-xyz", "  test_document.pdf  ", "test-user-123", r)
+	doc, err := service.Upload(ctx, "paper-uuid-xyz", "  test_document.pdf  ", "test-user-123", r, int64(len(pdfContent)))
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -73,7 +95,7 @@ func TestUploadSuccess(t *testing.T) {
 }
 
 func TestUploadInvalidMagicBytes(t *testing.T) {
-	service, _, _, paperRepo := setupTestService(t)
+	service, _, paperRepo := setupTestService(t)
 
 	ctx := context.Background()
 
@@ -82,14 +104,14 @@ func TestUploadInvalidMagicBytes(t *testing.T) {
 	invalidContent := []byte("NOTAPDF-1.4\ncontent")
 	r := bytes.NewReader(invalidContent)
 
-	_, err := service.Upload(ctx, "paper-uuid-xyz", "test.pdf", "test-user-123", r)
-	if !errors.Is(err, domain.ErrInvalidFileType) {
+	_, err := service.Upload(ctx, "paper-uuid-xyz", "test.pdf", "test-user-123", r, int64(len(invalidContent)))
+	if !errors.Is(err, ErrInvalidFileType) {
 		t.Errorf("expected ErrInvalidFileType, got: %v", err)
 	}
 }
 
 func TestUploadActualStreamExceedsLimit(t *testing.T) {
-	service, _, _, paperRepo := setupTestService(t)
+	service, _, paperRepo := setupTestService(t)
 
 	ctx := context.Background()
 
@@ -102,21 +124,21 @@ func TestUploadActualStreamExceedsLimit(t *testing.T) {
 		io.LimitReader(infiniteZeroReader{}, sizeExceedingLimit),
 	)
 
-	_, err := service.Upload(ctx, "paper-uuid-xyz", "test.pdf", "test-user-123", infiniteReader)
-	if !errors.Is(err, domain.ErrFileSizeExceeded) {
+	_, err := service.Upload(ctx, "paper-uuid-xyz", "test.pdf", "test-user-123", infiniteReader, sizeExceedingLimit)
+	if !errors.Is(err, ErrFileSizeExceeded) {
 		t.Errorf("expected ErrFileSizeExceeded, got: %v", err)
 	}
 }
 
 func TestUploadPaperDoesNotExist(t *testing.T) {
-	service, _, _, _ := setupTestService(t)
+	service, _, _ := setupTestService(t)
 
 	ctx := context.Background()
 
 	pdfContent := []byte("%PDF-1.4\ncontent")
 	r := bytes.NewReader(pdfContent)
 
-	_, err := service.Upload(ctx, "non-existent-paper-uuid", "test.pdf", "test-user-123", r)
+	_, err := service.Upload(ctx, "non-existent-paper-uuid", "test.pdf", "test-user-123", r, int64(len(pdfContent)))
 	if !errors.Is(err, paperDomain.ErrPaperNotFound) {
 		t.Errorf("expected ErrPaperNotFound, got: %v", err)
 	}

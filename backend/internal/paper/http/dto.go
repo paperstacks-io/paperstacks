@@ -14,7 +14,7 @@ type PaperRequest struct {
 	Abstract                   string                 `json:"abstract"`
 	Keywords                   []string               `json:"keywords"`
 	Type                       domain.PublicationType `json:"type"`
-	PDFs                       []string               `json:"pdfs"`
+	PDFURL                     string                 `json:"pdf-url"`
 	Metadata                   MetadataRequest        `json:"metadata"`
 }
 
@@ -30,7 +30,7 @@ type PaperResponse struct {
 	Abstract                   string                 `json:"abstract"`
 	Keywords                   []string               `json:"keywords"`
 	Type                       domain.PublicationType `json:"type"`
-	PDFs                       []string               `json:"pdfs"`
+	PDFURL                     string                 `json:"pdf-url"`
 	Metadata                   MetadataResponse       `json:"metadata"`
 }
 
@@ -118,7 +118,7 @@ func (r PaperRequest) toDomain() domain.Paper {
 		Abstract:                   r.Abstract,
 		Keywords:                   r.Keywords,
 		Type:                       r.Type,
-		PDFs:                       r.PDFs,
+		PDFURL:                     r.PDFURL,
 		Metadata:                   r.Metadata.toDomain(),
 	}
 }
@@ -141,7 +141,7 @@ func NewPaperResponse(p domain.Paper) PaperResponse {
 		Abstract:                   p.Abstract,
 		Keywords:                   p.Keywords,
 		Type:                       p.Type,
-		PDFs:                       p.PDFs,
+		PDFURL:                     p.PDFURL,
 		Metadata:                   NewMetadataResponse(p.Metadata),
 	}
 }
