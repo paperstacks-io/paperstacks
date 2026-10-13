@@ -64,7 +64,7 @@ psql_as() {
   local database="$3"
   shift 3
 
-  "$container_runtime" exec -i \
+  "${compose_cmd[@]}" "${compose_args[@]}" exec -T \
     -e PGPASSWORD="$password" \
     db \
     psql \
