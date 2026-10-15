@@ -14,8 +14,8 @@
     "htmx.org": "^4.0.0"
   },
   "devDependencies": {
-    "daisyui": "^5.7.19",
-    "oxfmt": "^0.64.0",
+    "daisyui": "^5.7.50",
+    "oxfmt": "^0.73.0",
     "tailwindcss": "^4.3.3"
   },
   "allowScripts": {
