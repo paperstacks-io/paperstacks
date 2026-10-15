@@ -135,8 +135,8 @@
                 data-uuid="{{ .UUID }}"
                 class="cursor-pointer hover:bg-base-200"
                 hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
-                hx-target:inherited="#stack-paper-info"
-                hx-swap:inherited="innerHTML"
+                hx-target="#stack-paper-info"
+                hx-swap="innerHTML"
               >
                 <td>
                   <div class="flex items-center gap-3">
