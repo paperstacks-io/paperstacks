@@ -1,4 +1,5 @@
 secrets/
+.env
 **/.idea/
 **/.vscode/
 **/.vs/
