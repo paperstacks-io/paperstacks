@@ -4,11 +4,6 @@ import (
 	"errors"
 )
 
-var (
-	ErrFileSizeExceeded = errors.New("file size exceeds maximum limit")
-	ErrInvalidFileType  = errors.New("invalid file type: only valid PDFs allowed")
-)
-
 type Document struct {
 	Key         string
 	PaperUUID   string

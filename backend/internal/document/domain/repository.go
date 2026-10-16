@@ -3,9 +3,15 @@ package domain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+)
+
+var (
+	ErrFileSizeExceeded = errors.New("file size exceeds maximum limit")
+	ErrInvalidFileType  = errors.New("invalid file type: only valid PDFs allowed")
 )
 
 type Repository interface {
