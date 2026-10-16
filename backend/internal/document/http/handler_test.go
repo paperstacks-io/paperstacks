@@ -144,8 +144,10 @@ func TestUploadDocument(t *testing.T) {
 		t.Errorf("Size = %d, want %d", response.Size, len(pdfContent))
 	}
 
-	if !strings.HasPrefix(response.Key, "paper/960ae542-c8ee-4454-9ad3-536ffbbacde6/") || !strings.HasSuffix(response.Key, ".pdf") {
-		t.Errorf("Key = %q, expected format 'paper/960ae542-c8ee-4454-9ad3-536ffbbacde6/{uuid}.pdf'", response.Key)
+	expectedKey := "pdf/960ae542-c8ee-4454-9ad3-536ffbbacde6/main.pdf"
+
+	if response.Key != expectedKey {
+		t.Errorf("Key = %q, want %q", response.Key, expectedKey)
 	}
 }
 

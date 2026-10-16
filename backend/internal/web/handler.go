@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
+	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
@@ -192,5 +195,84 @@ func handleLogout(
 		}
 
 		http.Redirect(w, r, "/app/", http.StatusSeeOther)
+	})
+}
+
+func handleDocumentUpload(
+	logger *slog.Logger,
+	documentService *docApp.DocumentService,
+	templates *template.Template,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			if errors.Is(err, http.ErrMissingFile) {
+				http.Error(w, "file is required", http.StatusBadRequest)
+				return
+			}
+			http.Error(w, "invalid multipart form data", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		paperUUID := r.FormValue("paper_uuid")
+		if paperUUID == "" {
+			http.Error(w, "paper_uuid is required", http.StatusBadRequest)
+			logger.Warn("PDF upload missing paper UUID")
+
+			if err := renderErrorToast(w, templates, "Paper UUID is required."); err != nil {
+				logger.Error("render upload toast", "error", err)
+			}
+			return
+		}
+
+		fileName := header.Filename
+		if fileName == "" {
+			http.Error(w, "file_name is required", http.StatusBadRequest)
+			return
+		}
+
+		opts := domain.UploadOptions{
+			PaperUUID: paperUUID,
+			FileName:  fileName,
+			UserID:    session.UserID,
+			File:      file,
+			Size:      header.Size,
+			Config: domain.PDFConfiguration{
+				MaxFileSize:     10 * 1024 * 1024,
+				Signature:       "%PDF-",
+				ContentType:     "application/pdf",
+				SniffBufferSize: 512,
+			},
+		}
+
+		_, err = documentService.Upload(ctx, opts)
+		if err != nil {
+			if errors.Is(err, domain.ErrFileSizeExceeded) || errors.Is(err, domain.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
+				if err := renderErrorToast(w, templates, err.Error()); err != nil {
+					logger.Error("render upload toast", "error", err)
+				}
+				return
+			}
+			logger.Error("upload document", "user_id", session.UserID, "error", err)
+			if err := renderErrorToast(w, templates, "Failed to upload PDF."); err != nil {
+				logger.Error("render upload toast", "error", err)
+			}
+			return
+		}
+
+		logger.Info("PDF uploaded successfully", "paper_uuid", paperUUID, "file_name", header.Filename)
+
+		if err := renderSuccessToast(w, templates, "PDF uploaded successfully."); err != nil {
+			logger.Error("render upload toast", "error", err)
+		}
 	})
 }

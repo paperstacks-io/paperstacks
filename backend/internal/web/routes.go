@@ -13,6 +13,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
+	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -30,6 +31,7 @@ func AddRoute(
 	stackService *stackApp.StackService,
 	userService *userApp.UserService,
 	sessionService commonauth.SessionService,
+	documentService *docApp.DocumentService,
 ) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -83,6 +85,8 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/sidebar/create", authenticated(handleSidebarStackCreate(logger, tmpl, userService, stackService)))
+
+	mux.Handle(http.MethodPost+" /document", authenticated(handleDocumentUpload(logger, documentService, tmpl)))
 
 	settingsTmpl := pageTemplate("settings/page")
 	mux.Handle(http.MethodGet+" /settings", authenticated(handleSettingsPage(logger, settingsTmpl, cfg.HankoAPIURL, userService)))
