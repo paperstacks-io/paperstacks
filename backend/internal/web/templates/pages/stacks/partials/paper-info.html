@@ -121,7 +121,10 @@
     "
   />
 
-  <label for="paper-pdf-{{ .UUID }}" class="add-pdf btn btn-dash min-h-24 w-full"> Add PDF </label>
+  <label for="paper-pdf-{{ .UUID }}" class="add-pdf btn btn-dash min-h-24 w-full">
+    <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
+    Add PDF
+  </label>
 
   <button
     type="submit"
@@ -133,6 +136,7 @@
       }
     "
   >
+    <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-5"></svg>
     Upload PDF
   </button>
 </form>
