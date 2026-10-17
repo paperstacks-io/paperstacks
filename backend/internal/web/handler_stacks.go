@@ -70,11 +70,6 @@ type citationViewData struct {
 	Styles []citationStyleViewData
 }
 
-type paperInfoData struct {
-	paperDomain.Paper
-	StackUUID string
-}
-
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
 	return stacksListData{
 		Items:         result.Items,
@@ -143,17 +138,14 @@ func handleStacksDetailPage(
 		data := struct {
 			pageData
 			Stack           stackDomain.Stack
-			SelectedPaper   paperInfoData
+			SelectedPaper   paperDomain.Paper
 			PDFAvailability map[string]bool
 			CreatedAt       string
 			UpdatedAt       string
 		}{
-			pageData: newPageData(r, hankoAPIURL),
-			Stack:    stack,
-			SelectedPaper: paperInfoData{
-				Paper:     selectedPaper,
-				StackUUID: stack.UUID,
-			},
+			pageData:        newPageData(r, hankoAPIURL),
+			Stack:           stack,
+			SelectedPaper:   selectedPaper,
 			PDFAvailability: pdfAvailability,
 			CreatedAt:       stack.CreatedAt.Format("2006-01-02 15:04"),
 			UpdatedAt:       stack.UpdatedAt.Format("2006-01-02 15:04"),
@@ -374,7 +366,6 @@ func handleStackPaperInfo(
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		ctx := r.Context()
 		paperUUID := r.PathValue("paperUUID")
-		stackUUID := r.PathValue("stackUUID")
 
 		if paperUUID == "" {
 			http.Error(w, "missing paper uuid", http.StatusBadRequest)
@@ -392,12 +383,8 @@ func handleStackPaperInfo(
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		data := paperInfoData{
-			Paper:     paper,
-			StackUUID: stackUUID,
-		}
 
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", data); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
@@ -606,13 +593,16 @@ func handleStackPaperRemove(
 			return
 		}
 
-		detailURL := "/app/stacks/detail/" + stackUUID
 		if isHTMX(r) {
-			hxLocation(w, detailURL, http.StatusOK)
+			w.Header().Set("HX-Trigger", "pdfUploaded")
+
+			if err := renderSuccessToast(w, tmpl, "PDF uploaded successfully."); err != nil {
+				logger.Error("render upload toast", "error", err)
+			}
 			return
 		}
 
-		http.Redirect(w, r, detailURL, http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
@@ -691,12 +681,6 @@ func handleDocumentUpload(
 			return
 		}
 
-		stackUUID := r.FormValue("stack_uuid")
-		if stackUUID == "" {
-			http.Error(w, "stack_uuid is required", http.StatusBadRequest)
-			return
-		}
-
 		fileName := header.Filename
 		if fileName == "" {
 			http.Error(w, "file_name is required", http.StatusBadRequest)
@@ -732,8 +716,6 @@ func handleDocumentUpload(
 			return
 		}
 
-		detailURL := "/app/stacks/detail/" + stackUUID
-
 		if isHTMX(r) {
 			w.Header().Set("HX-Trigger", "pdfUploaded")
 
@@ -743,7 +725,7 @@ func handleDocumentUpload(
 			return
 		}
 
-		http.Redirect(w, r, detailURL, http.StatusSeeOther)
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
