@@ -105,6 +105,7 @@
   hx-on::after-request="this.reset()"
 >
   <input type="hidden" name="paper_uuid" value="{{ .UUID }}" />
+  <input type="hidden" name="stack_uuid" value="{{ .StackUUID }}" />
 
   <input
     id="paper-pdf-{{ .UUID }}"

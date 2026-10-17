@@ -84,7 +84,14 @@
   </div>
 </section>
 
-<section class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+<section
+  class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]"
+  hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
+  hx-trigger="pdfUploaded from:body"
+  hx-target="#page-shell"
+  hx-select="#page-shell"
+  hx-swap="outerHTML"
+>
   <div class="grid gap-6">
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">

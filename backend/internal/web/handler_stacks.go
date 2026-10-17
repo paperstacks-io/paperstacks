@@ -9,6 +9,8 @@ import (
 	"net/http"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
+	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -68,6 +70,11 @@ type citationViewData struct {
 	Styles []citationStyleViewData
 }
 
+type paperInfoData struct {
+	paperDomain.Paper
+	StackUUID string
+}
+
 func NewStacksListData(result stackDomain.SearchResult, opts stackDomain.SearchOptions) stacksListData {
 	return stacksListData{
 		Items:         result.Items,
@@ -119,15 +126,18 @@ func handleStacksDetailPage(
 		data := struct {
 			pageData
 			Stack         stackDomain.Stack
-			SelectedPaper paperDomain.Paper
+			SelectedPaper paperInfoData
 			CreatedAt     string
 			UpdatedAt     string
 		}{
-			pageData:      newPageData(r, hankoAPIURL),
-			Stack:         stack,
-			SelectedPaper: selectedPaper,
-			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
-			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
+			pageData: newPageData(r, hankoAPIURL),
+			Stack:    stack,
+			SelectedPaper: paperInfoData{
+				Paper:     selectedPaper,
+				StackUUID: stack.UUID,
+			},
+			CreatedAt: stack.CreatedAt.Format("2006-01-02 15:04"),
+			UpdatedAt: stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
 
 		renderTemplate(w, r, tmpl, data)
@@ -345,6 +355,7 @@ func handleStackPaperInfo(
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		ctx := r.Context()
 		paperUUID := r.PathValue("paperUUID")
+		stackUUID := r.PathValue("stackUUID")
 
 		if paperUUID == "" {
 			http.Error(w, "missing paper uuid", http.StatusBadRequest)
@@ -362,8 +373,12 @@ func handleStackPaperInfo(
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
+		data := paperInfoData{
+			Paper:     paper,
+			StackUUID: stackUUID,
+		}
 
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
@@ -618,5 +633,97 @@ func handleStackPublicSettingUpdate(
 		}
 
 		renderSuccessToast(w, tmpl, "Stack changes saved")
+	})
+}
+
+func handleDocumentUpload(
+	logger *slog.Logger,
+	documentService *docApp.DocumentService,
+	templates *template.Template,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			if errors.Is(err, http.ErrMissingFile) {
+				http.Error(w, "file is required", http.StatusBadRequest)
+				return
+			}
+			http.Error(w, "invalid multipart form data", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		paperUUID := r.FormValue("paper_uuid")
+		if paperUUID == "" {
+			http.Error(w, "paper_uuid is required", http.StatusBadRequest)
+			logger.Warn("PDF upload missing paper UUID")
+
+			if err := renderErrorToast(w, templates, "Paper UUID is required."); err != nil {
+				logger.Error("render upload toast", "error", err)
+			}
+			return
+		}
+
+		stackUUID := r.FormValue("stack_uuid")
+		if stackUUID == "" {
+			http.Error(w, "stack_uuid is required", http.StatusBadRequest)
+			return
+		}
+
+		fileName := header.Filename
+		if fileName == "" {
+			http.Error(w, "file_name is required", http.StatusBadRequest)
+			return
+		}
+
+		opts := domain.UploadOptions{
+			PaperUUID: paperUUID,
+			FileName:  fileName,
+			UserID:    session.UserID,
+			File:      file,
+			Size:      header.Size,
+			Config: domain.PDFConfiguration{
+				MaxFileSize:     10 * 1024 * 1024,
+				Signature:       "%PDF-",
+				ContentType:     "application/pdf",
+				SniffBufferSize: 512,
+			},
+		}
+
+		_, err = documentService.Upload(ctx, opts)
+		if err != nil {
+			if errors.Is(err, domain.ErrFileSizeExceeded) || errors.Is(err, domain.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
+				if err := renderErrorToast(w, templates, err.Error()); err != nil {
+					logger.Error("render upload toast", "error", err)
+				}
+				return
+			}
+			logger.Error("upload document", "user_id", session.UserID, "error", err)
+			if err := renderErrorToast(w, templates, "Failed to upload PDF."); err != nil {
+				logger.Error("render upload toast", "error", err)
+			}
+			return
+		}
+
+		detailURL := "/app/stacks/detail/" + stackUUID
+
+		if isHTMX(r) {
+			w.Header().Set("HX-Trigger", "pdfUploaded")
+
+			if err := renderSuccessToast(w, templates, "PDF uploaded successfully."); err != nil {
+				logger.Error("render upload toast", "error", err)
+			}
+			return
+		}
+
+		http.Redirect(w, r, detailURL, http.StatusSeeOther)
 	})
 }
