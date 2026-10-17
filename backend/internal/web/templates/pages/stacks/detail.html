@@ -84,14 +84,7 @@
   </div>
 </section>
 
-<section
-  class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]"
-  hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
-  hx-trigger="pdfUploaded from:body"
-  hx-target="#page-shell"
-  hx-select="#page-shell"
-  hx-swap="outerHTML"
->
+<section class="col-span-12 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
   <div class="grid gap-6">
     <div class="card bg-base-200 shadow-xs">
       <div class="card-body">
@@ -133,7 +126,15 @@
                 <th></th>
               </tr>
             </thead>
-            <tbody id="stack-paper-results" data-stack-paper-results>
+            <tbody
+              id="stack-paper-results"
+              data-stack-paper-results
+              hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
+              hx-trigger="pdfUploaded from:body"
+              hx-target="this"
+              hx-select="#stack-paper-results"
+              hx-swap="outerHTML"
+            >
               {{ range .Stack.Papers }}
               <tr
                 data-stack-paper-row
@@ -161,7 +162,13 @@
                 <td>{{ .PublicationDate }}</td>
                 <td class="text-right">
                   <div class="flex">
-                    <a class="btn btn-ghost btn-xs">PDF</a>
+                    {{ if index $.PDFAvailability .UUID }}
+                    <a class="btn btn-ghost btn-xs" href="/app/document/{{ .UUID }}" onclick="event.stopPropagation()">
+                      PDF
+                    </a>
+                    {{ else }}
+                    <span class="btn btn-ghost btn-xs btn-disabled opacity-40"> PDF </span>
+                    {{ end }}
                     <a
                       class="btn btn-ghost btn-xs"
                       type="button"

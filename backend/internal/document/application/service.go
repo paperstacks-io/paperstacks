@@ -78,3 +78,20 @@ func (s *DocumentService) Upload(
 
 	return savedDoc, nil
 }
+
+func (s *DocumentService) Download(ctx context.Context, paperUUID string) (*objectstorage.Object, error) {
+	key := fmt.Sprintf("pdf/%s/main.pdf", paperUUID)
+
+	object, err := s.storage.Get(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download PDF: %w", err)
+	}
+
+	return object, nil
+}
+
+func (s *DocumentService) Exists(ctx context.Context, paperUUID string) (bool, error) {
+	key := fmt.Sprintf("pdf/%s/main.pdf", paperUUID)
+
+	return s.storage.Exists(ctx, key)
+}

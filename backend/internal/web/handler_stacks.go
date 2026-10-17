@@ -100,6 +100,7 @@ func handleStacksDetailPage(
 	tmpl *template.Template,
 	hankoAPIURL string,
 	stackService *stackApp.StackService,
+	documentService *docApp.DocumentService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -123,12 +124,29 @@ func handleStacksDetailPage(
 			selectedPaper = stack.Papers[0]
 		}
 
+		pdfAvailability := make(map[string]bool, len(stack.Papers))
+		for _, paper := range stack.Papers {
+			hasPDF, err := documentService.Exists(ctx, paper.UUID)
+			if err != nil {
+				logger.Error(
+					"check PDF existence",
+					"paper_uuid", paper.UUID,
+					"error", err,
+				)
+				http.Error(w, "failed to check PDF availability", http.StatusInternalServerError)
+				return
+			}
+
+			pdfAvailability[paper.UUID] = hasPDF
+		}
+
 		data := struct {
 			pageData
-			Stack         stackDomain.Stack
-			SelectedPaper paperInfoData
-			CreatedAt     string
-			UpdatedAt     string
+			Stack           stackDomain.Stack
+			SelectedPaper   paperInfoData
+			PDFAvailability map[string]bool
+			CreatedAt       string
+			UpdatedAt       string
 		}{
 			pageData: newPageData(r, hankoAPIURL),
 			Stack:    stack,
@@ -136,8 +154,9 @@ func handleStacksDetailPage(
 				Paper:     selectedPaper,
 				StackUUID: stack.UUID,
 			},
-			CreatedAt: stack.CreatedAt.Format("2006-01-02 15:04"),
-			UpdatedAt: stack.UpdatedAt.Format("2006-01-02 15:04"),
+			PDFAvailability: pdfAvailability,
+			CreatedAt:       stack.CreatedAt.Format("2006-01-02 15:04"),
+			UpdatedAt:       stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
 
 		renderTemplate(w, r, tmpl, data)
@@ -661,7 +680,7 @@ func handleDocumentUpload(
 		}
 		defer file.Close()
 
-		paperUUID := r.FormValue("paper_uuid")
+		paperUUID := r.PathValue("uuid")
 		if paperUUID == "" {
 			http.Error(w, "paper_uuid is required", http.StatusBadRequest)
 			logger.Warn("PDF upload missing paper UUID")
@@ -725,5 +744,44 @@ func handleDocumentUpload(
 		}
 
 		http.Redirect(w, r, detailURL, http.StatusSeeOther)
+	})
+}
+
+func handleDocumentDownload(
+	logger *slog.Logger,
+	documentService *docApp.DocumentService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		session, ok := commonauth.SessionFromContext(ctx)
+		if !ok || session == nil || !session.IsValid {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		paperUUID := r.PathValue("uuid")
+		if paperUUID == "" {
+			http.Error(w, "paper_uuid is required", http.StatusBadRequest)
+			return
+		}
+
+		object, err := documentService.Download(ctx, paperUUID)
+		if err != nil {
+			logger.Error("download document", "user_id", session.UserID, "error", err)
+			http.Error(w, "Failed to download PDF.", http.StatusInternalServerError)
+			return
+		}
+		defer object.Body.Close()
+
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", `attachment; filename="main.pdf"`)
+
+		if _, err := io.Copy(w, object.Body); err != nil {
+			logger.Error("stream PDF", "user_id", session.UserID, "error", err)
+			return
+		}
+
+		logger.Info("PDF downloaded successfully", "paper_uuid", paperUUID)
 	})
 }
