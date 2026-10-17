@@ -13,6 +13,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/common/server/middleware"
+	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
@@ -30,6 +31,7 @@ func AddRoute(
 	stackService *stackApp.StackService,
 	userService *userApp.UserService,
 	sessionService commonauth.SessionService,
+	documentService *docApp.DocumentService,
 ) error {
 	templateFiles, err := templateFiles(content)
 	if err != nil {
@@ -69,12 +71,12 @@ func AddRoute(
 	stacksMyTmpl := pageTemplate("stacks/page")
 	mux.Handle(http.MethodGet+" /stacks/page", authenticated(handleStacksPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
 	bibImportTmpl := pageTemplate("stacks/import-biblatex")
-	mux.Handle(http.MethodGet+" /stacks/{uuid}/import/biblatex", authenticated(handleStacksDetailPage(logger, bibImportTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodGet+" /stacks/{uuid}/import/biblatex", authenticated(handleStacksDetailPage(logger, bibImportTmpl, cfg.HankoAPIURL, stackService, documentService)))
 	mux.Handle(http.MethodPost+" /stacks/{uuid}/import/biblatex", authenticated(handleStackBibLaTeXImport(logger, tmpl, stackService)))
 	stacksCiteTmpl := pageTemplate("stacks/cite")
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}/cite", authenticated(handleStacksPaperCitation(logger, stacksCiteTmpl, cfg.HankoAPIURL, paperService, stackService)))
 	stacksDetailTmpl := pageTemplate("stacks/detail")
-	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}", authenticated(handleStacksDetailPage(logger, stacksDetailTmpl, cfg.HankoAPIURL, stackService)))
+	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}", authenticated(handleStacksDetailPage(logger, stacksDetailTmpl, cfg.HankoAPIURL, stackService, documentService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{uuid}/export/biblatex", authenticated(handleStackBibLaTeXExport(logger, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
@@ -83,6 +85,9 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/sidebar/create", authenticated(handleSidebarStackCreate(logger, tmpl, userService, stackService)))
+
+	mux.Handle(http.MethodPost+" /document/{uuid}", authenticated(handleDocumentUpload(logger, documentService, tmpl)))
+	mux.Handle(http.MethodGet+" /document/{uuid}", authenticated(handleDocumentDownload(logger, documentService)))
 
 	settingsTmpl := pageTemplate("settings/page")
 	mux.Handle(http.MethodGet+" /settings", authenticated(handleSettingsPage(logger, settingsTmpl, cfg.HankoAPIURL, userService)))

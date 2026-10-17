@@ -97,13 +97,48 @@
   </fieldset>
 </div>
 
-<button
-  class="btn btn-dash min-h-24"
-  hx-get="/app/partials/toast/not-implemented"
+<form
+  hx-post="/app/document/{{ .UUID }}"
+  hx-encoding="multipart/form-data"
   hx-target="#toast-host"
   hx-swap="innerHTML"
+  hx-on::after-request="this.reset()"
 >
-  <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
-  Add PDF
-</button>
+  <input
+    id="paper-pdf-{{ .UUID }}"
+    type="file"
+    name="file"
+    accept=".pdf,application/pdf"
+    class="hidden"
+    required
+    onchange="
+      this.closest('form')
+        .querySelector('.add-pdf')
+        .classList.toggle('hidden', this.files.length > 0)
+      this.closest('form')
+        .querySelector('.upload-pdf')
+        .classList.toggle('hidden', this.files.length === 0)
+    "
+  />
+
+  <label for="paper-pdf-{{ .UUID }}" class="add-pdf btn btn-dash min-h-24 w-full">
+    <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
+    Add PDF
+  </label>
+
+  <button
+    type="submit"
+    class="upload-pdf btn btn-success min-h-24 w-full hidden"
+    onclick="
+      if (this.form.checkValidity()) {
+        this.form.querySelector('.add-pdf').classList.remove('hidden')
+        this.classList.add('hidden')
+      }
+    "
+  >
+    <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-5"></svg>
+    Upload PDF
+  </button>
+</form>
+
 {{ end }}

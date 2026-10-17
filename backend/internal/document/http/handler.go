@@ -8,6 +8,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/server"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/document/application"
+	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -31,6 +32,7 @@ func handleUploadDocument(
 					http.Error(w, "file is required", http.StatusBadRequest)
 					return
 				}
+
 				http.Error(w, "invalid multipart form data", http.StatusBadRequest)
 				return
 			}
@@ -48,9 +50,23 @@ func handleUploadDocument(
 				return
 			}
 
-			uploadedDocument, err := service.Upload(ctx, paperUUID, fileName, session.UserID, file, fileHeader.Size)
+			opts := domain.UploadOptions{
+				PaperUUID: paperUUID,
+				FileName:  fileName,
+				UserID:    session.UserID,
+				File:      file,
+				Size:      fileHeader.Size,
+				Config: domain.PDFConfiguration{
+					MaxFileSize:     10 * 1024 * 1024,
+					Signature:       "%PDF-",
+					ContentType:     "application/pdf",
+					SniffBufferSize: 512,
+				},
+			}
+
+			uploadedDocument, err := service.Upload(ctx, opts)
 			if err != nil {
-				if errors.Is(err, application.ErrFileSizeExceeded) || errors.Is(err, application.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
+				if errors.Is(err, domain.ErrFileSizeExceeded) || errors.Is(err, domain.ErrInvalidFileType) || errors.Is(err, paperDomain.ErrPaperNotFound) {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
