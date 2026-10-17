@@ -593,16 +593,13 @@ func handleStackPaperRemove(
 			return
 		}
 
+		detailURL := "/app/stacks/detail/" + stackUUID
 		if isHTMX(r) {
-			w.Header().Set("HX-Trigger", "pdfUploaded")
-
-			if err := renderSuccessToast(w, tmpl, "PDF uploaded successfully."); err != nil {
-				logger.Error("render upload toast", "error", err)
-			}
+			hxLocation(w, detailURL, http.StatusOK)
 			return
 		}
 
-		w.WriteHeader(http.StatusNoContent)
+		http.Redirect(w, r, detailURL, http.StatusOK)
 	})
 }
 
