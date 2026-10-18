@@ -23,19 +23,12 @@ func loadAuthors(ctx context.Context, db *sql.DB, papers map[string]*domain.Pape
 	defer rows.Close()
 
 	for rows.Next() {
-		var uuid string
-		var first, middle, last, affiliation, orcid sql.NullString
-		if err := rows.Scan(&uuid, &first, &middle, &last, &affiliation, &orcid); err != nil {
+		var d authorDAO
+		if err := rows.Scan(&d.PaperUUID, &d.First, &d.Middle, &d.Last, &d.Affiliation, &d.ORCID); err != nil {
 			return err
 		}
-		if paper := papers[uuid]; paper != nil {
-			paper.Authors = append(paper.Authors, domain.Author{
-				NameFirst:   first.String,
-				NameMiddle:  middle.String,
-				NameLast:    last.String,
-				Affiliation: affiliation.String,
-				ORCID:       orcid.String,
-			})
+		if paper := papers[d.PaperUUID]; paper != nil {
+			paper.Authors = append(paper.Authors, d.domain())
 		}
 	}
 

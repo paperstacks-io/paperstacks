@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
@@ -460,6 +461,11 @@ func TestRepositorySearchSortByUpdatedAtDescending(t *testing.T) {
 
 	stackThree := domain.NewStack("sort-created Stack Three", user)
 	stackThree.IsPublic = true
+
+	// Creation calls can share the same clock tick, especially on Windows.
+	stackOne.UpdatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	stackTwo.UpdatedAt = stackOne.UpdatedAt.Add(time.Hour)
+	stackThree.UpdatedAt = stackTwo.UpdatedAt.Add(time.Hour)
 
 	stacks := []domain.Stack{
 		*stackOne,
