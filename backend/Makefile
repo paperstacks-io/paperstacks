@@ -26,12 +26,17 @@ test-integration: ## Run all integration tests
 	$(GOCMD) test $(INTEGRATION_PACKAGE) -coverprofile=coverage.out
 
 .PHONY: build
-build: build-server ## Build all
+build: build-server build-extractor ## Build all
 
 .PHONY: build-server
 build-server: ## Build server application
 	mkdir -p $(BINARY_DIR)
 	$(GOCMD) build $(BUILD_LDFLAGS) -o $(BINARY_DIR)/server ./cmd/server/
+
+.PHONY: build-extractor
+build-extractor: ## Build extractor application
+	mkdir -p $(BINARY_DIR)
+	$(GOCMD) build $(BUILD_LDFLAGS) -o $(BINARY_DIR)/extractor ./cmd/extractor/
 
 .PHONY: build-docker
 build-docker: ## Build Docker image for server
