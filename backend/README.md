@@ -44,16 +44,13 @@ The server will start on `localhost:8080` by default.
 
 ### Configuration
 
-You can customize the server behavior with environment variables:
-
-- `HOST` - Server host (default: `localhost`)
-- `PORT` - Server port (default: `8080`)
-
-Example:
+To provide the required configuration to start the server copy the example environment file and fill in your Hanko and S3 settings:
 
 ```bash
-HOST=0.0.0.0 PORT=9000 ./server
+cp .env.example .env
 ```
+
+The server automatically loads `.env` on startup.
 
 ## Testing
 

@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go/middleware"
 )
 
 type S3Store struct {
@@ -17,29 +18,27 @@ type S3Store struct {
 	logger *slog.Logger
 }
 
-func NewS3Store(cfg Config, bucket string, logger *slog.Logger) (*S3Store, error) {
+func NewS3Store(cfg Config, logger *slog.Logger) (*S3Store, error) {
 	if ok, err := cfg.Validate(); !ok {
 		return nil, err
 	}
 
-	bucket = strings.TrimSpace(bucket)
-	if bucket == "" {
-		return nil, fmt.Errorf("%w: missing bucket", ErrInvalidConfig)
-	}
-
-	awsCfg := aws.Config{
+	client := s3.NewFromConfig(aws.Config{
 		Region:      cfg.Region,
 		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "")),
-	}
-
-	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
+	}, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(cfg.Endpoint)
 		o.UsePathStyle = true
+		o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
+			// Google Cloud changes Accept-Encoding, invalidating signatures that include it.
+			_, err := stack.Finalize.Remove("DisableAcceptEncodingGzip")
+			return err
+		})
 	})
 
 	return &S3Store{
 		client: client,
-		bucket: bucket,
+		bucket: cfg.Bucket,
 		logger: logger,
 	}, nil
 }

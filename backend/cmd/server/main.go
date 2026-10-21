@@ -74,7 +74,7 @@ func run(
 
 	var objectStore objectstorage.Store
 	if ok, _ := cfg.ObjectStorage.Validate(); ok {
-		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
+		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, logger)
 		if err != nil {
 			logger.Error("ObjectStorage config error", "error", err)
 			return err
@@ -84,6 +84,7 @@ func run(
 			logger.Error("ObjectStorage check error", "error", err)
 			return err
 		}
+
 		objectStore = s3Store
 	}
 
