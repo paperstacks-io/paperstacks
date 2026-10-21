@@ -13,3 +13,4 @@ skills-lock.json
 
 # Envs
 .env*
+!.env.example
