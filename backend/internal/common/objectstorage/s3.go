@@ -2,14 +2,17 @@ package objectstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 type S3Store struct {
@@ -127,6 +130,10 @@ func (s *S3Store) Exists(ctx context.Context, key string) (bool, error) {
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		var responseErr *smithyhttp.ResponseError
+		if errors.As(err, &responseErr) && responseErr.HTTPStatusCode() == http.StatusNotFound {
+			return false, nil
+		}
 		return false, fmt.Errorf("check object %q: %w", key, err)
 	}
 

@@ -99,6 +99,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFoundHTMX(t *tes
 		testWebTemplate(t),
 		"",
 		newTestStackService(),
+		nil,
 	)
 	req := newStackDetailRequest(t, "00000000-0000-4000-8000-000000000000")
 	req.Header.Set("HX-Request", "true")
@@ -122,6 +123,7 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 		testWebTemplate(t),
 		"",
 		newTestStackService(),
+		nil,
 	)
 	req := newStackDetailRequest(t, "00000000-0000-4000-8000-000000000001")
 	rr := httptest.NewRecorder()

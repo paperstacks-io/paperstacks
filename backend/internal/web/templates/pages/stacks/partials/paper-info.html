@@ -97,13 +97,43 @@
   </fieldset>
 </div>
 
-<button
-  class="btn btn-dash min-h-24"
-  hx-get="/app/partials/toast/not-implemented"
+<form
+  hx-post="/app/document/{{ .UUID }}"
+  hx-encoding="multipart/form-data"
   hx-target="#toast-host"
   hx-swap="innerHTML"
+  hx-on::after:request="
+    this.reset()
+    if (event.detail.ctx.hx.trigger === 'pdfUploaded') {
+      htmx.ajax('GET', window.location.pathname + '/papers/{{ .UUID }}', {target: '#stack-paper-info', swap: 'innerHTML'})
+    }
+  "
 >
-  <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
-  Add PDF
-</button>
+  <fieldset class="fieldset">
+    <label class="label">PDF</label>
+    {{ if .PDFURL }}
+    <div class="join">
+      <input type="text" name="pdf" class="input input-sm join-item" value="main.pdf" />
+      <a class="btn btn-sm join-item" href="/app/document/{{ .UUID }}" onclick="event.stopPropagation()"> Download </a>
+      <a
+        class="btn btn-sm join-item"
+        hx-get="/app/partials/toast/not-implemented"
+        hx-target="#toast-host"
+        hx-swap="innerHTML"
+        >Remove</a
+      >
+    </div>
+    {{ else }}
+    <input
+      name="file"
+      type="file"
+      class="file-input file-input-sm"
+      accept=".pdf,application/pdf"
+      required
+      onchange="if (this.files.length) this.form.requestSubmit()"
+    />
+    {{ end }}
+  </fieldset>
+</form>
+
 {{ end }}
