@@ -54,7 +54,7 @@ func run(ctx context.Context) error {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 
-	paperService := paperapp.NewPaperService(papermemory.NewRepository())
+	paperService := paperapp.NewPaperService(papermemory.NewRepository(), nil)
 	imp := importer.New(importer.Config{Dir: *dir, LogDir: logDir}, log, paperService)
 
 	return imp.Run(ctx)
