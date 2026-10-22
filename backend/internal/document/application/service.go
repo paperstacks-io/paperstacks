@@ -1,23 +1,13 @@
 package application
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
-	"uuid"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/document/domain"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
-)
-
-var (
-	ErrFileSizeExceeded = errors.New("file size exceeds maximum limit")
-	ErrInvalidFileType  = errors.New("invalid file type: only valid PDFs allowed")
 )
 
 type PaperGetter interface {
@@ -30,7 +20,11 @@ type DocumentService struct {
 	paperGetter PaperGetter
 }
 
-func NewDocumentService(repo domain.Repository, storage objectstorage.Store, paperGetter PaperGetter) *DocumentService {
+func NewDocumentService(
+	repo domain.Repository,
+	storage objectstorage.Store,
+	paperGetter PaperGetter,
+) *DocumentService {
 	return &DocumentService{
 		repo:        repo,
 		storage:     storage,
@@ -40,58 +34,29 @@ func NewDocumentService(repo domain.Repository, storage objectstorage.Store, pap
 
 func (s *DocumentService) Upload(
 	ctx context.Context,
-	paperUUID string,
-	fileName string,
-	userID string,
-	r io.Reader,
-	size int64,
+	opts domain.UploadOptions,
 ) (domain.Document, error) {
-	if _, err := s.paperGetter.GetByUUID(ctx, paperUUID); err != nil {
+	if _, err := s.paperGetter.GetByUUID(ctx, opts.PaperUUID); err != nil {
 		return domain.Document{}, err
 	}
 
-	const (
-		maxFileSize        = 10 * 1024 * 1024
-		pdfSignature       = "%PDF-"
-		pdfSignatureLength = len(pdfSignature)
-		documentType       = "application/pdf"
-		sniffBufferSize    = 512
-	)
-
-	if size > maxFileSize {
-		return domain.Document{}, ErrFileSizeExceeded
+	if opts.Size > opts.Config.MaxFileSize {
+		return domain.Document{}, domain.ErrFileSizeExceeded
 	}
 
-	buf := make([]byte, sniffBufferSize)
-	n, err := io.ReadFull(io.LimitReader(r, sniffBufferSize), buf)
-	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-		return domain.Document{}, fmt.Errorf("failed to read file header: %w", err)
+	pdfReader, pdfSize, err := domain.ValidatePDF(opts.File, opts.Config)
+	if err != nil {
+		return domain.Document{}, err
 	}
 
-	if n < pdfSignatureLength {
-		return domain.Document{}, ErrInvalidFileType
-	}
-
-	if string(buf[:pdfSignatureLength]) != pdfSignature {
-		return domain.Document{}, ErrInvalidFileType
-	}
-
-	detectedType := http.DetectContentType(buf[:n])
-	if detectedType != documentType {
-		return domain.Document{}, ErrInvalidFileType
-	}
-
-	fullReader := io.MultiReader(bytes.NewReader(buf[:n]), r)
-
-	trimmedFileName := strings.TrimSpace(fileName)
-	docUUID := uuid.New().String()
-	storageKey := fmt.Sprintf("paper/%s/%s.pdf", paperUUID, docUUID)
+	trimmedFileName := strings.TrimSpace(opts.FileName)
+	storageKey := fmt.Sprintf("pdf/%s/main.pdf", opts.PaperUUID)
 
 	_, err = s.storage.Put(ctx, objectstorage.PutObjectInput{
 		Key:         storageKey,
-		Body:        fullReader,
-		Size:        size,
-		ContentType: documentType,
+		Body:        pdfReader,
+		Size:        pdfSize,
+		ContentType: opts.Config.ContentType,
 	})
 	if err != nil {
 		return domain.Document{}, fmt.Errorf("failed to store physical file: %w", err)
@@ -99,11 +64,11 @@ func (s *DocumentService) Upload(
 
 	doc := domain.Document{
 		Key:         storageKey,
-		UserID:      userID,
-		PaperUUID:   paperUUID,
+		UserID:      opts.UserID,
+		PaperUUID:   opts.PaperUUID,
 		FileName:    trimmedFileName,
-		ContentType: documentType,
-		Size:        size,
+		ContentType: opts.Config.ContentType,
+		Size:        pdfSize,
 	}
 
 	savedDoc, err := s.repo.Save(ctx, doc)
@@ -112,4 +77,21 @@ func (s *DocumentService) Upload(
 	}
 
 	return savedDoc, nil
+}
+
+func (s *DocumentService) Download(ctx context.Context, paperUUID string) (*objectstorage.Object, error) {
+	key := fmt.Sprintf("pdf/%s/main.pdf", paperUUID)
+
+	object, err := s.storage.Get(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download PDF: %w", err)
+	}
+
+	return object, nil
+}
+
+func (s *DocumentService) Exists(ctx context.Context, paperUUID string) (bool, error) {
+	key := fmt.Sprintf("pdf/%s/main.pdf", paperUUID)
+
+	return s.storage.Exists(ctx, key)
 }
