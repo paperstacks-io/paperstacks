@@ -12,7 +12,7 @@ import (
 func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 	t.Parallel()
 
-	service := NewPaperService(memory.NewRepository())
+	service := NewPaperService(memory.NewRepository(), nil)
 
 	_, err := service.Create(context.Background(), domain.Paper{
 		DOI:   " 10.1000/example ",
@@ -49,7 +49,7 @@ func TestServiceCreateNormalizesAndValidatesPaper(t *testing.T) {
 func TestServiceCreateRejectsInvalidPublicationDate(t *testing.T) {
 	t.Parallel()
 
-	service := NewPaperService(memory.NewRepository())
+	service := NewPaperService(memory.NewRepository(), nil)
 
 	_, err := service.Create(context.Background(), domain.Paper{
 		DOI:             "10.1000/example",
@@ -64,7 +64,7 @@ func TestServiceCreateRejectsInvalidPublicationDate(t *testing.T) {
 func TestServiceCreateRejectsInvalidPublicationType(t *testing.T) {
 	t.Parallel()
 
-	service := NewPaperService(memory.NewRepository())
+	service := NewPaperService(memory.NewRepository(), nil)
 
 	_, err := service.Create(context.Background(), domain.Paper{
 		DOI:   "10.1000/example",
@@ -105,7 +105,7 @@ func TestServiceCreateRejectsInvalidStatusAndTimestamps(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			service := NewPaperService(memory.NewRepository())
+			service := NewPaperService(memory.NewRepository(), nil)
 			_, err := service.Create(context.Background(), test.paper)
 			if (err != nil) != test.wantErr {
 				t.Fatalf("Create() error = %v, want error: %t", err, test.wantErr)
@@ -117,7 +117,7 @@ func TestServiceCreateRejectsInvalidStatusAndTimestamps(t *testing.T) {
 func TestServiceUpdateRejectsMismatchedUUID(t *testing.T) {
 	t.Parallel()
 
-	service := NewPaperService(memory.NewRepository())
+	service := NewPaperService(memory.NewRepository(), nil)
 
 	err := service.Update(context.Background(), "a4b065f1-1b88-4f50-a7fe-1177f3489fcf", domain.Paper{
 		UUID:  "a4b065f1-other",
