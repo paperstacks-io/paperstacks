@@ -31,8 +31,10 @@ import (
 	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
+	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
+	stackPostgres "github.com/paperstacks.io/paperstacks/internal/stack/repository/postgres"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
@@ -49,6 +51,7 @@ func run(
 
 	var paperService *paperApp.PaperService
 	var userService *userApp.UserService
+	var stackRepo stackDomain.Repository
 	if hasDB {
 		db, err := sql.Open("pgx", cfg.DatabaseURL)
 		if err != nil {
@@ -61,13 +64,15 @@ func run(
 
 		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db))
 		userService = userApp.NewUserService(userPostgres.NewRepository(db))
+		stackRepo = stackPostgres.NewRepository(db)
 	} else {
 		paperService = paperApp.NewPaperService(paperMem.NewRepository())
 		userService = userApp.NewUserService(userMem.NewRepository())
+		stackRepo = stackMem.NewRepository()
 	}
 
 	doiService := doiApp.NewDOIService(nil)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
+	stackService := stackApp.NewStackService(stackRepo, paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 	docRepo := docMem.NewRepository()
