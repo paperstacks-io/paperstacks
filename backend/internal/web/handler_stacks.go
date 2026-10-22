@@ -361,6 +361,7 @@ func handleStackPaperInfo(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
+	documentService *docApp.DocumentService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -382,6 +383,11 @@ func handleStackPaperInfo(
 			logger.Error("get paper by UUID", "error", err.Error())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
+		}
+
+		hasPDF, _ := documentService.Exists(ctx, paperUUID)
+		if hasPDF {
+			paper.PDFURL = "placeholder"
 		}
 
 		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
