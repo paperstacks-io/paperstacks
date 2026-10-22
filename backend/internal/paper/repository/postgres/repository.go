@@ -1,3 +1,4 @@
+// Package postgres persists papers and their bibliographic data in PostgreSQL.
 package postgres
 
 import (
@@ -19,6 +20,7 @@ type Repository struct {
 
 var _ domain.Repository = (*Repository)(nil)
 
+// NewRepository shares the application's connection pool. Its owner closes it.
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
@@ -76,6 +78,9 @@ func (r *Repository) List(ctx context.Context) ([]domain.Paper, error) {
 }
 
 func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	if opts.SortBy != "" && opts.SortBy != "title" && opts.SortBy != "year" {
+		return domain.SearchResult{}, domain.ErrInvalidSearch
+	}
 	query := strings.ToLower(opts.Query)
 
 	const match = `
@@ -98,7 +103,11 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 	if pageSize < 1 {
 		pageSize = max(1, total)
 	}
-	offset := (page - 1) * pageSize
+	// Clamp pages before multiplication to avoid overflowing on untrusted input.
+	offset := total
+	if page-1 <= total/pageSize {
+		offset = (page - 1) * pageSize
+	}
 
 	orderBy := "uuid ASC"
 	switch opts.SortBy {
@@ -135,7 +144,7 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 		Total:    total,
 		Page:     page,
 		PageSize: pageSize,
-		HasNext:  offset+len(papers) < total,
+		HasNext:  len(papers) < total-offset,
 	}, nil
 }
 
@@ -162,6 +171,10 @@ func (r *Repository) Save(ctx context.Context, paper domain.Paper) (domain.Paper
 }
 
 func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper) error {
+	if paper.UUID != "" && paper.UUID != uuid {
+		return domain.ErrUUIDMismatch
+	}
+	paper.UUID = uuid
 	paper = paper.Normalize()
 
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -196,6 +209,16 @@ func (r *Repository) Delete(ctx context.Context, uuid string) error {
 		return wrapError("begin delete paper", err)
 	}
 	defer tx.Rollback()
+
+	// Serialize with updates before removing children, so a concurrent update
+	// cannot recreate author links between cleanup and deletion of the paper.
+	var lockedUUID string
+	if err := tx.QueryRowContext(ctx, `SELECT uuid::text FROM public.paper WHERE uuid = $1 FOR UPDATE`, uuid).Scan(&lockedUUID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.ErrPaperNotFound
+		}
+		return wrapError("lock deleted paper", err)
+	}
 
 	if err := removePaperAuthors(ctx, tx, uuid); err != nil {
 		return wrapError("remove paper authors", err)
@@ -251,8 +274,13 @@ func insertChildren(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
 
 func wrapError(operation string, err error) error {
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-		return fmt.Errorf("%s: %w: %w", operation, domain.ErrPaperAlreadyExists, err)
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "23505":
+			return fmt.Errorf("%s: %w: %w", operation, domain.ErrPaperAlreadyExists, err)
+		case "23503", "23502", "23514", "22P02", "22003":
+			return fmt.Errorf("%s: %w: %w", operation, domain.ErrInvalidPaper, err)
+		}
 	}
 	return fmt.Errorf("%s: %w", operation, err)
 }

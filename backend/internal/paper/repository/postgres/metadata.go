@@ -53,56 +53,18 @@ func loadMetadata(ctx context.Context, db *sql.DB, papers map[string]*domain.Pap
 
 func scanMetadata(row rowScanner) (string, domain.Metadata, error) {
 	pgTypes := pgtype.NewMap()
-	var uuid string
-	var metadata domain.Metadata
-	var publisher, journalTitle, journalAbbrev, bookTitle, seriesTitle, eventTitle, eventLocation, institution sql.NullString
-	var pages, volume, issue, license, copyright, funding, dataSource sql.NullString
-	var dataSourceTimestamp sql.NullTime
-
+	var d metadataDAO
 	err := row.Scan(
-		&uuid,
-		&publisher,
-		&journalTitle,
-		&journalAbbrev,
-		&bookTitle,
-		&seriesTitle,
-		&eventTitle,
-		&eventLocation,
-		&institution,
-		&pages,
-		&volume,
-		&issue,
-		pgTypes.SQLScanner(&metadata.ISBN),
-		pgTypes.SQLScanner(&metadata.ISSN),
-		pgTypes.SQLScanner(&metadata.References),
-		&license,
-		&copyright,
-		&funding,
-		&dataSource,
-		&dataSourceTimestamp,
+		&d.PaperUUID, &d.Publisher, &d.JournalTitle, &d.JournalAbbrev,
+		&d.BookTitle, &d.SeriesTitle, &d.EventTitle, &d.EventLocation, &d.Institution,
+		&d.Pages, &d.Volume, &d.Issue,
+		pgTypes.SQLScanner(&d.ISBN), pgTypes.SQLScanner(&d.ISSN), pgTypes.SQLScanner(&d.References),
+		&d.License, &d.Copyright, &d.Funding, &d.DataSource, &d.DataSourceTimestamp,
 	)
 	if err != nil {
 		return "", domain.Metadata{}, err
 	}
-
-	metadata.Publisher = publisher.String
-	metadata.JournalTitle = journalTitle.String
-	metadata.JournalAbbrev = journalAbbrev.String
-	metadata.BookTitle = bookTitle.String
-	metadata.SeriesTitle = seriesTitle.String
-	metadata.EventTitle = eventTitle.String
-	metadata.EventLocation = eventLocation.String
-	metadata.Institution = institution.String
-	metadata.Pages = pages.String
-	metadata.Volume = volume.String
-	metadata.Issue = issue.String
-	metadata.License = license.String
-	metadata.Copyright = copyright.String
-	metadata.Funding = funding.String
-	metadata.DataSource = dataSource.String
-	metadata.DataSourceTimestamp = formatTimestamp(dataSourceTimestamp)
-
-	return uuid, metadata, nil
+	return d.PaperUUID, d.domain(), nil
 }
 
 func insertMetadata(ctx context.Context, tx *sql.Tx, uuid string, metadata domain.Metadata) error {

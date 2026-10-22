@@ -47,41 +47,16 @@ type rowScanner interface {
 
 func scanPaper(row rowScanner) (domain.Paper, error) {
 	pgTypes := pgtype.NewMap()
-	var paper domain.Paper
-	var doi, title, titleShort, paperType, publicationStatus, abstract, pdfURL sql.NullString
-	var year, month, day sql.NullInt16
-	var statusTimestamp sql.NullTime
-
+	var d paperDAO
 	err := row.Scan(
-		&paper.UUID,
-		&doi,
-		&title,
-		&titleShort,
-		&year,
-		&month,
-		&day,
-		&paperType,
-		&publicationStatus,
-		&statusTimestamp,
-		&abstract,
-		pgTypes.SQLScanner(&paper.Keywords),
-		&pdfURL,
+		&d.UUID, &d.DOI, &d.Title, &d.TitleShort,
+		&d.Year, &d.Month, &d.Day, &d.Type, &d.PublicationStatus,
+		&d.StatusTimestamp, &d.Abstract, pgTypes.SQLScanner(&d.Keywords), &d.PDFURL,
 	)
 	if err != nil {
 		return domain.Paper{}, err
 	}
-
-	paper.DOI = doi.String
-	paper.Title = title.String
-	paper.TitleShort = titleShort.String
-	paper.PublicationDate = domain.Date{Year: int(year.Int16), Month: int(month.Int16), Day: int(day.Int16)}
-	paper.Type = domain.PublicationType(paperType.String)
-	paper.PublicationStatus = publicationStatus.String
-	paper.PublicationStatusTimestamp = formatTimestamp(statusTimestamp)
-	paper.Abstract = abstract.String
-	paper.PDFURL = pdfURL.String
-
-	return paper, nil
+	return d.domain(), nil
 }
 
 func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Paper) error {
