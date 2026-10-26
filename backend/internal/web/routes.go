@@ -65,6 +65,7 @@ func AddRoute(
 	papersTmpl := pageTemplate("papers/page")
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /papers/{uuid}/upload-pdf", authenticated(handlePaperUploadPDF(logger, tmpl, paperService)))
 
 	stacksMyTmpl := pageTemplate("stacks/page")
 	mux.Handle(http.MethodGet+" /stacks/page", authenticated(handleStacksPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))

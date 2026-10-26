@@ -1,18 +1,24 @@
 package web
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"html/template"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -20,6 +26,103 @@ import (
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
+
+type uploadPDFTestStore struct {
+	objectstorage.Store
+	input objectstorage.PutObjectInput
+	body  []byte
+	err   error
+}
+
+func (s *uploadPDFTestStore) Put(_ context.Context, input objectstorage.PutObjectInput) (objectstorage.ObjectInfo, error) {
+	s.input = input
+	var err error
+	s.body, err = io.ReadAll(input.Body)
+	if err != nil {
+		return objectstorage.ObjectInfo{}, err
+	}
+	return objectstorage.ObjectInfo{}, s.err
+}
+
+func TestHandlePaperUploadPDF(t *testing.T) {
+	const paperUUID = "11111111-1111-4111-8111-111111111111"
+	tests := []struct {
+		name     string
+		content  string
+		field    string
+		missing  bool
+		noAuth   bool
+		storeErr error
+		want     string
+	}{
+		{name: "success", field: "file", content: "%PDF-1.4\ncontent", want: "PDF uploaded successfully."},
+		{name: "invalid PDF", field: "file", content: "not a PDF", want: "not a valid PDF"},
+		{name: "missing file", field: "other", want: "Choose a PDF file"},
+		{name: "missing paper", field: "file", missing: true, want: "paper could not be found"},
+		{name: "unauthenticated", noAuth: true, want: "Please log in"},
+		{name: "storage error", field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
+		{name: "file too large", field: "file", content: "%PDF-" + strings.Repeat("x", paperDomain.PDFMaxFileSize), want: "no larger than 10 MiB"},
+		{name: "request too large", field: "file", content: strings.Repeat("x", paperDomain.PDFMaxFileSize+int(oneMiB)), want: "no larger than 10 MiB"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := paperMemory.NewRepository()
+			if !tt.missing {
+				if _, err := repo.Save(t.Context(), paperDomain.Paper{UUID: paperUUID, Title: "Test paper"}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			store := &uploadPDFTestStore{err: tt.storeErr}
+			handler := handlePaperUploadPDF(testLogger(), testWebTemplate(t), paperApp.NewPaperService(repo, store))
+			var body bytes.Buffer
+			writer := multipart.NewWriter(&body)
+			file, err := writer.CreateFormFile(tt.field, "paper.pdf")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := io.WriteString(file, tt.content); err != nil {
+				t.Fatal(err)
+			}
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+			req := httptest.NewRequest(http.MethodPost, "/app/papers/"+paperUUID+"/upload-pdf", &body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			req.SetPathValue("uuid", paperUUID)
+			if !tt.noAuth {
+				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{IsValid: true}))
+			}
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), tt.want) {
+				t.Fatalf("response = %d %s, want toast containing %q", rr.Code, rr.Body.String(), tt.want)
+			}
+			paper, _ := repo.GetByUUID(t.Context(), paperUUID)
+			if !tt.noAuth && !tt.missing {
+				response := rr.Body.String()
+				if !strings.Contains(response, `id="paper-pdf-`+paperUUID+`"`) || !strings.Contains(response, `hx-swap-oob="outerHTML"`) {
+					t.Fatalf("response has no PDF form refresh: %s", response)
+				}
+				if tt.name == "success" {
+					if !strings.Contains(response, "Download") || strings.Contains(response, `type="file"`) {
+						t.Fatalf("successful upload did not replace file input with download: %s", response)
+					}
+				} else if !strings.Contains(response, `type="file"`) {
+					t.Fatalf("failed upload did not restore file input: %s", response)
+				}
+			}
+			if tt.name == "success" {
+				if paper.PDFStorageKey != "pdf/"+paperUUID+".pdf" || string(store.body) != tt.content ||
+					store.input.Metadata["filename"] != "paper.pdf" || store.input.Size != int64(len(tt.content)) ||
+					store.input.ContentType != paperDomain.PDFContentType {
+					t.Fatalf("PDF upload did not preserve content, metadata, or attachment: paper=%+v, input=%+v", paper, store.input)
+				}
+			} else if paper.PDFStorageKey != "" {
+				t.Fatalf("failed upload attached PDF: %q", paper.PDFStorageKey)
+			}
+		})
+	}
+}
 
 func newTestStackService() *stackApp.StackService {
 	return stackApp.NewStackService(stackMemory.NewRepository(), nil)
