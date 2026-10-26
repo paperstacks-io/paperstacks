@@ -46,8 +46,8 @@ type Paper struct {
 	// Type classifies the bibliographic kind of the Paper.
 	Type PublicationType
 
-	// PDFURL contains the URI of the paper's PDF.
-	PDFURL string
+	// PDFStorageKey contains the object storage key of the paper's PDF.
+	PDFStorageKey string
 
 	// Metadata contains detailed bibliographic metadata for the publication.
 	Metadata Metadata
@@ -67,7 +67,7 @@ func (p Paper) Normalize() Paper {
 		p.Authors[i] = p.Authors[i].Normalize()
 	}
 
-	p.PDFURL = strings.TrimSpace(p.PDFURL)
+	p.PDFStorageKey = strings.TrimSpace(p.PDFStorageKey)
 
 	for i := range p.Keywords {
 		p.Keywords[i] = strings.TrimSpace(p.Keywords[i])

@@ -43,20 +43,20 @@ $$;
 INSERT INTO public.app_user (external_id, email)
 VALUES ('cleanup-test-user', 'cleanup-test@example.invalid');
 
-INSERT INTO public.paper (uuid, doi, title, pdf_url, deleted_at)
+INSERT INTO public.paper (uuid, doi, title, pdf_storage_key, deleted_at)
 VALUES
 (
     '33333333-3333-3333-3333-333333333333',
     '10.0000/cleanup-expired',
     'Expired cleanup test paper',
-    'https://example.invalid/expired.pdf',
+    'pdf/33333333-3333-3333-3333-333333333333.pdf',
     now() - interval '31 days'
 ),
 (
     '44444444-4444-4444-4444-444444444444',
     '10.0000/cleanup-recent',
     'Recent cleanup test paper',
-    'https://example.invalid/recent.pdf',
+    'pdf/44444444-4444-4444-4444-444444444444.pdf',
     now() - interval '29 days'
 );
 
@@ -156,7 +156,7 @@ BEGIN
         SELECT 1 FROM public.paper
         WHERE uuid = '44444444-4444-4444-4444-444444444444'
           AND deleted_at IS NOT NULL
-          AND pdf_url = 'https://example.invalid/recent.pdf'
+          AND pdf_storage_key = 'pdf/44444444-4444-4444-4444-444444444444.pdf'
     ) THEN
         RAISE EXCEPTION 'Test failed: recent soft-deleted paper was removed too early';
     END IF;
