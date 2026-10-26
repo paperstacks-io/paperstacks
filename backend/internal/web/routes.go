@@ -65,7 +65,6 @@ func AddRoute(
 	papersTmpl := pageTemplate("papers/page")
 	mux.Handle(http.MethodGet+" /papers", defaultMiddle(handlePage(papersTmpl, cfg.HankoAPIURL)))
 	mux.Handle(http.MethodPost+" /papers/search", defaultMiddle(handlePapersSearch(logger, tmpl, paperService)))
-	mux.Handle(http.MethodPost+" /papers/{uuid}/upload-pdf", authenticated(handlePaperUploadPDF(logger, tmpl, paperService)))
 
 	stacksMyTmpl := pageTemplate("stacks/page")
 	mux.Handle(http.MethodGet+" /stacks/page", authenticated(handleStacksPage(logger, stacksMyTmpl, cfg.HankoAPIURL, stackService)))
@@ -80,6 +79,7 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /stacks/detail/{stackUUID}/papers/{paperUUID}/upload-pdf", authenticated(handlePaperUploadPDF(logger, tmpl, paperService, stackService)))
 	mux.Handle(http.MethodDelete+" /stacks/detail/{uuid}/papers/{paperUUID}", authenticated(handleStackPaperRemove(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))

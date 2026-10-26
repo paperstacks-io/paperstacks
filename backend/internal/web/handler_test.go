@@ -46,20 +46,27 @@ func (s *uploadPDFTestStore) Put(_ context.Context, input objectstorage.PutObjec
 
 func TestHandlePaperUploadPDF(t *testing.T) {
 	const paperUUID = "11111111-1111-4111-8111-111111111111"
+	const stackURL = "/app/stacks/detail/22222222-2222-4222-8222-222222222222"
 	tests := []struct {
-		name     string
-		content  string
-		field    string
-		missing  bool
-		noAuth   bool
-		storeErr error
-		want     string
+		name         string
+		content      string
+		field        string
+		missing      bool
+		noAuth       bool
+		forbidden    bool
+		notInStack   bool
+		missingStack bool
+		storeErr     error
+		want         string
 	}{
-		{name: "success", field: "file", content: "%PDF-1.4\ncontent", want: "PDF uploaded successfully."},
+		{name: "success", field: "file", content: "%PDF-1.4\ncontent", want: ""},
 		{name: "invalid PDF", field: "file", content: "not a PDF", want: "not a valid PDF"},
 		{name: "missing file", field: "other", want: "Choose a PDF file"},
 		{name: "missing paper", field: "file", missing: true, want: "paper could not be found"},
 		{name: "unauthenticated", noAuth: true, want: "Please log in"},
+		{name: "forbidden", forbidden: true, want: "not allowed"},
+		{name: "paper not in stack", notInStack: true, want: "does not belong"},
+		{name: "missing stack", missingStack: true, want: "stack could not be found"},
 		{name: "storage error", field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
 		{name: "file too large", field: "file", content: "%PDF-" + strings.Repeat("x", paperDomain.PDFMaxFileSize), want: "no larger than 10 MiB"},
 		{name: "request too large", field: "file", content: strings.Repeat("x", paperDomain.PDFMaxFileSize+int(oneMiB)), want: "no larger than 10 MiB"},
@@ -73,7 +80,22 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 				}
 			}
 			store := &uploadPDFTestStore{err: tt.storeErr}
-			handler := handlePaperUploadPDF(testLogger(), testWebTemplate(t), paperApp.NewPaperService(repo, store))
+			stackService := stackApp.NewStackService(stackMemory.NewRepository(nil), nil)
+			stack := stackDomain.Stack{
+				UUID:   strings.TrimPrefix(stackURL, "/app/stacks/detail/"),
+				Name:   "Upload stack",
+				Owner:  userDomain.User{ExternalID: "owner"},
+				Papers: []paperDomain.Paper{{UUID: paperUUID}},
+			}
+			if tt.notInStack {
+				stack.Papers = nil
+			}
+			if !tt.missingStack {
+				if err := stackService.Create(t.Context(), stack); err != nil {
+					t.Fatal(err)
+				}
+			}
+			handler := handlePaperUploadPDF(testLogger(), testWebTemplate(t), paperApp.NewPaperService(repo, store), stackService)
 			var body bytes.Buffer
 			writer := multipart.NewWriter(&body)
 			file, err := writer.CreateFormFile(tt.field, "paper.pdf")
@@ -86,30 +108,29 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			if err := writer.Close(); err != nil {
 				t.Fatal(err)
 			}
-			req := httptest.NewRequest(http.MethodPost, "/app/papers/"+paperUUID+"/upload-pdf", &body)
+			req := httptest.NewRequest(http.MethodPost, stackURL+"/papers/"+paperUUID+"/upload-pdf", &body)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
-			req.SetPathValue("uuid", paperUUID)
+			req.SetPathValue("stackUUID", stack.UUID)
+			req.SetPathValue("paperUUID", paperUUID)
 			if !tt.noAuth {
-				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{IsValid: true}))
+				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{UserID: "owner", IsValid: true}))
 			}
+			if tt.forbidden {
+				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{UserID: "other", IsValid: true}))
+			}
+
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), tt.want) {
 				t.Fatalf("response = %d %s, want toast containing %q", rr.Code, rr.Body.String(), tt.want)
 			}
 			paper, _ := repo.GetByUUID(t.Context(), paperUUID)
-			if !tt.noAuth && !tt.missing {
-				response := rr.Body.String()
-				if !strings.Contains(response, `id="paper-pdf-`+paperUUID+`"`) || !strings.Contains(response, `hx-swap-oob="outerHTML"`) {
-					t.Fatalf("response has no PDF form refresh: %s", response)
-				}
-				if tt.name == "success" {
-					if !strings.Contains(response, "Download") || strings.Contains(response, `type="file"`) {
-						t.Fatalf("successful upload did not replace file input with download: %s", response)
-					}
-				} else if !strings.Contains(response, `type="file"`) {
-					t.Fatalf("failed upload did not restore file input: %s", response)
-				}
+			wantLocation := ""
+			if tt.name == "success" {
+				wantLocation = stackURL
+			}
+			if got := rr.Header().Get("HX-Location"); got != wantLocation {
+				t.Fatalf("HX-Location = %q, want %q", got, wantLocation)
 			}
 			if tt.name == "success" {
 				if paper.PDFStorageKey != "pdf/"+paperUUID+".pdf" || string(store.body) != tt.content ||
@@ -120,12 +141,57 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			} else if paper.PDFStorageKey != "" {
 				t.Fatalf("failed upload attached PDF: %q", paper.PDFStorageKey)
 			}
+			if (tt.noAuth || tt.forbidden || tt.notInStack || tt.missingStack) && store.input.Key != "" {
+				t.Fatal("unauthorized upload reached object storage")
+			}
 		})
 	}
 }
 
-func newTestStackService() *stackApp.StackService {
-	return stackApp.NewStackService(stackMemory.NewRepository(), nil)
+func TestPaperInfoUploadURLIncludesStackUUID(t *testing.T) {
+	const stackUUID = "22222222-2222-4222-8222-222222222222"
+	paper := paperDomain.Paper{UUID: "11111111-1111-4111-8111-111111111111", Title: "Test paper"}
+	stackService := newTestStackService(paper)
+	if err := stackService.Create(t.Context(), stackDomain.Stack{
+		UUID: stackUUID, Name: "Upload stack", Papers: []paperDomain.Paper{paper},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	repo := paperMemory.NewRepository()
+	if _, err := repo.Save(t.Context(), paper); err != nil {
+		t.Fatal(err)
+	}
+	tmpl := testWebTemplate(t)
+	detailTmpl, err := pageTemplateSet(tmpl, "stacks/detail")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, handler := range map[string]http.Handler{
+		"detail page":   handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
+		"paper partial": handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
+	} {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/"+stackUUID, nil)
+			req.SetPathValue("uuid", stackUUID)
+			req.SetPathValue("stackUUID", stackUUID)
+			req.SetPathValue("paperUUID", paper.UUID)
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+			want := `hx-post="/app/stacks/detail/` + stackUUID + `/papers/` + paper.UUID + `/upload-pdf"`
+			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), want) {
+				t.Fatalf("response = %d %s, want upload URL %s", rr.Code, rr.Body.String(), want)
+			}
+		})
+	}
+}
+
+func newTestStackService(papers ...paperDomain.Paper) *stackApp.StackService {
+	repo := paperMemory.NewRepository()
+	for _, paper := range papers {
+		_, _ = repo.Save(context.Background(), paper)
+	}
+	paperService := paperApp.NewPaperService(repo, nil)
+	return stackApp.NewStackService(stackMemory.NewRepository(paperService), paperService)
 }
 
 func newTestUserService(users ...userDomain.User) *userApplication.UserService {
@@ -242,7 +308,6 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
-	stackService := newTestStackService()
 	user := userDomain.NewUser("owner-paper-remove", "paper-remove@example.com")
 	stack := stackDomain.NewStack("Paper Remove Stack", user)
 	removedPaperUUID := "11111111-1111-4111-8111-111111111111"
@@ -251,6 +316,7 @@ func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 		{UUID: removedPaperUUID, Title: "Removed Paper"},
 		{UUID: retainedPaperUUID, Title: "Retained Paper"},
 	}
+	stackService := newTestStackService(stack.Papers...)
 	if err := stackService.Create(t.Context(), *stack); err != nil {
 		t.Fatalf("seed stack: %v", err)
 	}

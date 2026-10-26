@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"slices"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -88,6 +89,11 @@ type stacksPageData struct {
 	StacksCountPublic int
 }
 
+type paperInfoData struct {
+	paperDomain.Paper
+	StackUUID string
+}
+
 func handleStacksDetailPage(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -119,13 +125,13 @@ func handleStacksDetailPage(
 		data := struct {
 			pageData
 			Stack         stackDomain.Stack
-			SelectedPaper paperDomain.Paper
+			SelectedPaper paperInfoData
 			CreatedAt     string
 			UpdatedAt     string
 		}{
 			pageData:      newPageData(r, hankoAPIURL),
 			Stack:         stack,
-			SelectedPaper: selectedPaper,
+			SelectedPaper: paperInfoData{Paper: selectedPaper, StackUUID: stack.UUID},
 			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
 			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
@@ -363,7 +369,9 @@ func handleStackPaperInfo(
 			return
 		}
 
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paperInfoData{
+			Paper: paper, StackUUID: r.PathValue("stackUUID"),
+		}); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
@@ -618,5 +626,75 @@ func handleStackPublicSettingUpdate(
 		}
 
 		renderSuccessToast(w, tmpl, "Stack changes saved")
+	})
+}
+
+func handlePaperUploadPDF(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok || session == nil || !session.IsValid {
+			_ = renderErrorToast(w, tmpl, "Please log in before uploading a PDF.")
+			return
+		}
+		stackUUID := r.PathValue("stackUUID")
+		paperUUID := r.PathValue("paperUUID")
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			logger.Error("get stack before PDF upload", "stackUUID", stackUUID, "error", err.Error())
+			_ = renderErrorToast(w, tmpl, "The requested stack could not be found.")
+			return
+		}
+		if stack.Owner.ExternalID != session.UserID {
+			_ = renderErrorToast(w, tmpl, "You are not allowed to upload PDFs to this stack.")
+			return
+		}
+		if !slices.ContainsFunc(stack.Papers, func(paper paperDomain.Paper) bool { return paper.UUID == paperUUID }) {
+			_ = renderErrorToast(w, tmpl, "The requested paper does not belong to this stack.")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, paperDomain.PDFMaxFileSize+oneMiB)
+		if err := r.ParseMultipartForm(oneMiB); err != nil {
+			if r.MultipartForm != nil {
+				_ = r.MultipartForm.RemoveAll()
+			}
+			_ = renderErrorToast(w, tmpl, "Upload a PDF file no larger than 10 MiB.")
+			return
+		}
+		defer r.MultipartForm.RemoveAll()
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			_ = renderErrorToast(w, tmpl, "Choose a PDF file to upload.")
+			return
+		}
+		defer file.Close()
+
+		_, err = paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
+			PaperUUID: paperUUID,
+			FileName:  header.Filename,
+			File:      file,
+			Size:      header.Size,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, paperDomain.ErrFileSizeExceeded):
+				_ = renderErrorToast(w, tmpl, "Upload a PDF file no larger than 10 MiB.")
+			case errors.Is(err, paperDomain.ErrInvalidFileType):
+				_ = renderErrorToast(w, tmpl, "The uploaded file is not a valid PDF.")
+			case errors.Is(err, paperDomain.ErrPaperNotFound):
+				_ = renderErrorToast(w, tmpl, "The requested paper could not be found.")
+			default:
+				logger.Error("upload paper PDF", "paperUUID", paperUUID, "error", err.Error())
+				_ = renderErrorToast(w, tmpl, "The PDF could not be uploaded. Please try again.")
+			}
+			return
+		}
+		_ = renderSuccessToast(w, tmpl, "The PDF was uploaded sucessfully")
 	})
 }
