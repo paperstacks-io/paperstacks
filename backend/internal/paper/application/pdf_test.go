@@ -227,7 +227,7 @@ type detachFailingRepository struct {
 	err error
 }
 
-func (r detachFailingRepository) RemovePDF(context.Context, string) error {
+func (r detachFailingRepository) DetachPDF(context.Context, string) error {
 	return r.err
 }
 

@@ -100,7 +100,7 @@ func (r *Repository) AttachPDF(_ context.Context, uuid string, storageKey string
 	return domain.ErrPaperNotFound
 }
 
-func (r *Repository) RemovePDF(ctx context.Context, uuid string) error {
+func (r *Repository) DetachPDF(ctx context.Context, uuid string) error {
 	return r.AttachPDF(ctx, uuid, "")
 }
 

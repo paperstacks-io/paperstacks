@@ -205,7 +205,7 @@ func (r *Repository) AttachPDF(ctx context.Context, uuid string, storageKey stri
 	return nil
 }
 
-func (r *Repository) RemovePDF(ctx context.Context, uuid string) error {
+func (r *Repository) DetachPDF(ctx context.Context, uuid string) error {
 	return r.AttachPDF(ctx, uuid, "")
 }
 

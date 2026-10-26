@@ -35,7 +35,7 @@ func TestPDFAttachmentPreservesPaperEdits(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("after stale edit = %#v, %v; want %#v", got, err, want)
 	}
-	if err := repo.RemovePDF(ctx, paper.UUID); err != nil {
+	if err := repo.DetachPDF(ctx, paper.UUID); err != nil {
 		t.Fatal(err)
 	}
 	// A stale edit must not restore a removed attachment either.
@@ -55,8 +55,8 @@ func TestPDFAttachmentMissingPaper(t *testing.T) {
 	if err := repo.AttachPDF(ctx, "missing", "pdf/test.pdf"); !errors.Is(err, domain.ErrPaperNotFound) {
 		t.Fatalf("AttachPDF error = %v, want ErrPaperNotFound", err)
 	}
-	if err := repo.RemovePDF(ctx, "missing"); !errors.Is(err, domain.ErrPaperNotFound) {
-		t.Fatalf("RemovePDF error = %v, want ErrPaperNotFound", err)
+	if err := repo.DetachPDF(ctx, "missing"); !errors.Is(err, domain.ErrPaperNotFound) {
+		t.Fatalf("DetachPDF error = %v, want ErrPaperNotFound", err)
 	}
 }
 

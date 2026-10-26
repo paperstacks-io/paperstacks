@@ -76,7 +76,7 @@ func (s *PaperService) DeletePDF(ctx context.Context, paperUUID string) error {
 }
 
 func (s *PaperService) detachPDF(ctx context.Context, paperUUID string) error {
-	return s.repo.RemovePDF(ctx, strings.TrimSpace(paperUUID))
+	return s.repo.DetachPDF(ctx, strings.TrimSpace(paperUUID))
 }
 
 // OpenPDF opens a PDF from object storage. The caller must close the returned PDFFile.Body.
