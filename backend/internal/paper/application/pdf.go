@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -49,14 +50,24 @@ func (s *PaperService) UploadPDF(
 	return storageKey, nil
 }
 
-// OpenPDF opens a PDF from object storage. The caller must close the returned object.Body.
-func (s *PaperService) OpenPDF(ctx context.Context, storageKey string) (*objectstorage.Object, error) {
+// OpenPDF opens a PDF from object storage. The caller must close the returned PDFFile.Body.
+func (s *PaperService) OpenPDF(ctx context.Context, storageKey string) (*domain.PDFFile, error) {
 	object, err := s.storage.Get(ctx, storageKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open PDF: %w", err)
 	}
 
-	return object, nil
+	fileName := object.Info.Metadata["filename"]
+	if fileName == "" {
+		fileName = strings.TrimPrefix(storageKey, "pdf/")
+	}
+
+	return &domain.PDFFile{
+		Body:        object.Body,
+		FileName:    fileName,
+		ContentType: object.Info.ContentType,
+		Size:        object.Info.Size,
+	}, nil
 }
 
 func (s *PaperService) PDFExists(ctx context.Context, storageKey string) (bool, error) {

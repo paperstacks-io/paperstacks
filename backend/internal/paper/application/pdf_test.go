@@ -13,8 +13,8 @@ import (
 )
 
 type storedPDF struct {
-	body     []byte
-	metadata map[string]string
+	body []byte
+	info objectstorage.ObjectInfo
 }
 
 type mockObjectStorage struct {
@@ -30,13 +30,14 @@ func (m mockObjectStorage) Put(ctx context.Context, input objectstorage.PutObjec
 	if err != nil {
 		return objectstorage.ObjectInfo{}, err
 	}
-	m.objects[input.Key] = storedPDF{body: data, metadata: input.Metadata}
-	return objectstorage.ObjectInfo{
+	info := objectstorage.ObjectInfo{
 		Key:         input.Key,
 		Size:        input.Size,
 		ContentType: input.ContentType,
 		Metadata:    input.Metadata,
-	}, nil
+	}
+	m.objects[input.Key] = storedPDF{body: data, info: info}
+	return info, nil
 }
 
 func (m mockObjectStorage) Get(ctx context.Context, key string) (*objectstorage.Object, error) {
@@ -47,7 +48,7 @@ func (m mockObjectStorage) Get(ctx context.Context, key string) (*objectstorage.
 	if !ok {
 		return nil, objectstorage.ErrObjectNotFound
 	}
-	return &objectstorage.Object{Body: io.NopCloser(bytes.NewReader(data.body)), Info: objectstorage.ObjectInfo{Metadata: data.metadata}}, nil
+	return &objectstorage.Object{Body: io.NopCloser(bytes.NewReader(data.body)), Info: data.info}, nil
 }
 
 func (m mockObjectStorage) Delete(ctx context.Context, key string) error {
@@ -86,7 +87,6 @@ func TestUploadPDFSuccess(t *testing.T) {
 	opts := domain.UploadPDFOptions{
 		PaperUUID: paperUUID,
 		FileName:  "  test_document.pdf  ",
-		UserID:    "test-user-123",
 		File:      r,
 		Size:      int64(len(pdfContent)),
 	}
@@ -112,8 +112,14 @@ func TestUploadPDFSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer object.Body.Close()
-	if got := object.Info.Metadata["filename"]; got != opts.FileName {
+	if got := object.FileName; got != opts.FileName {
 		t.Fatalf("stored filename = %q, want %q", got, opts.FileName)
+	}
+	if object.ContentType != domain.PDFContentType {
+		t.Fatalf("content type = %q, want %q", object.ContentType, domain.PDFContentType)
+	}
+	if object.Size != int64(len(pdfContent)) {
+		t.Fatalf("size = %d, want %d", object.Size, len(pdfContent))
 	}
 	content, err := io.ReadAll(object.Body)
 	if err != nil {
@@ -122,7 +128,6 @@ func TestUploadPDFSuccess(t *testing.T) {
 	if !bytes.Equal(content, pdfContent) {
 		t.Fatalf("stored content = %q, want %q", content, pdfContent)
 	}
-
 }
 
 func TestUploadPDFInvalidMagicBytes(t *testing.T) {
@@ -138,7 +143,6 @@ func TestUploadPDFInvalidMagicBytes(t *testing.T) {
 	opts := domain.UploadPDFOptions{
 		PaperUUID: "paper-uuid-xyz",
 		FileName:  "test.pdf",
-		UserID:    "test-user-123",
 		File:      r,
 		Size:      int64(len(invalidContent)),
 	}
@@ -166,7 +170,6 @@ func TestUploadPDFActualStreamExceedsLimit(t *testing.T) {
 	opts := domain.UploadPDFOptions{
 		PaperUUID: "paper-uuid-xyz",
 		FileName:  "test.pdf",
-		UserID:    "test-user-123",
 		File:      infiniteReader,
 		Size:      0,
 	}
@@ -188,7 +191,6 @@ func TestUploadPDFPaperDoesNotExist(t *testing.T) {
 	opts := domain.UploadPDFOptions{
 		PaperUUID: "non-existent-paper-uuid",
 		FileName:  "test.pdf",
-		UserID:    "test-user-123",
 		File:      r,
 		Size:      int64(len(pdfContent)),
 	}
@@ -205,7 +207,7 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 	service, repo := setupPDFTestService(t)
 	ctx := context.Background()
 	paperUUIDs := []string{"a4b065f1-1b88-4f50-a7fe-1177f3489fcf", "a4b065f1-1b88-4f50-a7fe-1177f3489fd0"}
-	for i, paperUUID := range paperUUIDs {
+	for _, paperUUID := range paperUUIDs {
 		if _, err := repo.Save(ctx, domain.Paper{UUID: paperUUID, DOI: "10.1000/same-paper", Title: "Test Paper"}); err != nil {
 			t.Fatal(err)
 		}
@@ -214,8 +216,8 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		}
 		content := "%PDF-1.4\n" + paperUUID
 		storageKey, err := service.UploadPDF(ctx, domain.UploadPDFOptions{
-			PaperUUID: paperUUID, UserID: []string{"user-one", "user-two"}[i],
-			FileName: "main.pdf", File: bytes.NewBufferString(content),
+			PaperUUID: paperUUID,
+			FileName:  "main.pdf", File: bytes.NewBufferString(content),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -237,6 +239,32 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		if err != nil || string(content) != "%PDF-1.4\n"+paperUUID {
 			t.Fatalf("downloaded content = %q, error = %v", content, err)
 		}
+	}
+}
+
+func TestOpenPDFFallsBackToStorageKey(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		metadata map[string]string
+	}{
+		{name: "no metadata"},
+		{name: "missing filename", metadata: map[string]string{"other": "value"}},
+		{name: "empty filename", metadata: map[string]string{"filename": ""}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			const key = "archive/custom.pdf"
+			service := NewPaperService(nil, mockObjectStorage{objects: map[string]storedPDF{
+				key: {info: objectstorage.ObjectInfo{Metadata: tc.metadata}},
+			}})
+			pdf, err := service.OpenPDF(context.Background(), key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer pdf.Body.Close()
+			if pdf.FileName != key {
+				t.Fatalf("filename = %q, want %q", pdf.FileName, key)
+			}
+		})
 	}
 }
 

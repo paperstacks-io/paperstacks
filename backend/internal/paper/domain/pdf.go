@@ -24,9 +24,15 @@ const (
 type UploadPDFOptions struct {
 	PaperUUID string
 	FileName  string
-	UserID    string
 	File      io.Reader
 	Size      int64
+}
+
+type PDFFile struct {
+	Body        io.ReadCloser
+	FileName    string
+	ContentType string
+	Size        int64
 }
 
 func ValidatePDF(r io.Reader) (io.Reader, int64, error) {
