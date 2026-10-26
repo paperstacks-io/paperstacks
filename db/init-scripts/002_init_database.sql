@@ -81,7 +81,7 @@ CREATE TABLE public.paper (
 	publication_status_timestamp timestamptz,
 	abstract text,
 	keywords text[],
-	pdf_url text,
+	pdf_storage_key text,
 	created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
 	updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
 	created_by text REFERENCES public.app_user (external_id) ON DELETE SET NULL ON UPDATE CASCADE,

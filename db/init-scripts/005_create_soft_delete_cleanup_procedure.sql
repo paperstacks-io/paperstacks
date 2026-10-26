@@ -26,7 +26,7 @@ BEGIN
       AND p.deleted_at < v_cutoff;
 
     -- stack_paper and metadata are cleaned via ON DELETE CASCADE.
-    -- pdf_url is stored directly on paper and is removed with the row.
+    -- pdf_storage_key is stored directly on paper and is removed with the row.
     DELETE FROM public.paper AS p
     WHERE p.deleted_at IS NOT NULL
       AND p.deleted_at < v_cutoff;
