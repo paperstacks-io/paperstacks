@@ -64,6 +64,7 @@ func (s *S3Store) Put(ctx context.Context, input PutObjectInput) (ObjectInfo, er
 		Body:          input.Body,
 		ContentLength: aws.Int64(input.Size),
 		ContentType:   aws.String(input.ContentType),
+		Metadata:      input.Metadata,
 	})
 	if err != nil {
 		return ObjectInfo{}, fmt.Errorf("put object %q: %w", key, err)
@@ -74,6 +75,7 @@ func (s *S3Store) Put(ctx context.Context, input PutObjectInput) (ObjectInfo, er
 		ETag:        strings.Trim(aws.ToString(out.ETag), "\""),
 		Size:        input.Size,
 		ContentType: input.ContentType,
+		Metadata:    input.Metadata,
 	}, nil
 }
 
@@ -97,6 +99,7 @@ func (s *S3Store) Get(ctx context.Context, key string) (*Object, error) {
 			ETag:        strings.Trim(aws.ToString(out.ETag), "\""),
 			Size:        aws.ToInt64(out.ContentLength),
 			ContentType: aws.ToString(out.ContentType),
+			Metadata:    out.Metadata,
 		},
 	}, nil
 }
