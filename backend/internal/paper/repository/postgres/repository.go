@@ -190,6 +190,25 @@ func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper
 	return nil
 }
 
+func (r *Repository) AttachPDF(ctx context.Context, uuid string, storageKey string) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE public.paper SET pdf_storage_key = $2 WHERE uuid = $1`, uuid, storageKey)
+	if err != nil {
+		return wrapError("update paper PDF key", err)
+	}
+	changed, err := result.RowsAffected()
+	if err != nil {
+		return wrapError("check updated paper PDF key", err)
+	}
+	if changed == 0 {
+		return domain.ErrPaperNotFound
+	}
+	return nil
+}
+
+func (r *Repository) DetachPDF(ctx context.Context, uuid string) error {
+	return r.AttachPDF(ctx, uuid, "")
+}
+
 func (r *Repository) Delete(ctx context.Context, uuid string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

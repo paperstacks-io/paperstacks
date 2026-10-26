@@ -48,7 +48,7 @@ func startApplication(t *testing.T) testApplication {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	root := http.NewServeMux()
 	api := http.NewServeMux()
-	paperService := application.NewPaperService(memory.NewRepository())
+	paperService := application.NewPaperService(memory.NewRepository(), nil)
 	userRepo := userMemory.NewRepository()
 	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
 	userService := userApplication.NewUserService(userRepo)
