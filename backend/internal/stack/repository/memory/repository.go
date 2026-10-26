@@ -3,6 +3,7 @@ package memory
 import (
 	"cmp"
 	"context"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -12,7 +13,12 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 )
 
+type PaperGetter interface {
+	GetByUUID(context.Context, string) (paperDomain.Paper, error)
+}
+
 type Repository struct {
+	paperGetter       PaperGetter
 	mu                sync.RWMutex
 	data              []domain.Stack
 	countPublicCache  int
@@ -20,8 +26,9 @@ type Repository struct {
 	statsByOwnerCache map[string]domain.Stats
 }
 
-func NewRepository() *Repository {
+func NewRepository(paperGetter PaperGetter) *Repository {
 	return &Repository{
+		paperGetter:       paperGetter,
 		data:              seedData(),
 		countPublicDirty:  true,
 		statsByOwnerCache: make(map[string]domain.Stats),
@@ -83,6 +90,16 @@ func (r *Repository) GetByUUID(ctx context.Context, uuid string) (domain.Stack, 
 
 	for _, item := range r.data {
 		if item.UUID == uuid {
+			if r.paperGetter != nil {
+				item.Papers = slices.Clone(item.Papers)
+				for i, paper := range item.Papers {
+					current, err := r.paperGetter.GetByUUID(ctx, paper.UUID)
+					if err != nil {
+						return domain.Stack{}, err
+					}
+					item.Papers[i] = current
+				}
+			}
 			return item, nil
 		}
 	}

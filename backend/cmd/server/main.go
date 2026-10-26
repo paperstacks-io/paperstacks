@@ -80,7 +80,7 @@ func run(
 	}
 
 	doiService := doiApp.NewDOIService(nil)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
+	stackService := stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 
