@@ -91,44 +91,36 @@ func TestUploadPDFSuccess(t *testing.T) {
 		Size:      int64(len(pdfContent)),
 	}
 
-	doc, err := service.UploadPDF(ctx, opts)
+	storageKey, err := service.UploadPDF(ctx, opts)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	if doc.Key != "pdf/"+paperUUID+".pdf" {
-		t.Errorf("unexpected storage key: %s", doc.Key)
-	}
-	if doc.UserID != "test-user-123" {
-		t.Errorf("expected UploaderUUID to be 'test-user-123', got: %s", doc.UserID)
-	}
-	if doc.PaperUUID != paperUUID {
-		t.Errorf("expected PaperUUID to be %q, got: %s", paperUUID, doc.PaperUUID)
-	}
-	if doc.FileName != "test_document.pdf" {
-		t.Errorf("expected FileName to be trimmed to 'test_document.pdf', got: %s", doc.FileName)
-	}
-	if doc.ContentType != "application/pdf" {
-		t.Errorf("expected ContentType to be 'application/pdf', got: %s", doc.ContentType)
-	}
-	if doc.Size != int64(len(pdfContent)) {
-		t.Errorf("expected Size to be %d, got: %d", len(pdfContent), doc.Size)
+	if storageKey != "pdf/"+paperUUID+".pdf" {
+		t.Errorf("unexpected storage key: %s", storageKey)
 	}
 	paper, err := paperRepo.GetByUUID(ctx, paperUUID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if paper.PDFStorageKey != doc.Key {
-		t.Errorf("stored PDFStorageKey = %q, want %q", paper.PDFStorageKey, doc.Key)
+	if paper.PDFStorageKey != storageKey {
+		t.Errorf("stored PDFStorageKey = %q, want %q", paper.PDFStorageKey, storageKey)
 	}
 
-	object, err := service.OpenPDF(ctx, doc.Key)
+	object, err := service.OpenPDF(ctx, storageKey)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer object.Body.Close()
-	if got := object.Info.Metadata["filename"]; got != "test_document.pdf" {
-		t.Fatalf("downloaded filename = %q, want test_document.pdf", got)
+	if got := object.Info.Metadata["filename"]; got != opts.FileName {
+		t.Fatalf("stored filename = %q, want %q", got, opts.FileName)
+	}
+	content, err := io.ReadAll(object.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(content, pdfContent) {
+		t.Fatalf("stored content = %q, want %q", content, pdfContent)
 	}
 
 }
@@ -221,15 +213,15 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 			t.Fatalf("PDFExists before upload = %v, %v", exists, err)
 		}
 		content := "%PDF-1.4\n" + paperUUID
-		doc, err := service.UploadPDF(ctx, domain.UploadPDFOptions{
+		storageKey, err := service.UploadPDF(ctx, domain.UploadPDFOptions{
 			PaperUUID: paperUUID, UserID: []string{"user-one", "user-two"}[i],
 			FileName: "main.pdf", File: bytes.NewBufferString(content),
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if doc.Key != "pdf/"+paperUUID+".pdf" {
-			t.Fatalf("unexpected storage key: %s", doc.Key)
+		if storageKey != "pdf/"+paperUUID+".pdf" {
+			t.Fatalf("unexpected storage key: %s", storageKey)
 		}
 	}
 	for _, paperUUID := range paperUUIDs {

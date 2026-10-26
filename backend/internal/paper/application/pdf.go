@@ -3,31 +3,30 @@ package application
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
+// UploadPDF uploads a PDF to object storage and returns the assigned key.
 func (s *PaperService) UploadPDF(
 	ctx context.Context,
 	opts domain.UploadPDFOptions,
-) (domain.PDF, error) {
+) (string, error) {
 	paper, err := s.GetByUUID(ctx, opts.PaperUUID)
 	if err != nil {
-		return domain.PDF{}, err
+		return "", err
 	}
 
 	if opts.Size > domain.PDFMaxFileSize {
-		return domain.PDF{}, domain.ErrFileSizeExceeded
+		return "", domain.ErrFileSizeExceeded
 	}
 
 	pdfReader, pdfSize, err := domain.ValidatePDF(opts.File)
 	if err != nil {
-		return domain.PDF{}, err
+		return "", err
 	}
 
-	trimmedFileName := strings.TrimSpace(opts.FileName)
 	storageKey := fmt.Sprintf("pdf/%s.pdf", opts.PaperUUID)
 
 	_, err = s.storage.Put(ctx, objectstorage.PutObjectInput{
@@ -35,26 +34,19 @@ func (s *PaperService) UploadPDF(
 		Body:        pdfReader,
 		Size:        pdfSize,
 		ContentType: domain.PDFContentType,
-		Metadata:    map[string]string{"filename": trimmedFileName},
+		Metadata:    map[string]string{"filename": opts.FileName},
 	})
 	if err != nil {
-		return domain.PDF{}, fmt.Errorf("failed to store physical file: %w", err)
+		return "", fmt.Errorf("failed to store physical file: %w", err)
 	}
 
 	paper.PDFStorageKey = storageKey
 	err = s.Update(ctx, paper.UUID, paper)
 	if err != nil {
-		return domain.PDF{}, fmt.Errorf("failed to update paper PDF key: %w", err)
+		return "", fmt.Errorf("failed to update paper PDF key: %w", err)
 	}
 
-	return domain.PDF{
-		Key:         storageKey,
-		UserID:      opts.UserID,
-		PaperUUID:   opts.PaperUUID,
-		FileName:    trimmedFileName,
-		ContentType: domain.PDFContentType,
-		Size:        pdfSize,
-	}, nil
+	return storageKey, nil
 }
 
 // OpenPDF opens a PDF from object storage. The caller must close the returned object.Body.
