@@ -101,8 +101,7 @@ func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Pape
 			publication_status = $9,
 			publication_status_timestamp = $10,
 			abstract = $11,
-			keywords = $12,
-			pdf_storage_key = $13
+			keywords = $12
 		WHERE uuid = $1`, args...)
 	if err != nil {
 		return wrapError("update paper", err)
@@ -123,6 +122,7 @@ func insertPaper(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
 	if err != nil {
 		return err
 	}
+	args = append(args, nullString(paper.PDFStorageKey))
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
@@ -150,6 +150,5 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		statusTimestamp,
 		nullString(paper.Abstract),
 		pgtype.FlatArray[string](paper.Keywords),
-		nullString(paper.PDFStorageKey),
 	}, nil
 }

@@ -41,13 +41,42 @@ func (s *PaperService) UploadPDF(
 		return "", fmt.Errorf("failed to store physical file: %w", err)
 	}
 
-	paper.PDFStorageKey = storageKey
-	err = s.Update(ctx, paper.UUID, paper)
+	err = s.attachPDF(ctx, paper.UUID, storageKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to update paper PDF key: %w", err)
 	}
 
 	return storageKey, nil
+}
+
+func (s *PaperService) attachPDF(ctx context.Context, paperUUID string, storageKey string) error {
+	storageKey = strings.TrimSpace(storageKey)
+	if storageKey == "" {
+		return domain.ErrInvalidPaper
+	}
+	return s.repo.AttachPDF(ctx, strings.TrimSpace(paperUUID), storageKey)
+}
+
+// DeletePDF deletes the paper's stored PDF, then clears its attachment.
+func (s *PaperService) DeletePDF(ctx context.Context, paperUUID string) error {
+	paper, err := s.GetByUUID(ctx, paperUUID)
+	if err != nil {
+		return err
+	}
+	if paper.PDFStorageKey == "" {
+		return nil
+	}
+	if err := s.storage.Delete(ctx, paper.PDFStorageKey); err != nil {
+		return fmt.Errorf("failed to delete stored PDF: %w", err)
+	}
+	if err := s.detachPDF(ctx, paper.UUID); err != nil {
+		return fmt.Errorf("failed to detach PDF after deleting stored object: %w", err)
+	}
+	return nil
+}
+
+func (s *PaperService) detachPDF(ctx context.Context, paperUUID string) error {
+	return s.repo.RemovePDF(ctx, strings.TrimSpace(paperUUID))
 }
 
 // OpenPDF opens a PDF from object storage. The caller must close the returned PDFFile.Body.

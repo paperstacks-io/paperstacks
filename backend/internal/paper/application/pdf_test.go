@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"reflect"
 	"testing"
 
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
@@ -20,6 +21,7 @@ type storedPDF struct {
 type mockObjectStorage struct {
 	objects map[string]storedPDF
 	err     error
+	onPut   func() error
 }
 
 func (m mockObjectStorage) Put(ctx context.Context, input objectstorage.PutObjectInput) (objectstorage.ObjectInfo, error) {
@@ -37,6 +39,11 @@ func (m mockObjectStorage) Put(ctx context.Context, input objectstorage.PutObjec
 		Metadata:    input.Metadata,
 	}
 	m.objects[input.Key] = storedPDF{body: data, info: info}
+	if m.onPut != nil {
+		if err := m.onPut(); err != nil {
+			return objectstorage.ObjectInfo{}, err
+		}
+	}
 	return info, nil
 }
 
@@ -52,6 +59,10 @@ func (m mockObjectStorage) Get(ctx context.Context, key string) (*objectstorage.
 }
 
 func (m mockObjectStorage) Delete(ctx context.Context, key string) error {
+	if m.err != nil {
+		return m.err
+	}
+	delete(m.objects, key)
 	return nil
 }
 
@@ -127,6 +138,160 @@ func TestUploadPDFSuccess(t *testing.T) {
 	}
 	if !bytes.Equal(content, pdfContent) {
 		t.Fatalf("stored content = %q, want %q", content, pdfContent)
+	}
+}
+
+func TestUploadPDFPreservesInterveningEdits(t *testing.T) {
+	ctx := context.Background()
+	repo := paperMemory.NewRepository()
+	const uuid = "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	if _, err := repo.Save(ctx, domain.Paper{UUID: uuid, DOI: "10.1000/test", Title: "Original"}); err != nil {
+		t.Fatal(err)
+	}
+	edited := domain.Paper{
+		UUID: uuid, DOI: "10.1000/test", Title: "Edited during upload",
+		Authors:  []domain.Author{{NameLast: "New Author"}},
+		Metadata: domain.Metadata{Publisher: "New Publisher"},
+	}
+	service := NewPaperService(repo, mockObjectStorage{
+		objects: make(map[string]storedPDF),
+		onPut:   func() error { return repo.Update(ctx, uuid, edited) },
+	})
+	key, err := service.UploadPDF(ctx, domain.UploadPDFOptions{PaperUUID: uuid, File: bytes.NewBufferString("%PDF-1.4\ncontent")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited.PDFStorageKey = key
+	got, err := repo.GetByUUID(ctx, uuid)
+	if err != nil || !reflect.DeepEqual(got, edited) {
+		t.Fatalf("paper after upload = %#v, %v; want %#v", got, err, edited)
+	}
+	if err := service.detachPDF(ctx, uuid); err != nil {
+		t.Fatal(err)
+	}
+	edited.PDFStorageKey = ""
+	got, err = repo.GetByUUID(ctx, uuid)
+	if err != nil || !reflect.DeepEqual(got, edited) {
+		t.Fatalf("paper after removal = %#v, %v; want %#v", got, err, edited)
+	}
+	if exists, err := service.PDFExists(ctx, key); err != nil || !exists {
+		t.Fatalf("detachPDF should retain the stored object: exists = %v, error = %v", exists, err)
+	}
+}
+
+func TestUploadPDFPaperDeletedDuringUpload(t *testing.T) {
+	ctx := context.Background()
+	repo := paperMemory.NewRepository()
+	const uuid = "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	if _, err := repo.Save(ctx, domain.Paper{UUID: uuid}); err != nil {
+		t.Fatal(err)
+	}
+	service := NewPaperService(repo, mockObjectStorage{
+		objects: make(map[string]storedPDF),
+		onPut:   func() error { return repo.Delete(ctx, uuid) },
+	})
+	key, err := service.UploadPDF(ctx, domain.UploadPDFOptions{PaperUUID: uuid, File: bytes.NewBufferString("%PDF-1.4\ncontent")})
+	if key != "" || !errors.Is(err, domain.ErrPaperNotFound) {
+		t.Fatalf("UploadPDF = %q, %v; want empty key and ErrPaperNotFound", key, err)
+	}
+}
+
+func TestAttachPDFAndDetachPDF(t *testing.T) {
+	service, repo := setupPDFTestService(t)
+	ctx := context.Background()
+	const uuid = "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
+	if _, err := repo.Save(ctx, domain.Paper{UUID: uuid}); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.attachPDF(ctx, " "+uuid+" ", " archive/test.pdf "); err != nil {
+		t.Fatal(err)
+	}
+	paper, err := repo.GetByUUID(ctx, uuid)
+	if err != nil || paper.PDFStorageKey != "archive/test.pdf" {
+		t.Fatalf("attached key = %q, error = %v", paper.PDFStorageKey, err)
+	}
+	if err := service.attachPDF(ctx, uuid, " "); !errors.Is(err, domain.ErrInvalidPaper) {
+		t.Fatalf("attachPDF empty key error = %v, want ErrInvalidPaper", err)
+	}
+	if err := service.detachPDF(ctx, " "+uuid+" "); err != nil {
+		t.Fatal(err)
+	}
+	paper, err = repo.GetByUUID(ctx, uuid)
+	if err != nil || paper.PDFStorageKey != "" {
+		t.Fatalf("removed key = %q, error = %v", paper.PDFStorageKey, err)
+	}
+}
+
+type detachFailingRepository struct {
+	domain.Repository
+	err error
+}
+
+func (r detachFailingRepository) RemovePDF(context.Context, string) error {
+	return r.err
+}
+
+func TestDeletePDF(t *testing.T) {
+	const key = "archive/custom.pdf"
+	storageErr := errors.New("storage unavailable")
+	detachErr := errors.New("database unavailable")
+	for _, tc := range []struct {
+		name          string
+		key           string
+		missingPaper  bool
+		missingObject bool
+		storageErr    error
+		detachErr     error
+		wantErr       error
+	}{
+		{name: "deletes recorded key", key: key},
+		{name: "already missing object", key: key, missingObject: true},
+		{name: "no attachment skips storage", storageErr: storageErr},
+		{name: "missing paper", key: key, missingPaper: true, wantErr: domain.ErrPaperNotFound},
+		{name: "storage failure preserves attachment", key: key, storageErr: storageErr, wantErr: storageErr},
+		{name: "detach failure is reported", key: key, detachErr: detachErr, wantErr: detachErr},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			const uuid = "test-delete-paper"
+			repo := paperMemory.NewRepository()
+			original := domain.Paper{UUID: uuid, Title: "Keep title", PDFStorageKey: tc.key}
+			if !tc.missingPaper {
+				if _, err := repo.Save(ctx, original); err != nil {
+					t.Fatal(err)
+				}
+			}
+			objects := map[string]storedPDF{"unrelated.pdf": {}}
+			if !tc.missingObject {
+				objects[key] = storedPDF{}
+			}
+			var repository domain.Repository = repo
+			if tc.detachErr != nil {
+				repository = detachFailingRepository{Repository: repo, err: tc.detachErr}
+			}
+			service := NewPaperService(repository, mockObjectStorage{objects: objects, err: tc.storageErr})
+			if err := service.DeletePDF(ctx, " "+uuid+" "); !errors.Is(err, tc.wantErr) {
+				t.Fatalf("DeletePDF error = %v, want %v", err, tc.wantErr)
+			}
+			_, objectExists := objects[key]
+			wantObject := !tc.missingObject && (tc.missingPaper || tc.key == "" || tc.storageErr != nil)
+			if objectExists != wantObject {
+				t.Fatalf("stored object exists = %v, want %v", objectExists, wantObject)
+			}
+			if _, ok := objects["unrelated.pdf"]; !ok {
+				t.Fatal("deleted unrelated object")
+			}
+			if !tc.missingPaper {
+				want := original
+				if tc.wantErr == nil {
+					want.PDFStorageKey = ""
+				}
+				got, err := repo.GetByUUID(ctx, uuid)
+				if err != nil || !reflect.DeepEqual(got, want) {
+					t.Fatalf("paper after deletion = %#v, %v; want %#v", got, err, want)
+				}
+			}
+		})
 	}
 }
 
