@@ -217,8 +217,8 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		if _, err := repo.Save(ctx, domain.Paper{UUID: paperUUID, DOI: "10.1000/same-paper", Title: "Test Paper"}); err != nil {
 			t.Fatal(err)
 		}
-		if exists, err := service.HasPDF(ctx, paperUUID); err != nil || exists {
-			t.Fatalf("HasPDF before upload = %v, %v", exists, err)
+		if exists, err := service.PDFExists(ctx, "pdf/"+paperUUID+".pdf"); err != nil || exists {
+			t.Fatalf("PDFExists before upload = %v, %v", exists, err)
 		}
 		content := "%PDF-1.4\n" + paperUUID
 		doc, err := service.UploadPDF(ctx, domain.UploadPDFOptions{
@@ -233,8 +233,8 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		}
 	}
 	for _, paperUUID := range paperUUIDs {
-		if exists, err := service.HasPDF(ctx, paperUUID); err != nil || !exists {
-			t.Fatalf("HasPDF after upload = %v, %v", exists, err)
+		if exists, err := service.PDFExists(ctx, "pdf/"+paperUUID+".pdf"); err != nil || !exists {
+			t.Fatalf("PDFExists after upload = %v, %v", exists, err)
 		}
 		object, err := service.DownloadPDF(ctx, "pdf/"+paperUUID+".pdf")
 		if err != nil {
@@ -245,6 +245,19 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		if err != nil || string(content) != "%PDF-1.4\n"+paperUUID {
 			t.Fatalf("downloaded content = %q, error = %v", content, err)
 		}
+	}
+}
+
+func TestPDFExistsUsesStorageKey(t *testing.T) {
+	service := NewPaperService(nil, mockObjectStorage{objects: map[string]storedPDF{
+		"archive/custom.pdf": {},
+	}})
+	ctx := context.Background()
+	if exists, err := service.PDFExists(ctx, "archive/custom.pdf"); err != nil || !exists {
+		t.Fatalf("PDFExists for existing key = %v, %v", exists, err)
+	}
+	if exists, err := service.PDFExists(ctx, "archive/missing.pdf"); err != nil || exists {
+		t.Fatalf("PDFExists for missing key = %v, %v", exists, err)
 	}
 }
 
@@ -265,8 +278,8 @@ func TestPDFStorageErrors(t *testing.T) {
 	if _, err := service.DownloadPDF(ctx, "paper-one"); !errors.Is(err, wantErr) {
 		t.Fatalf("DownloadPDF error = %v, want %v", err, wantErr)
 	}
-	if _, err := service.HasPDF(ctx, "paper-one"); !errors.Is(err, wantErr) {
-		t.Fatalf("HasPDF error = %v, want %v", err, wantErr)
+	if _, err := service.PDFExists(ctx, "pdf/paper-one.pdf"); !errors.Is(err, wantErr) {
+		t.Fatalf("PDFExists error = %v, want %v", err, wantErr)
 	}
 }
 

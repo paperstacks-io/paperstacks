@@ -66,8 +66,6 @@ func (s *PaperService) DownloadPDF(ctx context.Context, storageKey string) (*obj
 	return object, nil
 }
 
-func (s *PaperService) HasPDF(ctx context.Context, paperUUID string) (bool, error) {
-	key := fmt.Sprintf("pdf/%s.pdf", paperUUID)
-
-	return s.storage.Exists(ctx, key)
+func (s *PaperService) PDFExists(ctx context.Context, storageKey string) (bool, error) {
+	return s.storage.Exists(ctx, storageKey)
 }
