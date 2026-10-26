@@ -15,7 +15,7 @@ COPY go.sum .
 COPY cmd/ cmd/
 COPY internal/ internal/
 
-RUN make build-extractor
+RUN make build-pdfextractor
 
 # Runtime stage
 FROM alpine:latest
@@ -25,15 +25,13 @@ RUN apk add --no-cache poppler-utils tesseract-ocr tesseract-ocr-data-eng
 
 WORKDIR /app
 
-COPY --from=build /app/extractor .
+COPY --from=build /app/pdfextractor .
 
 EXPOSE 8081
-ENV HOST 0.0.0.0
-ENV PORT 8081
 
 # Create a non-root user for security
-RUN adduser -D extractoruser
-USER extractoruser
+RUN adduser -D pdfextractoruser
+USER pdfextractoruser
 
-CMD ["./extractor"]
+CMD ["./pdfextractor"]
 

@@ -1,6 +1,8 @@
 package application
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -88,6 +90,14 @@ func TestDetermineMissingFields(t *testing.T) {
 			missingNames = append(missingNames, k)
 		}
 		t.Errorf("expected fields were not marked as missing: %s", strings.Join(missingNames, ", "))
+	}
+}
+
+func TestService_EmptyReader(t *testing.T) {
+	s := NewService()
+	_, err := s.ExtractMetadata(context.Background(), strings.NewReader(""), domain.Options{})
+	if err == nil || !errors.Is(err, domain.ErrEmptyPDF) {
+		t.Fatalf("expected ErrEmptyPDF, got: %v", err)
 	}
 }
 

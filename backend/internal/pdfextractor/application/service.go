@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -56,22 +55,17 @@ func (s *Service) runPdfToText(ctx context.Context, r io.Reader, opts domain.Opt
 	if _, err := exec.LookPath("pdftotext"); err != nil {
 		return "", false, domain.ErrPDFToTextNotFound
 	}
-
-	tmpFile, err := os.CreateTemp("", "extract-*.pdf")
-	if err != nil {
-		return "", false, fmt.Errorf("create temp file: %w", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	n, err := io.Copy(tmpFile, r)
-	if err != nil {
-		return "", false, fmt.Errorf("write temp file: %w", err)
-	}
-	if n == 0 {
+	if r == nil {
 		return "", false, domain.ErrEmptyPDF
 	}
-	_ = tmpFile.Close()
+
+	// Read first byte to ensure reader is not empty without loading entire stream into memory
+	firstByte := make([]byte, 1)
+	n, err := r.Read(firstByte)
+	if err != nil || n == 0 {
+		return "", false, domain.ErrEmptyPDF
+	}
+	stream := io.MultiReader(bytes.NewReader(firstByte[:n]), r)
 
 	args := []string{}
 	if !opts.ExtractAllPages {
@@ -79,7 +73,8 @@ func (s *Service) runPdfToText(ctx context.Context, r io.Reader, opts domain.Opt
 			args = append(args, "-l", strconv.Itoa(opts.HeadPages))
 		}
 	}
-	args = append(args, "-layout", tmpFile.Name(), "-")
+	// "-" as input reads from stdin, second "-" outputs to stdout
+	args = append(args, "-layout", "-", "-")
 
 	cmdCtx := ctx
 	var cancel context.CancelFunc
@@ -89,6 +84,7 @@ func (s *Service) runPdfToText(ctx context.Context, r io.Reader, opts domain.Opt
 	}
 
 	cmd := exec.CommandContext(cmdCtx, "pdftotext", args...)
+	cmd.Stdin = stream
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

@@ -13,17 +13,23 @@ import (
 	"text/tabwriter"
 	"time"
 
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	extractorApp "github.com/paperstacks.io/paperstacks/internal/pdfextractor/application"
 	extractorHttp "github.com/paperstacks.io/paperstacks/internal/pdfextractor/http"
 )
 
-func run(
-	_ context.Context,
-	cfg Config,
-) error {
+const (
+	host = "0.0.0.0"
+	port = "8081"
+)
+
+func run(_ context.Context) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	if err := checkDependencies(); err != nil {
+		slog.Error("Dependency check failed", slog.String("error", err.Error()))
+		return err
+	}
 
 	extractorService := extractorApp.NewService()
 
@@ -36,7 +42,7 @@ func run(
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 
 	httpServer := &http.Server{
-		Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
+		Addr:         net.JoinHostPort(host, port),
 		Handler:      rootMux,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -62,13 +68,13 @@ func run(
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "\tStarting PDF Extractor service:")
-	fmt.Fprintln(tw, "\tAPI:      \thttp://"+cfg.Host+":"+cfg.Port+"/api/extract/")
-	fmt.Fprintln(tw, "\tHealthz:  \thttp://"+cfg.Host+":"+cfg.Port+"/healthz")
+	fmt.Fprintln(tw, "\tAPI:      \thttp://"+host+":"+port+"/api/extract/")
+	fmt.Fprintln(tw, "\tHealthz:  \thttp://"+host+":"+port+"/healthz")
 	fmt.Fprintln(tw)
 	_ = tw.Flush()
 
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("Could not listen", slog.String("port", cfg.Port), slog.String("error", err.Error()))
+		slog.Error("Could not listen", slog.String("port", port), slog.String("error", err.Error()))
 		return err
 	}
 
@@ -86,25 +92,28 @@ const bannerLogo = `
  |_|   |____/|_|     |_____/_/\_\\__|_|  \__,_|\___|\__\___/|_|   
 `
 
-func banner(w io.Writer, cfg Config) {
+func banner(w io.Writer) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	fmt.Fprint(tw, bannerLogo)
 	fmt.Fprintln(tw)
-	fmt.Fprintln(tw, "  Version:\t"+build.Version)
 	fmt.Fprintln(tw, "  Git hash:\t"+build.GitHash)
-	fmt.Fprintln(tw, "  Listen:\t"+net.JoinHostPort(cfg.Host, cfg.Port))
+	fmt.Fprintln(tw, "  Listen:\t"+net.JoinHostPort(host, port))
 	fmt.Fprintln(tw)
 
 	_ = tw.Flush()
 }
 
 func main() {
-	cfg := NewConfig()
-	banner(os.Stdout, cfg)
+	banner(os.Stdout)
 
-	if err := run(context.Background(), cfg); err != nil {
+	if err := run(context.Background()); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
+}
+
+func checkDependencies() error {
+	// Add your dependency checks here
+	return nil
 }

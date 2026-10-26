@@ -14,14 +14,14 @@ services:
     ports:
       - "8080:8080"
 
-  extractor:
+  pdfextractor:
     build:
       context: .
-      dockerfile: Dockerfile.extractor
+      dockerfile: Dockerfile.pdfextractor
       args:
         GO_VERSION: ${GO_VERSION:-1}
         APP_VERSION: ${APP_VERSION:-development}
         APP_GIT_HASH: ${APP_GIT_HASH}
-    image: ghcr.io/paperstacks-io/extractor:latest
+    image: ghcr.io/paperstacks-io/pdfextractor:latest
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
