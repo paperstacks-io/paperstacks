@@ -1,26 +1,25 @@
 package postgres
 
 import (
-	"database/sql"
-
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 // paperDAO represents a database row. SQL nullability stays out of the domain.
 type paperDAO struct {
 	UUID              string
-	DOI               sql.NullString
-	Title             sql.NullString
-	TitleShort        sql.NullString
-	Year              sql.NullInt16
-	Month             sql.NullInt16
-	Day               sql.NullInt16
-	Type              sql.NullString
-	PublicationStatus sql.NullString
-	StatusTimestamp   sql.NullTime
-	Abstract          sql.NullString
+	DOI               pgtype.Text
+	Title             pgtype.Text
+	TitleShort        pgtype.Text
+	Year              pgtype.Int2
+	Month             pgtype.Int2
+	Day               pgtype.Int2
+	Type              pgtype.Text
+	PublicationStatus pgtype.Text
+	StatusTimestamp   pgtype.Timestamptz
+	Abstract          pgtype.Text
 	Keywords          []string
-	PDFURL            sql.NullString
+	PDFURL            pgtype.Text
 }
 
 func (d paperDAO) domain() domain.Paper {
@@ -42,25 +41,25 @@ func (d paperDAO) domain() domain.Paper {
 // metadataDAO represents bibliographic metadata, including its paper foreign key.
 type metadataDAO struct {
 	PaperUUID           string
-	Publisher           sql.NullString
-	JournalTitle        sql.NullString
-	JournalAbbrev       sql.NullString
-	BookTitle           sql.NullString
-	SeriesTitle         sql.NullString
-	EventTitle          sql.NullString
-	EventLocation       sql.NullString
-	Institution         sql.NullString
-	Pages               sql.NullString
-	Volume              sql.NullString
-	Issue               sql.NullString
+	Publisher           pgtype.Text
+	JournalTitle        pgtype.Text
+	JournalAbbrev       pgtype.Text
+	BookTitle           pgtype.Text
+	SeriesTitle         pgtype.Text
+	EventTitle          pgtype.Text
+	EventLocation       pgtype.Text
+	Institution         pgtype.Text
+	Pages               pgtype.Text
+	Volume              pgtype.Text
+	Issue               pgtype.Text
 	ISBN                []string
 	ISSN                []string
 	References          []string
-	License             sql.NullString
-	Copyright           sql.NullString
-	Funding             sql.NullString
-	DataSource          sql.NullString
-	DataSourceTimestamp sql.NullTime
+	License             pgtype.Text
+	Copyright           pgtype.Text
+	Funding             pgtype.Text
+	DataSource          pgtype.Text
+	DataSourceTimestamp pgtype.Timestamptz
 }
 
 func (d metadataDAO) domain() domain.Metadata {
@@ -90,11 +89,11 @@ func (d metadataDAO) domain() domain.Metadata {
 // authorDAO represents an author joined with its affiliation and paper link.
 type authorDAO struct {
 	PaperUUID   string
-	First       sql.NullString
-	Middle      sql.NullString
-	Last        sql.NullString
-	Affiliation sql.NullString
-	ORCID       sql.NullString
+	First       pgtype.Text
+	Middle      pgtype.Text
+	Last        pgtype.Text
+	Affiliation pgtype.Text
+	ORCID       pgtype.Text
 }
 
 func (d authorDAO) domain() domain.Author {

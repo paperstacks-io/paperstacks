@@ -3,30 +3,31 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
 
 const userColumns = `external_id, email, orcid, created_at, updated_at`
 
-// Repository persists users in PostgreSQL through database/sql.
+// Repository persists users in PostgreSQL through native pgx.
 type Repository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
 var _ domain.Repository = (*Repository)(nil)
 
-func NewRepository(db *sql.DB) *Repository {
+func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
 func (r *Repository) GetByExternalID(ctx context.Context, externalID string) (domain.User, error) {
-	user, err := scanUser(r.db.QueryRowContext(ctx, `SELECT `+userColumns+` FROM public.app_user WHERE external_id = $1`, externalID))
-	if errors.Is(err, sql.ErrNoRows) {
+	user, err := scanUser(r.db.QueryRow(ctx, `SELECT `+userColumns+` FROM public.app_user WHERE external_id = $1`, externalID))
+	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.User{}, domain.ErrUserNotFound
 	}
 	if err != nil {
@@ -36,8 +37,8 @@ func (r *Repository) GetByExternalID(ctx context.Context, externalID string) (do
 }
 
 func (r *Repository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
-	user, err := scanUser(r.db.QueryRowContext(ctx, `SELECT `+userColumns+` FROM public.app_user WHERE email = $1`, email))
-	if errors.Is(err, sql.ErrNoRows) {
+	user, err := scanUser(r.db.QueryRow(ctx, `SELECT `+userColumns+` FROM public.app_user WHERE email = $1`, email))
+	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.User{}, domain.ErrUserNotFound
 	}
 	if err != nil {
@@ -47,7 +48,7 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (domain.User,
 }
 
 func (r *Repository) List(ctx context.Context) ([]domain.User, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+userColumns+` FROM public.app_user ORDER BY external_id ASC`)
+	rows, err := r.db.Query(ctx, `SELECT `+userColumns+` FROM public.app_user ORDER BY external_id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
@@ -73,7 +74,7 @@ func (r *Repository) SaveIfNotExist(ctx context.Context, user domain.User) (doma
 		orcid = nil
 	}
 
-	stored, err := scanUser(r.db.QueryRowContext(ctx, `
+	stored, err := scanUser(r.db.QueryRow(ctx, `
 		INSERT INTO public.app_user (external_id, email, orcid, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (external_id) DO UPDATE SET external_id = app_user.external_id
@@ -92,17 +93,14 @@ func (r *Repository) Update(ctx context.Context, externalID string, user domain.
 		orcid = nil
 	}
 
-	result, err := r.db.ExecContext(ctx, `
+	result, err := r.db.Exec(ctx, `
 		UPDATE public.app_user
 		SET email = $1, orcid = $2, updated_at = $3
 		WHERE external_id = $4`, user.Email, orcid, user.UpdatedAt, externalID)
 	if err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("check updated user: %w", err)
-	}
+	changed := result.RowsAffected()
 	if changed == 0 {
 		return domain.ErrUserNotFound
 	}
@@ -110,27 +108,20 @@ func (r *Repository) Update(ctx context.Context, externalID string, user domain.
 }
 
 func (r *Repository) Delete(ctx context.Context, externalID string) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM public.app_user WHERE external_id = $1`, externalID)
+	result, err := r.db.Exec(ctx, `DELETE FROM public.app_user WHERE external_id = $1`, externalID)
 	if err != nil {
 		return fmt.Errorf("delete user: %w", err)
 	}
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("check deleted user: %w", err)
-	}
+	changed := result.RowsAffected()
 	if changed == 0 {
 		return domain.ErrUserNotFound
 	}
 	return nil
 }
 
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanUser(row rowScanner) (domain.User, error) {
+func scanUser(row pgx.Row) (domain.User, error) {
 	var user domain.User
-	var orcid sql.NullString
+	var orcid pgtype.Text
 	if err := row.Scan(&user.ExternalID, &user.Email, &orcid, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		return domain.User{}, err
 	}

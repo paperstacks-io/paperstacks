@@ -2,10 +2,10 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -31,8 +31,8 @@ const metadataColumns = `
 	datasource,
 	datasource_timestamp`
 
-func loadMetadata(ctx context.Context, db *sql.DB, papers map[string]*domain.Paper, uuids []string) error {
-	rows, err := db.QueryContext(ctx, `SELECT `+metadataColumns+` FROM public.metadata WHERE uuid_paper = ANY($1::uuid[])`, pgtype.FlatArray[string](uuids))
+func loadMetadata(ctx context.Context, db *pgxpool.Pool, papers map[string]*domain.Paper, uuids []string) error {
+	rows, err := db.Query(ctx, `SELECT `+metadataColumns+` FROM public.metadata WHERE uuid_paper = ANY($1::uuid[])`, uuids)
 	if err != nil {
 		return err
 	}
@@ -51,14 +51,13 @@ func loadMetadata(ctx context.Context, db *sql.DB, papers map[string]*domain.Pap
 	return rows.Err()
 }
 
-func scanMetadata(row rowScanner) (string, domain.Metadata, error) {
-	pgTypes := pgtype.NewMap()
+func scanMetadata(row pgx.Row) (string, domain.Metadata, error) {
 	var d metadataDAO
 	err := row.Scan(
 		&d.PaperUUID, &d.Publisher, &d.JournalTitle, &d.JournalAbbrev,
 		&d.BookTitle, &d.SeriesTitle, &d.EventTitle, &d.EventLocation, &d.Institution,
 		&d.Pages, &d.Volume, &d.Issue,
-		pgTypes.SQLScanner(&d.ISBN), pgTypes.SQLScanner(&d.ISSN), pgTypes.SQLScanner(&d.References),
+		&d.ISBN, &d.ISSN, &d.References,
 		&d.License, &d.Copyright, &d.Funding, &d.DataSource, &d.DataSourceTimestamp,
 	)
 	if err != nil {
@@ -67,12 +66,12 @@ func scanMetadata(row rowScanner) (string, domain.Metadata, error) {
 	return d.PaperUUID, d.domain(), nil
 }
 
-func insertMetadata(ctx context.Context, tx *sql.Tx, uuid string, metadata domain.Metadata) error {
+func insertMetadata(ctx context.Context, tx pgx.Tx, uuid string, metadata domain.Metadata) error {
 	timestamp, err := timestampValue(metadata.DataSourceTimestamp)
 	if err != nil {
 		return fmt.Errorf("parse data source timestamp: %w", err)
 	}
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		INSERT INTO public.metadata (
 			uuid_paper, publisher, journal_title, journal_abbrev, book_title, series_title, event_title,
 			event_place, institution, pages, volume, issue, isbn, issn, "reference", license, copyright,
@@ -92,9 +91,9 @@ func insertMetadata(ctx context.Context, tx *sql.Tx, uuid string, metadata domai
 		nullString(metadata.Pages),
 		nullString(metadata.Volume),
 		nullString(metadata.Issue),
-		pgtype.FlatArray[string](metadata.ISBN),
-		pgtype.FlatArray[string](metadata.ISSN),
-		pgtype.FlatArray[string](metadata.References),
+		metadata.ISBN,
+		metadata.ISSN,
+		metadata.References,
 		nullString(metadata.License),
 		nullString(metadata.Copyright),
 		nullString(metadata.Funding),

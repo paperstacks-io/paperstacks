@@ -66,10 +66,10 @@ behavior is defined.
 Paper persistence uses separate DAO structs for SQL nullability and foreign keys;
 the domain model stays database-independent. The existing `DATABASE_URL` pool is
 shared and checked at startup. Paper, metadata, and ordered author associations
-are written in one transaction. Updates reject conflicting UUIDs. Deletion keeps
+are written in one transaction. Updates reject conflicting UUIDs. Updates keep
 authors used by other papers and removes only unreferenced authors/affiliations.
-The repository retains its existing permanent-delete behavior; the soft-delete
-schema does not automatically change the application API's deletion semantics.
+Deletion sets deleted_at and preserves related data. Reads and updates exclude deleted papers. The soft-delete
+cleanup procedure permanently removes retained papers after 30 days.
 
 Run `make test` in `backend/` for database-independent repository unit tests.
 For real PostgreSQL tests, initialize a separate test database, set

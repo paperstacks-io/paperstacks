@@ -2,10 +2,11 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -25,7 +26,7 @@ const paperColumns = `
 	pdf_url
 `
 
-func scanPapers(rows *sql.Rows) ([]domain.Paper, error) {
+func scanPapers(rows pgx.Rows) ([]domain.Paper, error) {
 	papers := make([]domain.Paper, 0)
 	for rows.Next() {
 		paper, err := scanPaper(rows)
@@ -41,17 +42,12 @@ func scanPapers(rows *sql.Rows) ([]domain.Paper, error) {
 	return papers, nil
 }
 
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanPaper(row rowScanner) (domain.Paper, error) {
-	pgTypes := pgtype.NewMap()
+func scanPaper(row pgx.Row) (domain.Paper, error) {
 	var d paperDAO
 	err := row.Scan(
 		&d.UUID, &d.DOI, &d.Title, &d.TitleShort,
 		&d.Year, &d.Month, &d.Day, &d.Type, &d.PublicationStatus,
-		&d.StatusTimestamp, &d.Abstract, pgTypes.SQLScanner(&d.Keywords), &d.PDFURL,
+		&d.StatusTimestamp, &d.Abstract, &d.Keywords, &d.PDFURL,
 	)
 	if err != nil {
 		return domain.Paper{}, err
@@ -59,12 +55,12 @@ func scanPaper(row rowScanner) (domain.Paper, error) {
 	return d.domain(), nil
 }
 
-func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Paper) error {
+func updatePaper(ctx context.Context, tx pgx.Tx, uuid string, paper domain.Paper) error {
 	args, err := paperArguments(uuid, paper)
 	if err != nil {
-		return wrapError("prepare paper update", err)
+		return fmt.Errorf("prepare paper update: %w", err)
 	}
-	result, err := tx.ExecContext(ctx, `
+	result, err := tx.Exec(ctx, `
 		UPDATE public.paper
 		SET doi = $2,
 			title = $3,
@@ -78,14 +74,15 @@ func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Pape
 			abstract = $11,
 			keywords = $12,
 			pdf_url = $13
-		WHERE uuid = $1`, args...)
+		WHERE uuid = $1 AND deleted_at IS NULL`, args...)
 	if err != nil {
-		return wrapError("update paper", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "paper_doi_uq" {
+			return fmt.Errorf("update paper: %w: %w", domain.ErrPaperAlreadyExists, err)
+		}
+		return fmt.Errorf("update paper: %w", err)
 	}
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return wrapError("check updated paper", err)
-	}
+	changed := result.RowsAffected()
 	if changed == 0 {
 		return domain.ErrPaperNotFound
 	}
@@ -93,12 +90,12 @@ func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Pape
 	return nil
 }
 
-func insertPaper(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
+func insertPaper(ctx context.Context, tx pgx.Tx, paper domain.Paper) error {
 	args, err := paperArguments(paper.UUID, paper)
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
 			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_url
@@ -124,7 +121,7 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		nullString(paper.PublicationStatus),
 		statusTimestamp,
 		nullString(paper.Abstract),
-		pgtype.FlatArray[string](paper.Keywords),
+		paper.Keywords,
 		nullString(paper.PDFURL),
 	}, nil
 }
