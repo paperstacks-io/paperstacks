@@ -41,7 +41,7 @@ func (s *PaperService) UploadPDF(
 		return domain.PDF{}, fmt.Errorf("failed to store physical file: %w", err)
 	}
 
-	paper.PDFURL = storageKey
+	paper.PDFStorageKey = storageKey
 	err = s.Update(ctx, paper.UUID, paper)
 	if err != nil {
 		return domain.PDF{}, fmt.Errorf("failed to update paper PDF key: %w", err)

@@ -118,8 +118,8 @@ func TestUploadPDFSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if paper.PDFURL != doc.Key {
-		t.Errorf("stored PDFURL = %q, want %q", paper.PDFURL, doc.Key)
+	if paper.PDFStorageKey != doc.Key {
+		t.Errorf("stored PDFStorageKey = %q, want %q", paper.PDFStorageKey, doc.Key)
 	}
 
 	object, err := service.DownloadPDF(ctx, doc.Key)
