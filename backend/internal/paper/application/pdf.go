@@ -13,7 +13,8 @@ func (s *PaperService) UploadPDF(
 	ctx context.Context,
 	opts domain.UploadPDFOptions,
 ) (domain.PDF, error) {
-	if _, err := s.GetByUUID(ctx, opts.PaperUUID); err != nil {
+	paper, err := s.GetByUUID(ctx, opts.PaperUUID)
+	if err != nil {
 		return domain.PDF{}, err
 	}
 
@@ -27,16 +28,23 @@ func (s *PaperService) UploadPDF(
 	}
 
 	trimmedFileName := strings.TrimSpace(opts.FileName)
-	storageKey := fmt.Sprintf("pdf/%s/main.pdf", opts.PaperUUID)
+	storageKey := fmt.Sprintf("pdf/%s.pdf", opts.PaperUUID)
 
 	_, err = s.storage.Put(ctx, objectstorage.PutObjectInput{
 		Key:         storageKey,
 		Body:        pdfReader,
 		Size:        pdfSize,
 		ContentType: domain.PDFContentType,
+		Metadata:    map[string]string{"filename": trimmedFileName},
 	})
 	if err != nil {
 		return domain.PDF{}, fmt.Errorf("failed to store physical file: %w", err)
+	}
+
+	paper.PDFURL = storageKey
+	err = s.Update(ctx, paper.UUID, paper)
+	if err != nil {
+		return domain.PDF{}, fmt.Errorf("failed to update paper PDF key: %w", err)
 	}
 
 	return domain.PDF{
@@ -49,10 +57,8 @@ func (s *PaperService) UploadPDF(
 	}, nil
 }
 
-func (s *PaperService) DownloadPDF(ctx context.Context, paperUUID string) (*objectstorage.Object, error) {
-	key := fmt.Sprintf("pdf/%s/main.pdf", paperUUID)
-
-	object, err := s.storage.Get(ctx, key)
+func (s *PaperService) DownloadPDF(ctx context.Context, storageKey string) (*objectstorage.Object, error) {
+	object, err := s.storage.Get(ctx, storageKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download PDF: %w", err)
 	}
@@ -61,7 +67,7 @@ func (s *PaperService) DownloadPDF(ctx context.Context, paperUUID string) (*obje
 }
 
 func (s *PaperService) HasPDF(ctx context.Context, paperUUID string) (bool, error) {
-	key := fmt.Sprintf("pdf/%s/main.pdf", paperUUID)
+	key := fmt.Sprintf("pdf/%s.pdf", paperUUID)
 
 	return s.storage.Exists(ctx, key)
 }

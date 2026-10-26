@@ -12,8 +12,13 @@ import (
 	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
 
+type storedPDF struct {
+	body     []byte
+	metadata map[string]string
+}
+
 type mockObjectStorage struct {
-	objects map[string][]byte
+	objects map[string]storedPDF
 	err     error
 }
 
@@ -25,11 +30,12 @@ func (m mockObjectStorage) Put(ctx context.Context, input objectstorage.PutObjec
 	if err != nil {
 		return objectstorage.ObjectInfo{}, err
 	}
-	m.objects[input.Key] = data
+	m.objects[input.Key] = storedPDF{body: data, metadata: input.Metadata}
 	return objectstorage.ObjectInfo{
 		Key:         input.Key,
 		Size:        input.Size,
 		ContentType: input.ContentType,
+		Metadata:    input.Metadata,
 	}, nil
 }
 
@@ -41,7 +47,7 @@ func (m mockObjectStorage) Get(ctx context.Context, key string) (*objectstorage.
 	if !ok {
 		return nil, objectstorage.ErrObjectNotFound
 	}
-	return &objectstorage.Object{Body: io.NopCloser(bytes.NewReader(data))}, nil
+	return &objectstorage.Object{Body: io.NopCloser(bytes.NewReader(data.body)), Info: objectstorage.ObjectInfo{Metadata: data.metadata}}, nil
 }
 
 func (m mockObjectStorage) Delete(ctx context.Context, key string) error {
@@ -56,16 +62,19 @@ func (m mockObjectStorage) Exists(ctx context.Context, key string) (bool, error)
 func setupPDFTestService(t *testing.T) (*PaperService, *paperMemory.Repository) {
 	t.Helper()
 	paperRepo := paperMemory.NewRepository()
-	return NewPaperService(paperRepo, mockObjectStorage{objects: make(map[string][]byte)}), paperRepo
+	return NewPaperService(paperRepo, mockObjectStorage{objects: make(map[string]storedPDF)}), paperRepo
 }
 
 func TestUploadPDFSuccess(t *testing.T) {
 	service, paperRepo := setupPDFTestService(t)
+	const paperUUID = "a4b065f1-1b88-4f50-a7fe-1177f3489fcf"
 
 	ctx := context.Background()
 
 	_, err := paperRepo.Save(ctx, domain.Paper{
-		UUID: "paper-uuid-xyz",
+		UUID:  paperUUID,
+		DOI:   "10.1000/test-paper",
+		Title: "Test Paper",
 	})
 	if err != nil {
 		t.Fatalf("failed to save paper: %v", err)
@@ -75,7 +84,7 @@ func TestUploadPDFSuccess(t *testing.T) {
 	r := bytes.NewReader(pdfContent)
 
 	opts := domain.UploadPDFOptions{
-		PaperUUID: "paper-uuid-xyz",
+		PaperUUID: paperUUID,
 		FileName:  "  test_document.pdf  ",
 		UserID:    "test-user-123",
 		File:      r,
@@ -87,14 +96,14 @@ func TestUploadPDFSuccess(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	if doc.Key != "pdf/paper-uuid-xyz/main.pdf" {
-		t.Errorf("expected doc.Key to be 'pdf/paper-uuid-xyz/main.pdf', got: %s", doc.Key)
+	if doc.Key != "pdf/"+paperUUID+".pdf" {
+		t.Errorf("unexpected storage key: %s", doc.Key)
 	}
 	if doc.UserID != "test-user-123" {
 		t.Errorf("expected UploaderUUID to be 'test-user-123', got: %s", doc.UserID)
 	}
-	if doc.PaperUUID != "paper-uuid-xyz" {
-		t.Errorf("expected PaperUUID to be 'paper-uuid-xyz', got: %s", doc.PaperUUID)
+	if doc.PaperUUID != paperUUID {
+		t.Errorf("expected PaperUUID to be %q, got: %s", paperUUID, doc.PaperUUID)
 	}
 	if doc.FileName != "test_document.pdf" {
 		t.Errorf("expected FileName to be trimmed to 'test_document.pdf', got: %s", doc.FileName)
@@ -104,6 +113,22 @@ func TestUploadPDFSuccess(t *testing.T) {
 	}
 	if doc.Size != int64(len(pdfContent)) {
 		t.Errorf("expected Size to be %d, got: %d", len(pdfContent), doc.Size)
+	}
+	paper, err := paperRepo.GetByUUID(ctx, paperUUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if paper.PDFURL != doc.Key {
+		t.Errorf("stored PDFURL = %q, want %q", paper.PDFURL, doc.Key)
+	}
+
+	object, err := service.DownloadPDF(ctx, doc.Key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer object.Body.Close()
+	if got := object.Info.Metadata["filename"]; got != "test_document.pdf" {
+		t.Fatalf("downloaded filename = %q, want test_document.pdf", got)
 	}
 
 }
@@ -187,8 +212,9 @@ type infiniteZeroReader struct{}
 func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 	service, repo := setupPDFTestService(t)
 	ctx := context.Background()
-	for i, paperUUID := range []string{"paper-one", "paper-two"} {
-		if _, err := repo.Save(ctx, domain.Paper{UUID: paperUUID, DOI: "10.1000/same-paper"}); err != nil {
+	paperUUIDs := []string{"a4b065f1-1b88-4f50-a7fe-1177f3489fcf", "a4b065f1-1b88-4f50-a7fe-1177f3489fd0"}
+	for i, paperUUID := range paperUUIDs {
+		if _, err := repo.Save(ctx, domain.Paper{UUID: paperUUID, DOI: "10.1000/same-paper", Title: "Test Paper"}); err != nil {
 			t.Fatal(err)
 		}
 		if exists, err := service.HasPDF(ctx, paperUUID); err != nil || exists {
@@ -202,15 +228,15 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if doc.Key != "pdf/"+paperUUID+"/main.pdf" {
+		if doc.Key != "pdf/"+paperUUID+".pdf" {
 			t.Fatalf("unexpected storage key: %s", doc.Key)
 		}
 	}
-	for _, paperUUID := range []string{"paper-one", "paper-two"} {
+	for _, paperUUID := range paperUUIDs {
 		if exists, err := service.HasPDF(ctx, paperUUID); err != nil || !exists {
 			t.Fatalf("HasPDF after upload = %v, %v", exists, err)
 		}
-		object, err := service.DownloadPDF(ctx, paperUUID)
+		object, err := service.DownloadPDF(ctx, "pdf/"+paperUUID+".pdf")
 		if err != nil {
 			t.Fatal(err)
 		}
