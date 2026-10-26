@@ -122,7 +122,7 @@ func TestUploadPDFSuccess(t *testing.T) {
 		t.Errorf("stored PDFStorageKey = %q, want %q", paper.PDFStorageKey, doc.Key)
 	}
 
-	object, err := service.DownloadPDF(ctx, doc.Key)
+	object, err := service.OpenPDF(ctx, doc.Key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestPDFsAreStoredByPaperUUID(t *testing.T) {
 		if exists, err := service.PDFExists(ctx, "pdf/"+paperUUID+".pdf"); err != nil || !exists {
 			t.Fatalf("PDFExists after upload = %v, %v", exists, err)
 		}
-		object, err := service.DownloadPDF(ctx, "pdf/"+paperUUID+".pdf")
+		object, err := service.OpenPDF(ctx, "pdf/"+paperUUID+".pdf")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -275,8 +275,8 @@ func TestPDFStorageErrors(t *testing.T) {
 	}); !errors.Is(err, wantErr) {
 		t.Fatalf("UploadPDF error = %v, want %v", err, wantErr)
 	}
-	if _, err := service.DownloadPDF(ctx, "paper-one"); !errors.Is(err, wantErr) {
-		t.Fatalf("DownloadPDF error = %v, want %v", err, wantErr)
+	if _, err := service.OpenPDF(ctx, "paper-one"); !errors.Is(err, wantErr) {
+		t.Fatalf("OpenPDF error = %v, want %v", err, wantErr)
 	}
 	if _, err := service.PDFExists(ctx, "pdf/paper-one.pdf"); !errors.Is(err, wantErr) {
 		t.Fatalf("PDFExists error = %v, want %v", err, wantErr)

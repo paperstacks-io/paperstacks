@@ -57,10 +57,11 @@ func (s *PaperService) UploadPDF(
 	}, nil
 }
 
-func (s *PaperService) DownloadPDF(ctx context.Context, storageKey string) (*objectstorage.Object, error) {
+// OpenPDF opens a PDF from object storage. The caller must close the returned object.Body.
+func (s *PaperService) OpenPDF(ctx context.Context, storageKey string) (*objectstorage.Object, error) {
 	object, err := s.storage.Get(ctx, storageKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to download PDF: %w", err)
+		return nil, fmt.Errorf("failed to open PDF: %w", err)
 	}
 
 	return object, nil
