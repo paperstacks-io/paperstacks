@@ -70,8 +70,8 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 		{name: "missing paper", wantStatus: http.StatusNotFound, field: "file", missing: true, want: "paper could not be found"},
 		{name: "unauthenticated", wantStatus: http.StatusUnauthorized, noAuth: true, want: "Please log in"},
 		{name: "forbidden", wantStatus: http.StatusForbidden, forbidden: true, want: "not allowed"},
-		{name: "paper not in stack", wantStatus: http.StatusNotFound, notInStack: true, want: "does not belong"},
-		{name: "missing stack", wantStatus: http.StatusNotFound, missingStack: true, want: "stack could not be found"},
+		{name: "paper not in stack", wantStatus: http.StatusOK, notInStack: true, field: "file", content: "%PDF-1.4\ncontent"},
+		{name: "missing stack", wantStatus: http.StatusInternalServerError, missingStack: true, want: "PDF section could not be loaded"},
 		{name: "storage error", wantStatus: http.StatusInternalServerError, field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
 		{name: "file too large", wantStatus: http.StatusRequestEntityTooLarge, field: "file", content: "%PDF-" + strings.Repeat("x", paperDomain.PDFMaxFileSize), want: "no larger than 10 MiB"},
 		{name: "request too large", wantStatus: http.StatusRequestEntityTooLarge, field: "file", content: strings.Repeat("x", paperDomain.PDFMaxFileSize+int(oneMiB)), want: "no larger than 10 MiB"},
@@ -150,36 +150,37 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			if strings.Contains(response, "hx-swap-oob") || strings.Contains(response, "Paper Metadata") {
 				t.Fatalf("response contains unrelated content: %s", response)
 			}
-			unavailable := tt.noAuth || tt.forbidden || tt.notInStack || tt.missingStack || tt.missing
-			if strings.Contains(response, "<form") == unavailable {
-				t.Fatalf("unexpected upload controls for unavailable=%v: %s", unavailable, response)
+			if !strings.Contains(response, "<form") ||
+				!strings.Contains(response, `hx-target="#paper-pdf-`+paperUUID+`"`) ||
+				!strings.Contains(response, `hx-swap="outerHTML"`) {
+				t.Fatalf("form does not replace the PDF section: %s", response)
 			}
-			if tt.wantStatus != http.StatusOK && !strings.Contains(response, `role="alert"`) {
-				t.Fatalf("error is not announced inline: %s", response)
+			if strings.Contains(response, `type="file"`) != (tt.wantStatus != http.StatusOK) ||
+				strings.Contains(response, "Download") != (tt.wantStatus == http.StatusOK) {
+				t.Fatalf("unexpected PDF controls: %s", response)
 			}
-			if !unavailable {
-				if strings.Contains(response, `type="file"`) != (paper.PDFStorageKey == "") ||
-					strings.Contains(response, "Download") != (paper.PDFStorageKey != "") {
-					t.Fatalf("PDF controls do not reflect current attachment: %s", response)
-				}
-				if !strings.Contains(response, `hx-target="#paper-pdf-`+paperUUID+`"`) || !strings.Contains(response, `hx-swap="outerHTML"`) {
-					t.Fatalf("form does not replace the PDF section: %s", response)
-				}
-				if tt.wantStatus != http.StatusOK && paper.PDFStorageKey == "" &&
-					!strings.Contains(response, `aria-describedby="paper-pdf-error-`+paperUUID+`"`) {
-					t.Fatalf("file input is not linked to its error: %s", response)
-				}
+			if tt.wantStatus != http.StatusOK &&
+				(!strings.Contains(response, `aria-invalid="true"`) ||
+					!strings.Contains(response, `aria-describedby="paper-pdf-error-`+paperUUID+`"`) ||
+					!strings.Contains(response, `class="validator-hint"`)) {
+				t.Fatalf("file input is missing inline validation feedback: %s", response)
 			}
-			if tt.name == "success" {
+			if tt.wantStatus == http.StatusOK {
 				if paper.PDFStorageKey != "pdf/"+paperUUID+".pdf" || string(store.body) != tt.content ||
 					store.input.Metadata["filename"] != "paper.pdf" || store.input.Size != int64(len(tt.content)) ||
 					store.input.ContentType != paperDomain.PDFContentType {
 					t.Fatalf("PDF upload did not preserve content, metadata, or attachment: paper=%+v, input=%+v", paper, store.input)
 				}
-			} else if !tt.existingPDF && paper.PDFStorageKey != "" {
-				t.Fatalf("failed upload attached PDF: %q", paper.PDFStorageKey)
+			} else {
+				wantKey := ""
+				if tt.existingPDF {
+					wantKey = "pdf/existing.pdf"
+				}
+				if paper.PDFStorageKey != wantKey {
+					t.Fatalf("failed upload changed PDF key: got %q, want %q", paper.PDFStorageKey, wantKey)
+				}
 			}
-			if (tt.noAuth || tt.forbidden || tt.notInStack || tt.missingStack) && store.input.Key != "" {
+			if (tt.noAuth || tt.forbidden || tt.missingStack) && store.input.Key != "" {
 				t.Fatal("unauthorized upload reached object storage")
 			}
 		})
