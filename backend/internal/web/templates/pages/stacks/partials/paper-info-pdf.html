@@ -1,6 +1,5 @@
 {{ define "stacks/partials/paper-info-pdf" }}
 <div id="paper-pdf-{{ .UUID }}">
-  {{ if not .PDFUnavailable }}
   <form
     hx-post="/app/stacks/detail/{{ .StackUUID }}/papers/{{ .UUID }}/upload-pdf"
     hx-encoding="multipart/form-data"
@@ -30,11 +29,9 @@
         onchange="if (this.files.length) this.form.requestSubmit()"
       />
       <div paper-pdf-error-{{ .UUID }} class="validator-hint">{{ .PDFError }}</div>
-
       {{ end }}
     </fieldset>
   </form>
-  {{ end }}
 </div>
 
 {{ end }}

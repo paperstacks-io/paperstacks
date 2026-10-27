@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
-	"slices"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -641,7 +640,7 @@ func handlePaperUploadPDF(
 		stackUUID := r.PathValue("stackUUID")
 		paperUUID := r.PathValue("paperUUID")
 		data := paperInfoData{
-			Paper: paperDomain.Paper{UUID: paperUUID}, StackUUID: stackUUID, PDFUnavailable: true,
+			Paper: paperDomain.Paper{UUID: paperUUID}, StackUUID: stackUUID,
 		}
 
 		render := func(status int, message string) {
@@ -652,44 +651,24 @@ func handlePaperUploadPDF(
 				logger.Error("render PDF section", "paperUUID", paperUUID, "error", err.Error())
 			}
 		}
+
 		session, ok := commonauth.SessionFromContext(r.Context())
 		if !ok || session == nil || !session.IsValid {
 			render(http.StatusUnauthorized, "Please log in before uploading a PDF.")
 			return
 		}
+
 		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
 		if err != nil {
-			switch {
-			case errors.Is(err, stackDomain.ErrStackNotFound):
-				render(http.StatusNotFound, "The requested stack could not be found.")
-			case errors.Is(err, paperDomain.ErrPaperNotFound):
-				render(http.StatusNotFound, "The requested paper could not be found.")
-			default:
-				logger.Error("get stack before PDF upload", "stackUUID", stackUUID, "error", err.Error())
-				render(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
-			}
+			logger.Error("get stack before PDF upload", "stackUUID", stackUUID, "error", err.Error())
+			render(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
 			return
 		}
+
 		if stack.Owner.ExternalID != session.UserID {
 			render(http.StatusForbidden, "You are not allowed to upload PDFs to this stack.")
 			return
 		}
-		if !slices.ContainsFunc(stack.Papers, func(paper paperDomain.Paper) bool { return paper.UUID == paperUUID }) {
-			render(http.StatusNotFound, "The requested paper does not belong to this stack.")
-			return
-		}
-		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
-		if err != nil {
-			data.UUID = paperUUID
-			if errors.Is(err, paperDomain.ErrPaperNotFound) {
-				render(http.StatusNotFound, "The requested paper could not be found.")
-			} else {
-				logger.Error("get paper before PDF upload", "paperUUID", paperUUID, "error", err.Error())
-				render(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
-			}
-			return
-		}
-		data.PDFUnavailable = false
 
 		r.Body = http.MaxBytesReader(w, r.Body, paperDomain.PDFMaxFileSize+oneMiB)
 		if err := r.ParseMultipartForm(oneMiB); err != nil {
@@ -713,7 +692,7 @@ func handlePaperUploadPDF(
 		}
 		defer file.Close()
 
-		storageKey, err := paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
+		_, err = paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
 			PaperUUID: paperUUID,
 			FileName:  header.Filename,
 			File:      file,
@@ -734,7 +713,14 @@ func handlePaperUploadPDF(
 			}
 			return
 		}
-		data.PDFStorageKey = storageKey
+
+		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("get paper after PDF upload", "paperUUID", paperUUID, "error", err.Error())
+			render(http.StatusInternalServerError, "The PDF section could not be loaded after PDF upload.")
+			return
+		}
+
 		render(http.StatusOK, "")
 	})
 }
