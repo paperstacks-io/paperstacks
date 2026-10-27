@@ -97,43 +97,4 @@
   </fieldset>
 </div>
 
-{{ template "stacks/partials/paper-info-pdf" . }} {{ end }} {{ define "stacks/partials/paper-info-pdf" }}
-<div id="paper-pdf-{{ .UUID }}">
-  {{ if not .PDFUnavailable }}
-  <form
-    hx-post="/app/stacks/detail/{{ .StackUUID }}/papers/{{ .UUID }}/upload-pdf"
-    hx-encoding="multipart/form-data"
-    hx-target="#paper-pdf-{{ .UUID }}"
-    hx-swap="outerHTML"
-  >
-    <fieldset class="fieldset">
-      <label class="label" for="paper-pdf-file-{{ .UUID }}">PDF</label>
-      {{ if .PDFStorageKey }}
-      <a class="btn btn-sm join-item"> Download </a>
-      {{ else }}
-      <input
-        id="paper-pdf-file-{{ .UUID }}"
-        name="file"
-        type="file"
-        class="file-input file-input-sm validator"
-        accept=".pdf,application/pdf"
-        required
-        {{
-        if
-        .PDFError
-        }}aria-invalid="true"
-        aria-describedby="paper-pdf-error-{{ .UUID }}"
-        {{
-        end
-        }}
-        onchange="if (this.files.length) this.form.requestSubmit()"
-      />
-      <div paper-pdf-error-{{ .UUID }} class="validator-hint">{{ .PDFError }}</div>
-
-      {{ end }}
-    </fieldset>
-  </form>
-  {{ end }}
-</div>
-
-{{ end }}
+{{ template "stacks/partials/paper-info-pdf" . }} {{ end }}
