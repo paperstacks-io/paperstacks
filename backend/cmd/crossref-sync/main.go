@@ -16,10 +16,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/importer"
@@ -87,6 +89,22 @@ func run(ctx context.Context) error {
 		StateDir: *state,
 		LogDir:   logDir,
 	}
+	printConfig(os.Stdout, cfg)
+
 	client := api.NewClient(api.DefaultBaseURL, *mailto, nil)
 	return importer.NewUpdater(cfg, log, client, importer.NoopWriter{}).Run(ctx)
+}
+
+func printConfig(w io.Writer, cfg importer.UpdaterConfig) {
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+
+	fmt.Fprintln(tw)
+	fmt.Fprintln(tw, "  Filter:\t"+cfg.Filter)
+	fmt.Fprintln(tw, "  From:\t"+cfg.From.Format("2006-01-02"))
+	fmt.Fprintln(tw, "  Until:\t"+cfg.Until.Format("2006-01-02"))
+	fmt.Fprintln(tw, "  StateDir:\t"+cfg.StateDir)
+	fmt.Fprintln(tw, "  LogDir:\t"+cfg.LogDir)
+	fmt.Fprintln(tw)
+
+	_ = tw.Flush()
 }
