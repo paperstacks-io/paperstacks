@@ -1,18 +1,24 @@
 package web
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"html/template"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
+	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -21,8 +27,210 @@ import (
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
 
-func newTestStackService() *stackApp.StackService {
-	return stackApp.NewStackService(stackMemory.NewRepository(), nil)
+type uploadPDFTestStore struct {
+	objectstorage.Store
+	input objectstorage.PutObjectInput
+	body  []byte
+	err   error
+}
+
+func (s *uploadPDFTestStore) Put(_ context.Context, input objectstorage.PutObjectInput) (objectstorage.ObjectInfo, error) {
+	s.input = input
+	var err error
+	s.body, err = io.ReadAll(input.Body)
+	if err != nil {
+		return objectstorage.ObjectInfo{}, err
+	}
+	return objectstorage.ObjectInfo{}, s.err
+}
+
+func TestHandlePaperUploadPDF(t *testing.T) {
+	const paperUUID = "11111111-1111-4111-8111-111111111111"
+	const stackURL = "/app/stacks/detail/22222222-2222-4222-8222-222222222222"
+	tests := []struct {
+		name         string
+		content      string
+		field        string
+		missing      bool
+		noAuth       bool
+		forbidden    bool
+		notInStack   bool
+		missingStack bool
+		existingPDF  bool
+		malformed    bool
+		wantStatus   int
+		storeErr     error
+		want         string
+	}{
+		{name: "success", wantStatus: http.StatusOK, field: "file", content: "%PDF-1.4\ncontent", want: ""},
+		{name: "existing PDF with invalid upload", existingPDF: true, wantStatus: http.StatusUnprocessableEntity, field: "file", content: "not a PDF", want: "not a valid PDF"},
+		{name: "malformed multipart", malformed: true, wantStatus: http.StatusBadRequest, want: "upload could not be read"},
+		{name: "invalid PDF", wantStatus: http.StatusUnprocessableEntity, field: "file", content: "not a PDF", want: "not a valid PDF"},
+		{name: "missing file", wantStatus: http.StatusUnprocessableEntity, field: "other", want: "Choose a PDF file"},
+		{name: "missing paper", wantStatus: http.StatusNotFound, field: "file", missing: true, want: "paper could not be found"},
+		{name: "unauthenticated", wantStatus: http.StatusUnauthorized, noAuth: true, want: "Please log in"},
+		{name: "forbidden", wantStatus: http.StatusForbidden, forbidden: true, want: "not allowed"},
+		{name: "paper not in stack", wantStatus: http.StatusOK, notInStack: true, field: "file", content: "%PDF-1.4\ncontent"},
+		{name: "missing stack", wantStatus: http.StatusInternalServerError, missingStack: true, want: "PDF section could not be loaded"},
+		{name: "storage error", wantStatus: http.StatusInternalServerError, field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
+		{name: "file too large", wantStatus: http.StatusRequestEntityTooLarge, field: "file", content: "%PDF-" + strings.Repeat("x", paperDomain.PDFMaxFileSize), want: "no larger than 10 MiB"},
+		{name: "request too large", wantStatus: http.StatusRequestEntityTooLarge, field: "file", content: strings.Repeat("x", paperDomain.PDFMaxFileSize+int(oneMiB)), want: "no larger than 10 MiB"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := paperMemory.NewRepository()
+			if !tt.missing {
+				if _, err := repo.Save(t.Context(), paperDomain.Paper{UUID: paperUUID, Title: "Test paper"}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tt.existingPDF {
+				if err := repo.AttachPDF(t.Context(), paperUUID, "pdf/existing.pdf"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			store := &uploadPDFTestStore{err: tt.storeErr}
+			stackService := stackApp.NewStackService(stackMemory.NewRepository(nil), nil)
+			stack := stackDomain.Stack{
+				UUID:   strings.TrimPrefix(stackURL, "/app/stacks/detail/"),
+				Name:   "Upload stack",
+				Owner:  userDomain.User{ExternalID: "owner"},
+				Papers: []paperDomain.Paper{{UUID: paperUUID}},
+			}
+			if tt.notInStack {
+				stack.Papers = nil
+			}
+			if !tt.missingStack {
+				if err := stackService.Create(t.Context(), stack); err != nil {
+					t.Fatal(err)
+				}
+			}
+			handler := handlePaperUploadPDF(testLogger(), testWebTemplate(t), paperApp.NewPaperService(repo, store), stackService)
+			var body bytes.Buffer
+			writer := multipart.NewWriter(&body)
+			file, err := writer.CreateFormFile(tt.field, "paper.pdf")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := io.WriteString(file, tt.content); err != nil {
+				t.Fatal(err)
+			}
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+			req := httptest.NewRequest(http.MethodPost, stackURL+"/papers/"+paperUUID+"/upload-pdf", &body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			if tt.malformed {
+				req.Header.Set("Content-Type", "multipart/form-data; boundary=wrong-boundary")
+			}
+			req.SetPathValue("stackUUID", stack.UUID)
+			req.SetPathValue("paperUUID", paperUUID)
+			if !tt.noAuth {
+				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{UserID: "owner", IsValid: true}))
+			}
+			if tt.forbidden {
+				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{UserID: "other", IsValid: true}))
+			}
+
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+			if rr.Code != tt.wantStatus || !strings.Contains(rr.Body.String(), tt.want) {
+				t.Fatalf("response = %d %s, want %d containing %q", rr.Code, rr.Body.String(), tt.wantStatus, tt.want)
+			}
+			paper, _ := repo.GetByUUID(t.Context(), paperUUID)
+			response := strings.TrimSpace(rr.Body.String())
+			if !strings.HasPrefix(response, `<div id="paper-pdf-`+paperUUID+`">`) || !strings.HasSuffix(response, "</div>") {
+				t.Fatalf("response is not the PDF section: %s", response)
+			}
+			for _, header := range []string{"HX-Location", "HX-Retarget", "HX-Reswap"} {
+				if rr.Header().Get(header) != "" {
+					t.Fatalf("unexpected %s", header)
+				}
+			}
+			if strings.Contains(response, "hx-swap-oob") || strings.Contains(response, "Paper Metadata") {
+				t.Fatalf("response contains unrelated content: %s", response)
+			}
+			if !strings.Contains(response, "<form") ||
+				!strings.Contains(response, `hx-target="#paper-pdf-`+paperUUID+`"`) ||
+				!strings.Contains(response, `hx-swap="outerHTML"`) {
+				t.Fatalf("form does not replace the PDF section: %s", response)
+			}
+			if strings.Contains(response, `type="file"`) != (tt.wantStatus != http.StatusOK) ||
+				strings.Contains(response, "Download") != (tt.wantStatus == http.StatusOK) {
+				t.Fatalf("unexpected PDF controls: %s", response)
+			}
+			if tt.wantStatus != http.StatusOK &&
+				(!strings.Contains(response, `aria-invalid="true"`) ||
+					!strings.Contains(response, `aria-describedby="paper-pdf-error-`+paperUUID+`"`) ||
+					!strings.Contains(response, `class="validator-hint"`)) {
+				t.Fatalf("file input is missing inline validation feedback: %s", response)
+			}
+			if tt.wantStatus == http.StatusOK {
+				if paper.PDFStorageKey != "pdf/"+paperUUID+".pdf" || string(store.body) != tt.content ||
+					store.input.Metadata["filename"] != "paper.pdf" || store.input.Size != int64(len(tt.content)) ||
+					store.input.ContentType != paperDomain.PDFContentType {
+					t.Fatalf("PDF upload did not preserve content, metadata, or attachment: paper=%+v, input=%+v", paper, store.input)
+				}
+			} else {
+				wantKey := ""
+				if tt.existingPDF {
+					wantKey = "pdf/existing.pdf"
+				}
+				if paper.PDFStorageKey != wantKey {
+					t.Fatalf("failed upload changed PDF key: got %q, want %q", paper.PDFStorageKey, wantKey)
+				}
+			}
+			if (tt.noAuth || tt.forbidden || tt.missingStack) && store.input.Key != "" {
+				t.Fatal("unauthorized upload reached object storage")
+			}
+		})
+	}
+}
+
+func TestPaperInfoUploadURLIncludesStackUUID(t *testing.T) {
+	const stackUUID = "22222222-2222-4222-8222-222222222222"
+	paper := paperDomain.Paper{UUID: "11111111-1111-4111-8111-111111111111", Title: "Test paper"}
+	stackService := newTestStackService(paper)
+	if err := stackService.Create(t.Context(), stackDomain.Stack{
+		UUID: stackUUID, Name: "Upload stack", Papers: []paperDomain.Paper{paper},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	repo := paperMemory.NewRepository()
+	if _, err := repo.Save(t.Context(), paper); err != nil {
+		t.Fatal(err)
+	}
+	tmpl := testWebTemplate(t)
+	detailTmpl, err := pageTemplateSet(tmpl, "stacks/detail")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, handler := range map[string]http.Handler{
+		"detail page":   handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
+		"paper partial": handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
+	} {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/"+stackUUID, nil)
+			req.SetPathValue("uuid", stackUUID)
+			req.SetPathValue("stackUUID", stackUUID)
+			req.SetPathValue("paperUUID", paper.UUID)
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+			want := `hx-post="/app/stacks/detail/` + stackUUID + `/papers/` + paper.UUID + `/upload-pdf"`
+			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), want) {
+				t.Fatalf("response = %d %s, want upload URL %s", rr.Code, rr.Body.String(), want)
+			}
+		})
+	}
+}
+
+func newTestStackService(papers ...paperDomain.Paper) *stackApp.StackService {
+	repo := paperMemory.NewRepository()
+	for _, paper := range papers {
+		_, _ = repo.Save(context.Background(), paper)
+	}
+	paperService := paperApp.NewPaperService(repo, nil)
+	return stackApp.NewStackService(stackMemory.NewRepository(paperService), paperService)
 }
 
 func newTestUserService(users ...userDomain.User) *userApplication.UserService {
@@ -139,7 +347,6 @@ func TestHandleStacksDetailPageRedirectsToStacksPageWhenStackNotFound(t *testing
 func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
-	stackService := newTestStackService()
 	user := userDomain.NewUser("owner-paper-remove", "paper-remove@example.com")
 	stack := stackDomain.NewStack("Paper Remove Stack", user)
 	removedPaperUUID := "11111111-1111-4111-8111-111111111111"
@@ -148,6 +355,7 @@ func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 		{UUID: removedPaperUUID, Title: "Removed Paper"},
 		{UUID: retainedPaperUUID, Title: "Retained Paper"},
 	}
+	stackService := newTestStackService(stack.Papers...)
 	if err := stackService.Create(t.Context(), *stack); err != nil {
 		t.Fatalf("seed stack: %v", err)
 	}

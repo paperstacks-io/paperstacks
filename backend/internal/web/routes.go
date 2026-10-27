@@ -79,6 +79,7 @@ func AddRoute(
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/delete", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/detail/{uuid}/settings/is-public", authenticated(handleStackPublicSettingUpdate(logger, tmpl, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/detail/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
+	mux.Handle(http.MethodPost+" /stacks/detail/{stackUUID}/papers/{paperUUID}/upload-pdf", authenticated(handlePaperUploadPDF(logger, tmpl, paperService, stackService)))
 	mux.Handle(http.MethodDelete+" /stacks/detail/{uuid}/papers/{paperUUID}", authenticated(handleStackPaperRemove(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/search", authenticated(handleStacksSearchByOwner(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPost+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))

@@ -88,6 +88,13 @@ type stacksPageData struct {
 	StacksCountPublic int
 }
 
+type paperInfoData struct {
+	paperDomain.Paper
+	StackUUID      string
+	PDFError       string
+	PDFUnavailable bool
+}
+
 func handleStacksDetailPage(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -119,13 +126,13 @@ func handleStacksDetailPage(
 		data := struct {
 			pageData
 			Stack         stackDomain.Stack
-			SelectedPaper paperDomain.Paper
+			SelectedPaper paperInfoData
 			CreatedAt     string
 			UpdatedAt     string
 		}{
 			pageData:      newPageData(r, hankoAPIURL),
 			Stack:         stack,
-			SelectedPaper: selectedPaper,
+			SelectedPaper: paperInfoData{Paper: selectedPaper, StackUUID: stack.UUID},
 			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
 			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
@@ -363,7 +370,9 @@ func handleStackPaperInfo(
 			return
 		}
 
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paperInfoData{
+			Paper: paper, StackUUID: r.PathValue("stackUUID"),
+		}); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
@@ -618,5 +627,100 @@ func handleStackPublicSettingUpdate(
 		}
 
 		renderSuccessToast(w, tmpl, "Stack changes saved")
+	})
+}
+
+func handlePaperUploadPDF(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stackUUID := r.PathValue("stackUUID")
+		paperUUID := r.PathValue("paperUUID")
+		data := paperInfoData{
+			Paper: paperDomain.Paper{UUID: paperUUID}, StackUUID: stackUUID,
+		}
+
+		render := func(status int, message string) {
+			data.PDFError = message
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(status)
+			if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info-pdf", data); err != nil {
+				logger.Error("render PDF section", "paperUUID", paperUUID, "error", err.Error())
+			}
+		}
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok || session == nil || !session.IsValid {
+			render(http.StatusUnauthorized, "Please log in before uploading a PDF.")
+			return
+		}
+
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			logger.Error("get stack before PDF upload", "stackUUID", stackUUID, "error", err.Error())
+			render(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
+			return
+		}
+
+		if stack.Owner.ExternalID != session.UserID {
+			render(http.StatusForbidden, "You are not allowed to upload PDFs to this stack.")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, paperDomain.PDFMaxFileSize+oneMiB)
+		if err := r.ParseMultipartForm(oneMiB); err != nil {
+			if r.MultipartForm != nil {
+				_ = r.MultipartForm.RemoveAll()
+			}
+			var sizeError *http.MaxBytesError
+			if errors.As(err, &sizeError) {
+				render(http.StatusRequestEntityTooLarge, "Upload a PDF file no larger than 10 MiB.")
+			} else {
+				render(http.StatusBadRequest, "The upload could not be read. Choose a PDF file and try again.")
+			}
+			return
+		}
+		defer r.MultipartForm.RemoveAll()
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			render(http.StatusUnprocessableEntity, "Choose a PDF file to upload.")
+			return
+		}
+		defer file.Close()
+
+		_, err = paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
+			PaperUUID: paperUUID,
+			FileName:  header.Filename,
+			File:      file,
+			Size:      header.Size,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, paperDomain.ErrFileSizeExceeded):
+				render(http.StatusRequestEntityTooLarge, "Upload a PDF file no larger than 10 MiB.")
+			case errors.Is(err, paperDomain.ErrInvalidFileType):
+				render(http.StatusUnprocessableEntity, "The uploaded file is not a valid PDF. Choose a PDF file and try again.")
+			case errors.Is(err, paperDomain.ErrPaperNotFound):
+				data.PDFUnavailable = true
+				render(http.StatusNotFound, "The requested paper could not be found.")
+			default:
+				logger.Error("upload paper PDF", "paperUUID", paperUUID, "error", err.Error())
+				render(http.StatusInternalServerError, "The PDF could not be uploaded. Choose the file again to retry.")
+			}
+			return
+		}
+
+		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("get paper after PDF upload", "paperUUID", paperUUID, "error", err.Error())
+			render(http.StatusInternalServerError, "The PDF section could not be loaded after PDF upload.")
+			return
+		}
+
+		render(http.StatusOK, "")
 	})
 }

@@ -20,7 +20,7 @@ import (
 )
 
 func newStackService() *stackApplication.StackService {
-	return stackApplication.NewStackService(stackMemory.NewRepository(), nil)
+	return stackApplication.NewStackService(stackMemory.NewRepository(nil), nil)
 }
 
 func TestGetUserByID(t *testing.T) {

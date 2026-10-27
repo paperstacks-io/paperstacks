@@ -45,7 +45,7 @@ func (f fakePaperGetter) Create(_ context.Context, paper paperDomain.Paper) (pap
 }
 
 func newTestStackService() *StackService {
-	return NewStackService(memory.NewRepository(), fakePaperGetter{
+	return NewStackService(memory.NewRepository(nil), fakePaperGetter{
 		papers: map[string]paperDomain.Paper{
 			existingPaperUUID: {
 				UUID:  existingPaperUUID,
@@ -139,7 +139,7 @@ func TestEnsureDefaultCreatesOnePrivateEmptyStack(t *testing.T) {
 func TestEnsureDefaultAcceptsConcurrentCreation(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(duplicateDefaultStackRepository{Repository: memory.NewRepository()}, nil)
+	service := NewStackService(duplicateDefaultStackRepository{Repository: memory.NewRepository(nil)}, nil)
 
 	if err := service.EnsureDefault(context.Background(), userDomain.User{ExternalID: "default-user"}); err != nil {
 		t.Fatalf("EnsureDefault() error = %v, want nil", err)

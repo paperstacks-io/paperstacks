@@ -50,7 +50,7 @@ func startApplication(t *testing.T) testApplication {
 	api := http.NewServeMux()
 	paperService := application.NewPaperService(memory.NewRepository(), nil)
 	userRepo := userMemory.NewRepository()
-	stackService := stackApplication.NewStackService(stackMemory.NewRepository(), paperService)
+	stackService := stackApplication.NewStackService(stackMemory.NewRepository(paperService), paperService)
 	userService := userApplication.NewUserService(userRepo)
 	sessionService := noopSessionService{}
 	server.AddRoute(root, context.Background(), logger, sessionService)
