@@ -9,28 +9,33 @@
     <fieldset class="fieldset">
       <label class="label" for="paper-pdf-file-{{ .UUID }}">PDF</label>
       {{ if .PDFStorageKey }}
-      <a class="btn btn-sm join-item" href="/app/papers/{{ .UUID }}/pdf" onclick="event.stopPropagation()">
-        Download
-      </a>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <a class="btn btn-sm join-item" href="/app/papers/{{ .UUID }}/pdf" onclick="event.stopPropagation()">
+          Download
+        </a>
+        <button
+          class="btn btn-sm join-item"
+          type="button"
+          hx-delete="/app/stacks/{{ .StackUUID }}/papers/{{ .UUID }}/pdf"
+          hx-target="#paper-pdf-{{ .UUID }}"
+          hx-swap="outerHTML"
+          hx-disable="this"
+          hx-confirm="Are you sure you want to remove the PDF from this paper?"
+          onclick="event.stopPropagation()"
+        >
+          Remove
+        </button>
+      </div>
       {{ else }}
       <input
         id="paper-pdf-file-{{ .UUID }}"
         name="file"
         type="file"
-        class="file-input file-input-sm validator"
+        class="file-input file-input-sm"
         accept=".pdf,application/pdf"
         required
-        {{
-        if
-        .PDFError
-        }}aria-invalid="true"
-        aria-describedby="paper-pdf-error-{{ .UUID }}"
-        {{
-        end
-        }}
         onchange="if (this.files.length) this.form.requestSubmit()"
       />
-      <div paper-pdf-error-{{ .UUID }} class="validator-hint">{{ .PDFError }}</div>
       {{ end }}
     </fieldset>
   </form>
