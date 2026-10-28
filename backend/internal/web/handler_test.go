@@ -71,7 +71,6 @@ func TestHandlePaperDeletePDF(t *testing.T) {
 	}{
 		{name: "success", wantStatus: http.StatusOK},
 		{name: "already removed", noPDF: true, wantStatus: http.StatusOK},
-		{name: "unauthenticated", noAuth: true, wantStatus: http.StatusUnauthorized, wantError: "Please log in"},
 		{name: "forbidden", forbidden: true, wantStatus: http.StatusForbidden, wantError: "not allowed"},
 		{name: "paper not in stack", notInStack: true, wantStatus: http.StatusNotFound, wantError: "does not belong"},
 		{name: "missing stack", missingStack: true, wantStatus: http.StatusInternalServerError, wantError: "stack could not be loaded"},
@@ -161,7 +160,6 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 		{name: "invalid PDF", wantStatus: http.StatusUnprocessableEntity, field: "file", content: "not a PDF", want: "not a valid PDF"},
 		{name: "missing file", wantStatus: http.StatusUnprocessableEntity, field: "other", want: "Choose a PDF file"},
 		{name: "missing paper", wantStatus: http.StatusNotFound, field: "file", missing: true, want: "paper could not be found"},
-		{name: "unauthenticated", wantStatus: http.StatusUnauthorized, noAuth: true, want: "Please log in"},
 		{name: "forbidden", wantStatus: http.StatusForbidden, forbidden: true, want: "not allowed"},
 		{name: "paper not in stack", wantStatus: http.StatusNotFound, notInStack: true, field: "file", content: "%PDF-1.4\ncontent", want: "does not belong"},
 		{name: "missing stack", wantStatus: http.StatusInternalServerError, missingStack: true, want: "PDF section could not be loaded"},

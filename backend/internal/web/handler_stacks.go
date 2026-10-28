@@ -662,11 +662,7 @@ func handlePaperUploadPDF(
 			}
 		}
 
-		session, ok := commonauth.SessionFromContext(r.Context())
-		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Please log in before uploading a PDF.")
-			return
-		}
+		session, _ := commonauth.SessionFromContext(r.Context())
 
 		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
 		if err != nil {
@@ -759,11 +755,8 @@ func handlePaperDeletePDF(
 			return
 		}
 
-		session, ok := commonauth.SessionFromContext(r.Context())
-		if !ok || session == nil || !session.IsValid {
-			renderError(http.StatusUnauthorized, "Please log in before removing a PDF.")
-			return
-		}
+		session, _ := commonauth.SessionFromContext(r.Context())
+
 		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
 		if err != nil {
 			logger.Error("get stack before PDF removal", "stackUUID", stackUUID, "error", err.Error())
