@@ -103,7 +103,7 @@ func handleSidebarStacks(
 }
 
 func searchOptionsFromRequest(r *http.Request) stackDomain.SearchOptions {
-	search := normalizeFormParam(r.FormValue("search"))
+	search := normalizeFormParam(r.FormValue("query"))
 	sortByRaw := normalizeFormParam(r.FormValue("sortBy"))
 	pageStr := normalizeFormParam(r.FormValue("page"))
 

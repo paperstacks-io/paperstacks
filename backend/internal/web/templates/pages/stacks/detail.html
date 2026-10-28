@@ -6,7 +6,7 @@
       <ul>
         <li>
           <a
-            hx-get="/app/stacks/page"
+            hx-get="/app/stacks"
             hx-target="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
@@ -20,13 +20,13 @@
     </div>
   </div>
   <div class="flex flex-wrap gap-2">
-    <a class="btn btn-sm" href="/app/stacks/detail/{{ .Stack.UUID }}/export/biblatex">
+    <a class="btn btn-sm" href="/app/stacks/{{ .Stack.UUID }}/bibliography/biblatex">
       <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
       Export as BibLaTeX
     </a>
     <a
       class="btn btn-sm"
-      hx-get="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
+      hx-get="/app/stacks/{{ .Stack.UUID }}/imports/biblatex"
       hx-target="#page-shell"
       hx-select-oob="#sidebar:outerHTML"
       hx-swap="outerHTML"
@@ -53,7 +53,7 @@
       <button
         class="btn btn-error"
         type="button"
-        hx-post="/app/stacks/detail/{{ .Stack.UUID }}/delete"
+        hx-delete="/app/stacks/{{ .Stack.UUID }}"
         hx-target="#toast-host"
         hx-swap="innerHTML"
         hx-on::before:request="document.getElementById('modal_confirm_delete').close()"
@@ -134,7 +134,7 @@
                 data-year="{{ .PublicationDate.Year }}"
                 data-uuid="{{ .UUID }}"
                 class="cursor-pointer hover:bg-base-200"
-                hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
+                hx-get="/app/stacks/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
                 hx-target:inherited="#stack-paper-info"
                 hx-swap:inherited="innerHTML"
               >
@@ -157,7 +157,7 @@
                     <a
                       class="btn btn-ghost btn-xs"
                       type="button"
-                      hx-delete="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
+                      hx-delete="/app/stacks/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
                       hx-target="#toast-host"
                       hx-swap="innerHTML"
                       hx-disable="this"
@@ -169,7 +169,7 @@
                     <a
                       class="btn btn-ghost btn-xs"
                       type="button"
-                      hx-get="/app/stacks/detail/{{ $.Stack.UUID }}/papers/{{ .UUID }}/cite"
+                      hx-get="/app/stacks/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
                       hx-on::click="event.stopPropagation()"
                       hx-target="#page-shell"
                       hx-select-oob="#sidebar:outerHTML"
@@ -205,7 +205,7 @@
             type="checkbox"
             class="toggle toggle-success"
             name="is_public"
-            hx-post="/app/stacks/detail/{{ .Stack.UUID }}/settings/is-public"
+            hx-patch="/app/stacks/{{ .Stack.UUID }}"
             hx-trigger="change"
             hx-target="#toast-host"
             hx-swap="innerHTML"

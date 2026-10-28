@@ -19,7 +19,7 @@ import (
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
 
-const stacksPageURL = "/app/stacks/page"
+const stacksPageURL = "/app/stacks"
 
 const (
 	oneMiB int64 = 1 << 20
@@ -104,7 +104,7 @@ func handleStacksDetailPage(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		ctx := r.Context()
-		id := r.PathValue("uuid")
+		id := r.PathValue("stackUUID")
 
 		stack, err := stackService.GetByUUID(ctx, id)
 		if err != nil {
@@ -146,7 +146,7 @@ func handleStackBibLaTeXExport(
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
 		if err != nil {
 			if errors.Is(err, stackDomain.ErrStackNotFound) {
@@ -187,7 +187,7 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			if !errors.Is(err, stackDomain.ErrStackNotFound) {
@@ -283,7 +283,7 @@ func handleStackBibLaTeXImport(
 	})
 }
 
-func handleStacksPaperCitation(
+func handleStackPaperCitation(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	hankoAPIURL string,
@@ -343,7 +343,7 @@ func handleStacksPaperCitation(
 	})
 }
 
-func handleStackPaperInfo(
+func handleStackPaperDetail(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
@@ -385,6 +385,13 @@ func handleStacksPage(
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "HX-Request")
+		w.Header().Add("Vary", "HX-Target")
+		if isHTMX(r) && r.Header.Get("HX-Target") == "div#stack-results" {
+			handleStacksSearchByOwner(logger, tmpl, stackService).ServeHTTP(w, r)
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		counter, err := stackService.CountPublic(r.Context())
@@ -462,7 +469,7 @@ func handleStacksStatsByOwner(
 	})
 }
 
-func handleSidebarStackCreate(
+func handleStackCreate(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	userService *userApp.UserService,
@@ -500,7 +507,7 @@ func handleSidebarStackCreate(
 			return
 		}
 
-		hxLocation(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
+		hxLocation(w, "/app/stacks/"+stack.UUID, http.StatusCreated)
 	})
 }
 
@@ -518,7 +525,7 @@ func handleStackDelete(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("get stack before delete", "error", err.Error())
@@ -560,7 +567,7 @@ func handleStackPaperRemove(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		paperUUID := r.PathValue("paperUUID")
 
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
@@ -581,7 +588,7 @@ func handleStackPaperRemove(
 			return
 		}
 
-		detailURL := "/app/stacks/detail/" + stackUUID
+		detailURL := "/app/stacks/" + stackUUID
 		if isHTMX(r) {
 			hxLocation(w, detailURL, http.StatusOK)
 			return
@@ -591,7 +598,7 @@ func handleStackPaperRemove(
 	})
 }
 
-func handleStackPublicSettingUpdate(
+func handleStackVisibilityUpdate(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	stackService *stackApp.StackService,
@@ -605,7 +612,7 @@ func handleStackPublicSettingUpdate(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {

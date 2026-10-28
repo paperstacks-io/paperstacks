@@ -46,7 +46,7 @@ func (s *uploadPDFTestStore) Put(_ context.Context, input objectstorage.PutObjec
 
 func TestHandlePaperUploadPDF(t *testing.T) {
 	const paperUUID = "11111111-1111-4111-8111-111111111111"
-	const stackURL = "/app/stacks/detail/22222222-2222-4222-8222-222222222222"
+	const stackURL = "/app/stacks/22222222-2222-4222-8222-222222222222"
 	tests := []struct {
 		name         string
 		content      string
@@ -92,7 +92,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			store := &uploadPDFTestStore{err: tt.storeErr}
 			stackService := stackApp.NewStackService(stackMemory.NewRepository(nil), nil)
 			stack := stackDomain.Stack{
-				UUID:   strings.TrimPrefix(stackURL, "/app/stacks/detail/"),
+				UUID:   strings.TrimPrefix(stackURL, "/app/stacks/"),
 				Name:   "Upload stack",
 				Owner:  userDomain.User{ExternalID: "owner"},
 				Papers: []paperDomain.Paper{{UUID: paperUUID}},
@@ -118,7 +118,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			if err := writer.Close(); err != nil {
 				t.Fatal(err)
 			}
-			req := httptest.NewRequest(http.MethodPost, stackURL+"/papers/"+paperUUID+"/upload-pdf", &body)
+			req := httptest.NewRequest(http.MethodPut, stackURL+"/papers/"+paperUUID+"/pdf", &body)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 			if tt.malformed {
 				req.Header.Set("Content-Type", "multipart/form-data; boundary=wrong-boundary")
@@ -207,16 +207,15 @@ func TestPaperInfoUploadURLIncludesStackUUID(t *testing.T) {
 	}
 	for name, handler := range map[string]http.Handler{
 		"detail page":   handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
-		"paper partial": handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
+		"paper partial": handleStackPaperDetail(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
 	} {
 		t.Run(name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/"+stackUUID, nil)
-			req.SetPathValue("uuid", stackUUID)
+			req := httptest.NewRequest(http.MethodGet, "/app/stacks/"+stackUUID, nil)
 			req.SetPathValue("stackUUID", stackUUID)
 			req.SetPathValue("paperUUID", paper.UUID)
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
-			want := `hx-post="/app/stacks/detail/` + stackUUID + `/papers/` + paper.UUID + `/upload-pdf"`
+			want := `hx-put="/app/stacks/` + stackUUID + `/papers/` + paper.UUID + `/pdf"`
 			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), want) {
 				t.Fatalf("response = %d %s, want upload URL %s", rr.Code, rr.Body.String(), want)
 			}
@@ -369,7 +368,7 @@ func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if got := rr.Header().Get("HX-Location"); got != "/app/stacks/detail/"+stack.UUID {
+	if got := rr.Header().Get("HX-Location"); got != "/app/stacks/"+stack.UUID {
 		t.Fatalf("HX-Location = %q, want detail page redirect", got)
 	}
 
@@ -385,12 +384,12 @@ func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	}
 }
 
-func TestHandleSidebarStackCreateNavigatesToDetail(t *testing.T) {
+func TestHandleStackCreateNavigatesToDetail(t *testing.T) {
 	t.Parallel()
 
 	user := userDomain.NewUser("owner-sidebar-create", "sidebar@example.com")
 	stackService := newTestStackService()
-	handler := handleSidebarStackCreate(testLogger(), testWebTemplate(t), newTestUserService(user), stackService)
+	handler := handleStackCreate(testLogger(), testWebTemplate(t), newTestUserService(user), stackService)
 
 	req := newSidebarStackCreateRequest(t, user.ExternalID, user.Email, "Sidebar Stack")
 	rr := httptest.NewRecorder()
@@ -402,11 +401,11 @@ func TestHandleSidebarStackCreateNavigatesToDetail(t *testing.T) {
 	}
 
 	location := rr.Header().Get("HX-Location")
-	if !strings.HasPrefix(location, "/app/stacks/detail/") {
-		t.Fatalf("HX-Location = %q, want /app/stacks/detail/{uuid}", location)
+	if !strings.HasPrefix(location, "/app/stacks/") {
+		t.Fatalf("HX-Location = %q, want /app/stacks/{uuid}", location)
 	}
 
-	uuid := strings.TrimPrefix(location, "/app/stacks/detail/")
+	uuid := strings.TrimPrefix(location, "/app/stacks/")
 	created, err := stackService.GetByUUID(req.Context(), uuid)
 	if err != nil {
 		t.Fatalf("created stack not found by HX-Location UUID %q: %v", uuid, err)
@@ -422,7 +421,7 @@ func TestHandleSidebarStackCreateNavigatesToDetail(t *testing.T) {
 func newSidebarStackCreateRequest(t *testing.T, userID string, email string, name string) *http.Request {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodPost, "/app/stacks/sidebar/create", strings.NewReader(url.Values{
+	req := httptest.NewRequest(http.MethodPost, "/app/stacks", strings.NewReader(url.Values{
 		"name": {name},
 	}.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -438,8 +437,8 @@ func newSidebarStackCreateRequest(t *testing.T, userID string, email string, nam
 func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/app/stacks/detail/"+stackUUID, nil)
-	req.SetPathValue("uuid", stackUUID)
+	req := httptest.NewRequest(http.MethodGet, "/app/stacks/"+stackUUID, nil)
+	req.SetPathValue("stackUUID", stackUUID)
 	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
 		UserID:  "owner-detail",
 		Email:   "detail@example.com",
@@ -452,9 +451,9 @@ func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
 func newStackPaperRemoveRequest(t *testing.T, stackUUID string, paperUUID string, userID string, email string) *http.Request {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodPost, "/app/stacks/detail/"+stackUUID+"/papers/"+paperUUID+"/remove", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/app/stacks/"+stackUUID+"/papers/"+paperUUID, nil)
 	req.Header.Set("HX-Request", "true")
-	req.SetPathValue("uuid", stackUUID)
+	req.SetPathValue("stackUUID", stackUUID)
 	req.SetPathValue("paperUUID", paperUUID)
 	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
 		UserID:  userID,
