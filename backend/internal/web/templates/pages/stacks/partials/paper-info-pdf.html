@@ -1,7 +1,7 @@
 {{ define "stacks/partials/paper-info-pdf" }}
 <div id="paper-pdf-{{ .UUID }}">
   <form
-    hx-post="/app/stacks/detail/{{ .StackUUID }}/papers/{{ .UUID }}/upload-pdf"
+    hx-put="/app/stacks/{{ .StackUUID }}/papers/{{ .UUID }}/pdf"
     hx-encoding="multipart/form-data"
     hx-target="#paper-pdf-{{ .UUID }}"
     hx-swap="outerHTML"
@@ -9,7 +9,7 @@
     <fieldset class="fieldset">
       <label class="label" for="paper-pdf-file-{{ .UUID }}">PDF</label>
       {{ if .PDFStorageKey }}
-      <a class="btn btn-sm join-item" href="/app/papers/{{ .UUID }}/download-pdf" onclick="event.stopPropagation()">
+      <a class="btn btn-sm join-item" href="/app/papers/{{ .UUID }}/pdf" onclick="event.stopPropagation()">
         Download
       </a>
       {{ else }}
