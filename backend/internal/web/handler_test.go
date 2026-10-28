@@ -44,6 +44,98 @@ func (s *uploadPDFTestStore) Put(_ context.Context, input objectstorage.PutObjec
 	return objectstorage.ObjectInfo{}, s.err
 }
 
+type deletePDFTestStore struct {
+	objectstorage.Store
+	deletedKey string
+	err        error
+}
+
+func (s *deletePDFTestStore) Delete(_ context.Context, key string) error {
+	s.deletedKey = key
+	return s.err
+}
+
+func TestHandlePaperDeletePDF(t *testing.T) {
+	const paperUUID = "11111111-1111-4111-8111-111111111111"
+	const stackUUID = "22222222-2222-4222-8222-222222222222"
+	for _, tt := range []struct {
+		name         string
+		noAuth       bool
+		forbidden    bool
+		notInStack   bool
+		missingStack bool
+		noPDF        bool
+		storeErr     error
+		wantError    string
+	}{
+		{name: "success"},
+		{name: "already removed", noPDF: true},
+		{name: "unauthenticated", noAuth: true, wantError: "Please log in"},
+		{name: "forbidden", forbidden: true, wantError: "not allowed"},
+		{name: "paper not in stack", notInStack: true, wantError: "does not belong"},
+		{name: "missing stack", missingStack: true, wantError: "stack could not be loaded"},
+		{name: "storage failure", storeErr: errors.New("storage unavailable"), wantError: "PDF could not be removed"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := paperMemory.NewRepository()
+			paper := paperDomain.Paper{UUID: paperUUID, Title: "Test paper"}
+			if _, err := repo.Save(t.Context(), paper); err != nil {
+				t.Fatal(err)
+			}
+			if !tt.noPDF {
+				if err := repo.AttachPDF(t.Context(), paperUUID, "pdf/test.pdf"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			stackService := stackApp.NewStackService(stackMemory.NewRepository(nil), nil)
+			stack := stackDomain.Stack{UUID: stackUUID, Name: "Test stack", Owner: userDomain.User{ExternalID: "owner"}, Papers: []paperDomain.Paper{paper}}
+			if tt.notInStack {
+				stack.Papers = nil
+			}
+			if !tt.missingStack {
+				if err := stackService.Create(t.Context(), stack); err != nil {
+					t.Fatal(err)
+				}
+			}
+			store := &deletePDFTestStore{err: tt.storeErr}
+			handler := handlePaperDeletePDF(testLogger(), testWebTemplate(t), paperApp.NewPaperService(repo, store), stackService)
+			req := newStackPaperRemoveRequest(t, stackUUID, paperUUID, "owner", "owner@example.com")
+			if tt.noAuth {
+				req = req.WithContext(context.Background())
+			}
+			if tt.forbidden {
+				req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{UserID: "other", IsValid: true}))
+			}
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+			response := rr.Body.String()
+			if rr.Code != http.StatusOK {
+				t.Fatalf("status = %d; body: %s", rr.Code, response)
+			}
+			updated, err := repo.GetByUUID(t.Context(), paperUUID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.wantError != "" {
+				if !strings.Contains(response, tt.wantError) || rr.Header().Get("HX-Retarget") != "#toast-host" || rr.Header().Get("HX-Reswap") != "innerHTML" {
+					t.Fatalf("expected error toast containing %q: headers=%v body=%s", tt.wantError, rr.Header(), response)
+				}
+				if updated.PDFStorageKey != "pdf/test.pdf" {
+					t.Fatal("failed request detached PDF")
+				}
+			} else if updated.PDFStorageKey != "" || !strings.Contains(response, `id="paper-pdf-`+paperUUID+`"`) ||
+				!strings.Contains(response, `hx-put="/app/stacks/`+stackUUID+`/papers/`+paperUUID+`/pdf"`) ||
+				!strings.Contains(response, `type="file"`) || strings.Contains(response, "Download") || strings.Contains(response, "hx-delete") || rr.Header().Get("HX-Retarget") != "" {
+				t.Fatalf("expected upload section after removal: paper=%+v body=%s", updated, response)
+			}
+			wantDelete := !tt.noPDF && (tt.wantError == "" || tt.storeErr != nil)
+			if (store.deletedKey == "pdf/test.pdf") != wantDelete {
+				t.Fatalf("unexpected storage deletion: %q", store.deletedKey)
+			}
+		})
+	}
+}
+
 func TestHandlePaperUploadPDF(t *testing.T) {
 	const paperUUID = "11111111-1111-4111-8111-111111111111"
 	const stackURL = "/app/stacks/22222222-2222-4222-8222-222222222222"
@@ -58,6 +150,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 		missingStack bool
 		existingPDF  bool
 		malformed    bool
+		wantToast    bool
 		wantStatus   int
 		storeErr     error
 		want         string
@@ -67,12 +160,13 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 		{name: "malformed multipart", malformed: true, wantStatus: http.StatusBadRequest, want: "upload could not be read"},
 		{name: "invalid PDF", wantStatus: http.StatusUnprocessableEntity, field: "file", content: "not a PDF", want: "not a valid PDF"},
 		{name: "missing file", wantStatus: http.StatusUnprocessableEntity, field: "other", want: "Choose a PDF file"},
-		{name: "missing paper", wantStatus: http.StatusNotFound, field: "file", missing: true, want: "paper could not be found"},
-		{name: "unauthenticated", wantStatus: http.StatusUnauthorized, noAuth: true, want: "Please log in"},
-		{name: "forbidden", wantStatus: http.StatusForbidden, forbidden: true, want: "not allowed"},
+		{name: "missing paper", wantToast: true, wantStatus: http.StatusNotFound, field: "file", missing: true, want: "paper could not be found"},
+		{name: "unauthenticated", wantToast: true, wantStatus: http.StatusUnauthorized, noAuth: true, want: "Please log in"},
+		{name: "forbidden", wantToast: true, wantStatus: http.StatusForbidden, forbidden: true, want: "not allowed"},
 		{name: "paper not in stack", wantStatus: http.StatusOK, notInStack: true, field: "file", content: "%PDF-1.4\ncontent"},
-		{name: "missing stack", wantStatus: http.StatusInternalServerError, missingStack: true, want: "PDF section could not be loaded"},
-		{name: "storage error", wantStatus: http.StatusInternalServerError, field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
+		{name: "missing stack", wantToast: true, wantStatus: http.StatusInternalServerError, missingStack: true, want: "PDF section could not be loaded"},
+		{name: "storage error", wantToast: true, wantStatus: http.StatusInternalServerError, field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
+		{name: "existing PDF with storage error", existingPDF: true, wantToast: true, wantStatus: http.StatusInternalServerError, field: "file", content: "%PDF-1.4\ncontent", storeErr: errors.New("storage unavailable"), want: "could not be uploaded"},
 		{name: "file too large", wantStatus: http.StatusRequestEntityTooLarge, field: "file", content: "%PDF-" + strings.Repeat("x", paperDomain.PDFMaxFileSize), want: "no larger than 10 MiB"},
 		{name: "request too large", wantStatus: http.StatusRequestEntityTooLarge, field: "file", content: strings.Repeat("x", paperDomain.PDFMaxFileSize+int(oneMiB)), want: "no larger than 10 MiB"},
 	}
@@ -139,6 +233,23 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			}
 			paper, _ := repo.GetByUUID(t.Context(), paperUUID)
 			response := strings.TrimSpace(rr.Body.String())
+			if tt.wantToast {
+				if rr.Header().Get("HX-Retarget") != "#toast-host" || rr.Header().Get("HX-Reswap") != "innerHTML" ||
+					!strings.Contains(response, "alert-error") || strings.Contains(response, "<form") || strings.Contains(response, "aria-invalid") {
+					t.Fatalf("expected error toast preserving PDF section: headers=%v body=%s", rr.Header(), response)
+				}
+				wantKey := ""
+				if tt.existingPDF {
+					wantKey = "pdf/existing.pdf"
+				}
+				if paper.PDFStorageKey != wantKey {
+					t.Fatalf("failed upload changed PDF key: got %q, want %q", paper.PDFStorageKey, wantKey)
+				}
+				if (tt.noAuth || tt.forbidden || tt.missingStack) && store.input.Key != "" {
+					t.Fatal("unauthorized upload reached object storage")
+				}
+				return
+			}
 			if !strings.HasPrefix(response, `<div id="paper-pdf-`+paperUUID+`">`) || !strings.HasSuffix(response, "</div>") {
 				t.Fatalf("response is not the PDF section: %s", response)
 			}
@@ -166,6 +277,9 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 				t.Fatalf("file input is missing inline validation feedback: %s", response)
 			}
 			if tt.wantStatus == http.StatusOK {
+				if !strings.Contains(response, `hx-delete="`+stackURL+`/papers/`+paperUUID+`/pdf"`) {
+					t.Fatalf("missing stack-scoped PDF removal URL: %s", response)
+				}
 				if paper.PDFStorageKey != "pdf/"+paperUUID+".pdf" || string(store.body) != tt.content ||
 					store.input.Metadata["filename"] != "paper.pdf" || store.input.Size != int64(len(tt.content)) ||
 					store.input.ContentType != paperDomain.PDFContentType {

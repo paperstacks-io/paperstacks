@@ -659,21 +659,31 @@ func handlePaperUploadPDF(
 			}
 		}
 
+		renderError := func(status int, message string) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("HX-Retarget", "#toast-host")
+			w.Header().Set("HX-Reswap", "innerHTML")
+			w.WriteHeader(status)
+			if err := renderErrorToast(w, tmpl, message); err != nil {
+				logger.Error("render PDF upload error toast", "paperUUID", paperUUID, "error", err.Error())
+			}
+		}
+
 		session, ok := commonauth.SessionFromContext(r.Context())
 		if !ok || session == nil || !session.IsValid {
-			render(http.StatusUnauthorized, "Please log in before uploading a PDF.")
+			renderError(http.StatusUnauthorized, "Please log in before uploading a PDF.")
 			return
 		}
 
 		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
 		if err != nil {
 			logger.Error("get stack before PDF upload", "stackUUID", stackUUID, "error", err.Error())
-			render(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
+			renderError(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
 			return
 		}
 
 		if stack.Owner.ExternalID != session.UserID {
-			render(http.StatusForbidden, "You are not allowed to upload PDFs to this stack.")
+			renderError(http.StatusForbidden, "You are not allowed to upload PDFs to this stack.")
 			return
 		}
 
@@ -712,11 +722,10 @@ func handlePaperUploadPDF(
 			case errors.Is(err, paperDomain.ErrInvalidFileType):
 				render(http.StatusUnprocessableEntity, "The uploaded file is not a valid PDF. Choose a PDF file and try again.")
 			case errors.Is(err, paperDomain.ErrPaperNotFound):
-				data.PDFUnavailable = true
-				render(http.StatusNotFound, "The requested paper could not be found.")
+				renderError(http.StatusNotFound, "The requested paper could not be found.")
 			default:
 				logger.Error("upload paper PDF", "paperUUID", paperUUID, "error", err.Error())
-				render(http.StatusInternalServerError, "The PDF could not be uploaded. Choose the file again to retry.")
+				renderError(http.StatusInternalServerError, "The PDF could not be uploaded. Choose the file again to retry.")
 			}
 			return
 		}
@@ -724,10 +733,62 @@ func handlePaperUploadPDF(
 		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
 		if err != nil {
 			logger.Error("get paper after PDF upload", "paperUUID", paperUUID, "error", err.Error())
-			render(http.StatusInternalServerError, "The PDF section could not be loaded after PDF upload.")
+			renderError(http.StatusInternalServerError, "The PDF section could not be loaded after PDF upload.")
 			return
 		}
 
 		render(http.StatusOK, "")
+	})
+}
+
+func handlePaperDeletePDF(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stackUUID := r.PathValue("stackUUID")
+		paperUUID := r.PathValue("paperUUID")
+		if stackUUID == "" || paperUUID == "" {
+			renderErrorToast(w, tmpl, "Missing stack or paper UUID.")
+			return
+		}
+
+		session, ok := commonauth.SessionFromContext(r.Context())
+		if !ok || session == nil || !session.IsValid {
+			renderErrorToast(w, tmpl, "Please log in before removing a PDF.")
+			return
+		}
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			logger.Error("get stack before PDF removal", "stackUUID", stackUUID, "error", err.Error())
+			renderErrorToast(w, tmpl, "The stack could not be loaded. Please try again.")
+			return
+		}
+		if stack.Owner.ExternalID != session.UserID {
+			renderErrorToast(w, tmpl, "You are not allowed to remove PDFs from this stack.")
+			return
+		}
+
+		err = paperService.DeletePDF(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("delete paper PDF", "paperUUID", paperUUID, "error", err.Error())
+			renderErrorToast(w, tmpl, "The PDF could not be removed. Please try again.")
+			return
+		}
+
+		data := paperInfoData{Paper: paperDomain.Paper{UUID: paperUUID}, StackUUID: stackUUID}
+		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("get paper after PDF upload", "paperUUID", paperUUID, "error", err.Error())
+			renderErrorToast(w, tmpl, "The paper could not be loaded after the PDF was removed. Please try again.")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info-pdf", data); err != nil {
+			logger.Error("render PDF section after removal", "paperUUID", paperUUID, "error", err.Error())
+		}
 	})
 }
