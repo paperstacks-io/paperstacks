@@ -133,7 +133,7 @@
                 data-title="{{ .Title }}"
                 data-year="{{ .PublicationDate.Year }}"
                 data-uuid="{{ .UUID }}"
-                class="cursor-pointer hover:bg-base-200"
+                class="cursor-pointer"
                 hx-get="/app/stacks/{{ $.Stack.UUID }}/papers/{{ .UUID }}"
                 hx-target:inherited="#stack-paper-info"
                 hx-swap:inherited="innerHTML"
@@ -248,6 +248,17 @@
         title: element.dataset.title || "",
         uuid: element.dataset.uuid || "",
         year: Number.isNaN(year) ? 0 : year,
+      }
+    })
+
+    tbody.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, input, select")) return
+
+      const selected = event.target.closest("[data-stack-paper-row]")
+      if (!selected) return
+
+      for (const { element } of rows) {
+        element.classList.toggle("bg-neutral-content", element === selected)
       }
     })
 
