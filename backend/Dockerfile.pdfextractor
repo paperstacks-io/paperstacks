@@ -1,0 +1,37 @@
+# Build stage
+ARG GO_VERSION
+FROM golang:${GO_VERSION}-alpine AS build
+
+ARG APP_VERSION
+ARG APP_GIT_HASH
+
+RUN apk add --no-cache make
+
+WORKDIR /app
+
+COPY Makefile .
+COPY go.mod .
+COPY go.sum .
+COPY cmd/ cmd/
+COPY internal/ internal/
+
+RUN make build-pdfextractor
+
+# Runtime stage
+FROM alpine:latest
+
+# Install Poppler utils for pdftotext, and tesseract for OCR (if enabled later)
+RUN apk add --no-cache poppler-utils tesseract-ocr tesseract-ocr-data-eng
+
+WORKDIR /app
+
+COPY --from=build /app/pdfextractor .
+
+EXPOSE 8081
+
+# Create a non-root user for security
+RUN adduser -D pdfextractoruser
+USER pdfextractoruser
+
+CMD ["./pdfextractor"]
+

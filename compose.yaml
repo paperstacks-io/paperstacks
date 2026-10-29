@@ -55,6 +55,18 @@ services:
       - db_app_rw_password
       - db_app_ro_password
 
+  pdfextractor:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.pdfextractor
+      args:
+        GO_VERSION: ${GO_VERSION:-1}
+        APP_VERSION: ${APP_VERSION:-development}
+        APP_GIT_HASH: ${APP_GIT_HASH}
+    image: ghcr.io/paperstacks-io/pdfextractor:latest
+    ports:
+      - "127.0.0.1:8081:8081"
+
 secrets:
   db_super_password:
     file: ./secrets/db_super_password.txt
