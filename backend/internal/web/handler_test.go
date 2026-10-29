@@ -300,7 +300,7 @@ func TestPaperInfoUploadURLIncludesStackUUID(t *testing.T) {
 	}
 	for name, handler := range map[string]http.Handler{
 		"detail page":   handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
-		"paper partial": handleStackPaperDetail(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
+		"paper partial": handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
 	} {
 		t.Run(name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/app/stacks/"+stackUUID, nil)

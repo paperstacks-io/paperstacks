@@ -80,7 +80,7 @@ func AddRoute(
 	mux.Handle(http.MethodGet+" /stacks/{stackUUID}/bibliography/biblatex", authenticated(handleStackBibLaTeXExport(logger, stackService)))
 	mux.Handle(http.MethodDelete+" /stacks/{stackUUID}", authenticated(handleStackDelete(logger, tmpl, stackService)))
 	mux.Handle(http.MethodPatch+" /stacks/{stackUUID}", authenticated(handleStackVisibilityUpdate(logger, tmpl, stackService)))
-	mux.Handle(http.MethodGet+" /stacks/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperDetail(logger, tmpl, paperService)))
+	mux.Handle(http.MethodGet+" /stacks/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperInfo(logger, tmpl, paperService)))
 	mux.Handle(http.MethodPut+" /stacks/{stackUUID}/papers/{paperUUID}/pdf", authenticated(handlePaperUploadPDF(logger, tmpl, paperService, stackService)))
 	mux.Handle(http.MethodDelete+" /stacks/{stackUUID}/papers/{paperUUID}", authenticated(handleStackPaperRemove(logger, tmpl, stackService)))
 	mux.Handle(http.MethodGet+" /stacks/stats", authenticated(handleStacksStatsByOwner(logger, tmpl, stackService)))
