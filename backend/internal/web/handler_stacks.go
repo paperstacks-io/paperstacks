@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"slices"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -19,7 +20,7 @@ import (
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
 
-const stacksPageURL = "/app/stacks/page"
+const stacksPageURL = "/app/stacks"
 
 const (
 	oneMiB int64 = 1 << 20
@@ -88,6 +89,12 @@ type stacksPageData struct {
 	StacksCountPublic int
 }
 
+type paperInfoData struct {
+	paperDomain.Paper
+	StackUUID      string
+	PDFUnavailable bool
+}
+
 func handleStacksDetailPage(
 	logger *slog.Logger,
 	tmpl *template.Template,
@@ -97,7 +104,7 @@ func handleStacksDetailPage(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		ctx := r.Context()
-		id := r.PathValue("uuid")
+		id := r.PathValue("stackUUID")
 
 		stack, err := stackService.GetByUUID(ctx, id)
 		if err != nil {
@@ -119,13 +126,13 @@ func handleStacksDetailPage(
 		data := struct {
 			pageData
 			Stack         stackDomain.Stack
-			SelectedPaper paperDomain.Paper
+			SelectedPaper paperInfoData
 			CreatedAt     string
 			UpdatedAt     string
 		}{
 			pageData:      newPageData(r, hankoAPIURL),
 			Stack:         stack,
-			SelectedPaper: selectedPaper,
+			SelectedPaper: paperInfoData{Paper: selectedPaper, StackUUID: stack.UUID},
 			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
 			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
@@ -139,7 +146,7 @@ func handleStackBibLaTeXExport(
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
 		if err != nil {
 			if errors.Is(err, stackDomain.ErrStackNotFound) {
@@ -180,7 +187,7 @@ func handleStackBibLaTeXImport(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			if !errors.Is(err, stackDomain.ErrStackNotFound) {
@@ -276,7 +283,7 @@ func handleStackBibLaTeXImport(
 	})
 }
 
-func handleStacksPaperCitation(
+func handleStackPaperCitation(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	hankoAPIURL string,
@@ -336,7 +343,7 @@ func handleStacksPaperCitation(
 	})
 }
 
-func handleStackPaperInfo(
+func handleStackPaperDetail(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
@@ -363,7 +370,9 @@ func handleStackPaperInfo(
 			return
 		}
 
-		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paper); err != nil {
+		if err := tmpl.ExecuteTemplate(w, "stacks/partials/paper-info", paperInfoData{
+			Paper: paper, StackUUID: r.PathValue("stackUUID"),
+		}); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
@@ -376,6 +385,13 @@ func handleStacksPage(
 	stackService *stackApp.StackService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "HX-Request")
+		w.Header().Add("Vary", "HX-Target")
+		if isHTMX(r) && r.Header.Get("HX-Target") == "div#stack-results" {
+			handleStacksSearchByOwner(logger, tmpl, stackService).ServeHTTP(w, r)
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		counter, err := stackService.CountPublic(r.Context())
@@ -453,7 +469,7 @@ func handleStacksStatsByOwner(
 	})
 }
 
-func handleSidebarStackCreate(
+func handleStackCreate(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	userService *userApp.UserService,
@@ -491,7 +507,7 @@ func handleSidebarStackCreate(
 			return
 		}
 
-		hxLocation(w, "/app/stacks/detail/"+stack.UUID, http.StatusCreated)
+		hxLocation(w, "/app/stacks/"+stack.UUID, http.StatusCreated)
 	})
 }
 
@@ -509,7 +525,7 @@ func handleStackDelete(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
 			logger.Error("get stack before delete", "error", err.Error())
@@ -551,7 +567,7 @@ func handleStackPaperRemove(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 		paperUUID := r.PathValue("paperUUID")
 
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
@@ -572,7 +588,7 @@ func handleStackPaperRemove(
 			return
 		}
 
-		detailURL := "/app/stacks/detail/" + stackUUID
+		detailURL := "/app/stacks/" + stackUUID
 		if isHTMX(r) {
 			hxLocation(w, detailURL, http.StatusOK)
 			return
@@ -582,7 +598,7 @@ func handleStackPaperRemove(
 	})
 }
 
-func handleStackPublicSettingUpdate(
+func handleStackVisibilityUpdate(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	stackService *stackApp.StackService,
@@ -596,7 +612,7 @@ func handleStackPublicSettingUpdate(
 			return
 		}
 
-		stackUUID := r.PathValue("uuid")
+		stackUUID := r.PathValue("stackUUID")
 
 		stack, err := stackService.GetByUUID(ctx, stackUUID)
 		if err != nil {
@@ -618,5 +634,161 @@ func handleStackPublicSettingUpdate(
 		}
 
 		renderSuccessToast(w, tmpl, "Stack changes saved")
+	})
+}
+
+func renderPaperPDFSection(w http.ResponseWriter, tmpl *template.Template, status int, data paperInfoData) error {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	return tmpl.ExecuteTemplate(w, "stacks/partials/paper-info-pdf", data)
+}
+
+func handlePaperUploadPDF(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stackUUID := r.PathValue("stackUUID")
+		paperUUID := r.PathValue("paperUUID")
+		data := paperInfoData{
+			Paper: paperDomain.Paper{UUID: paperUUID}, StackUUID: stackUUID,
+		}
+
+		renderError := func(status int, message string) {
+			if err := renderErrorToastStatus(w, tmpl, status, message); err != nil {
+				logger.Error("render PDF upload error toast", "paperUUID", paperUUID, "error", err.Error())
+			}
+		}
+
+		session, _ := commonauth.SessionFromContext(r.Context())
+
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			logger.Error("get stack before PDF upload", "stackUUID", stackUUID, "error", err.Error())
+			renderError(http.StatusInternalServerError, "The PDF section could not be loaded. Please try again.")
+			return
+		}
+
+		if stack.Owner.ExternalID != session.UserID {
+			renderError(http.StatusForbidden, "You are not allowed to upload PDFs to this stack.")
+			return
+		}
+		if !slices.ContainsFunc(stack.Papers, func(paper paperDomain.Paper) bool { return paper.UUID == paperUUID }) {
+			renderError(http.StatusNotFound, "The requested paper does not belong to this stack.")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, paperDomain.PDFMaxFileSize+oneMiB)
+		if err := r.ParseMultipartForm(oneMiB); err != nil {
+			if r.MultipartForm != nil {
+				_ = r.MultipartForm.RemoveAll()
+			}
+			var sizeError *http.MaxBytesError
+			if errors.As(err, &sizeError) {
+				renderError(http.StatusRequestEntityTooLarge, "Upload a PDF file no larger than 10 MiB.")
+			} else {
+				renderError(http.StatusBadRequest, "The upload could not be read. Choose a PDF file and try again.")
+			}
+			return
+		}
+		defer r.MultipartForm.RemoveAll()
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			renderError(http.StatusUnprocessableEntity, "Choose a PDF file to upload.")
+			return
+		}
+		defer file.Close()
+
+		_, err = paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
+			PaperUUID: paperUUID,
+			FileName:  header.Filename,
+			File:      file,
+			Size:      header.Size,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, paperDomain.ErrFileSizeExceeded):
+				renderError(http.StatusRequestEntityTooLarge, "Upload a PDF file no larger than 10 MiB.")
+			case errors.Is(err, paperDomain.ErrInvalidFileType):
+				renderError(http.StatusUnprocessableEntity, "The uploaded file is not a valid PDF. Choose a PDF file and try again.")
+			case errors.Is(err, paperDomain.ErrPaperNotFound):
+				renderError(http.StatusNotFound, "The requested paper could not be found.")
+			default:
+				logger.Error("upload paper PDF", "paperUUID", paperUUID, "error", err.Error())
+				renderError(http.StatusInternalServerError, "The PDF could not be uploaded. Choose the file again to retry.")
+			}
+			return
+		}
+
+		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("get paper after PDF upload", "paperUUID", paperUUID, "error", err.Error())
+			renderError(http.StatusInternalServerError, "The PDF section could not be loaded after PDF upload.")
+			return
+		}
+
+		if err := renderPaperPDFSection(w, tmpl, http.StatusOK, data); err != nil {
+			logger.Error("render PDF section after upload", "paperUUID", paperUUID, "error", err.Error())
+		}
+	})
+}
+
+func handlePaperDeletePDF(
+	logger *slog.Logger,
+	tmpl *template.Template,
+	paperService *paperApp.PaperService,
+	stackService *stackApp.StackService,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stackUUID := r.PathValue("stackUUID")
+		paperUUID := r.PathValue("paperUUID")
+		renderError := func(status int, message string) {
+			if err := renderErrorToastStatus(w, tmpl, status, message); err != nil {
+				logger.Error("render PDF removal error toast", "paperUUID", paperUUID, "error", err.Error())
+			}
+		}
+		if stackUUID == "" || paperUUID == "" {
+			renderError(http.StatusBadRequest, "Missing stack or paper UUID.")
+			return
+		}
+
+		session, _ := commonauth.SessionFromContext(r.Context())
+
+		stack, err := stackService.GetByUUID(r.Context(), stackUUID)
+		if err != nil {
+			logger.Error("get stack before PDF removal", "stackUUID", stackUUID, "error", err.Error())
+			renderError(http.StatusInternalServerError, "The stack could not be loaded. Please try again.")
+			return
+		}
+		if stack.Owner.ExternalID != session.UserID {
+			renderError(http.StatusForbidden, "You are not allowed to remove PDFs from this stack.")
+			return
+		}
+		if !slices.ContainsFunc(stack.Papers, func(paper paperDomain.Paper) bool { return paper.UUID == paperUUID }) {
+			renderError(http.StatusNotFound, "The requested paper does not belong to this stack.")
+			return
+		}
+
+		err = paperService.DeletePDF(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("delete paper PDF", "paperUUID", paperUUID, "error", err.Error())
+			renderError(http.StatusInternalServerError, "The PDF could not be removed. Please try again.")
+			return
+		}
+
+		data := paperInfoData{Paper: paperDomain.Paper{UUID: paperUUID}, StackUUID: stackUUID}
+		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
+		if err != nil {
+			logger.Error("get paper after PDF removal", "paperUUID", paperUUID, "error", err.Error())
+			renderError(http.StatusInternalServerError, "The paper could not be loaded after the PDF was removed. Please try again.")
+			return
+		}
+
+		if err := renderPaperPDFSection(w, tmpl, http.StatusOK, data); err != nil {
+			logger.Error("render PDF section after removal", "paperUUID", paperUUID, "error", err.Error())
+		}
 	})
 }

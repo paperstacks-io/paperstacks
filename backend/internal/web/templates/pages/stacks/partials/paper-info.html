@@ -97,13 +97,4 @@
   </fieldset>
 </div>
 
-<button
-  class="btn btn-dash min-h-24"
-  hx-get="/app/partials/toast/not-implemented"
-  hx-target="#toast-host"
-  hx-swap="innerHTML"
->
-  <svg data-src="https://unpkg.com/heroicons/20/solid/plus.svg" class="size-5"></svg>
-  Add PDF
-</button>
-{{ end }}
+{{ template "stacks/partials/paper-info-pdf" . }} {{ end }}

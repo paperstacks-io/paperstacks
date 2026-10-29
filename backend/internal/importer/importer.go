@@ -5,7 +5,10 @@ package importer
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,6 +22,8 @@ import (
 type Config struct {
 	// Dir is the directory containing *.jsonl[.gz] dump files.
 	Dir string
+	// LogDir is the directory the per-run import log file is created in.
+	LogDir string
 }
 
 // Importer walks a directory of Crossref dump files, parses every
@@ -41,7 +46,15 @@ func (im *Importer) Run(ctx context.Context) error {
 	im.log.Info("crawler import starting", slog.String("dir", im.cfg.Dir))
 	start := time.Now()
 
-	stats := &runStats{im: im, ctx: ctx, start: start}
+	logFile, err := createLogFile(im.cfg.LogDir, start)
+	if err != nil {
+		return err
+	}
+	defer logFile.Close()
+
+	im.log.Info("import log file created", slog.String("file", logFile.Name()))
+
+	stats := &runStats{im: im, ctx: ctx, start: start, logFile: logFile}
 	walkErr := reader.WalkDumpDir(im.cfg.Dir, stats.visitFile)
 
 	im.log.Info("import finished",
@@ -54,14 +67,29 @@ func (im *Importer) Run(ctx context.Context) error {
 	return walkErr
 }
 
+// createLogFile creates dir if needed and an empty log file in it named
+// after start, e.g. 20250315-143005-importer-log.txt.
+func createLogFile(dir string, start time.Time) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, fmt.Errorf("create log directory: %w", err)
+	}
+	name := start.Format("20060102-150405") + "-importer-log.txt"
+	f, err := os.Create(filepath.Join(dir, name))
+	if err != nil {
+		return nil, fmt.Errorf("create log file: %w", err)
+	}
+	return f, nil
+}
+
 // runStats tracks the running totals for a single Importer.Run call and
 // drives the per-file processing that reader.WalkDumpDir invokes. It's
 // its own type, separate from Importer, because these counters are
 // scoped to one run rather than to the Importer's lifetime.
 type runStats struct {
-	im    *Importer
-	ctx   context.Context
-	start time.Time
+	im      *Importer
+	ctx     context.Context
+	start   time.Time
+	logFile io.Writer
 
 	files   int
 	records int
@@ -109,7 +137,22 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 				slog.Int("line", rec.LineNumber),
 				slog.String("error", rec.Err.Error()),
 			)
-		} else if _, err := s.im.paperService.Create(s.ctx, toPaper(rec.Paper)); err != nil {
+			s.writeLogEntry(path, rec.LineNumber, "", rec.Err.Error())
+			return s.ctx.Err()
+		}
+
+		p := toPaper(rec.Paper)
+		if problems := invalidFields(p); problems != "" {
+			errs++
+			s.errors++
+			s.im.log.Warn("invalid paper",
+				slog.String("file", path),
+				slog.Int("line", rec.LineNumber),
+				slog.String("doi", rec.Paper.DOI),
+				slog.String("error", problems),
+			)
+			s.writeLogEntry(path, rec.LineNumber, rec.Paper.DOI, problems)
+		} else if _, err := s.im.paperService.Create(s.ctx, p); err != nil {
 			errs++
 			s.errors++
 			s.im.log.Warn("create paper",
@@ -118,6 +161,7 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 				slog.String("doi", rec.Paper.DOI),
 				slog.String("error", err.Error()),
 			)
+			s.writeLogEntry(path, rec.LineNumber, rec.Paper.DOI, err.Error())
 		} else {
 			records++
 			s.records++
@@ -129,6 +173,42 @@ func (s *runStats) importFile(path string) (records, errs int, err error) {
 		return records, errs, fmt.Errorf("read file: %w", err)
 	}
 	return records, errs, nil
+}
+
+// writeLogEntry appends one line to the run's log file describing a
+// record that could not be imported, e.g.:
+//
+//	time=2025-03-15T14:30:05.123+01:00 file=dump/0.jsonl.gz line=42 doi=10.1234/abc error=missing title
+func (s *runStats) writeLogEntry(path string, line int, doi, msg string) {
+	now := time.Now().Format("2006-01-02T15:04:05.000Z07:00")
+	if _, err := fmt.Fprintf(s.logFile, "time=%s file=%s line=%d doi=%s error=%s\n",
+		now, path, line, doi, msg); err != nil {
+		s.im.log.Error("write import log", slog.String("error", err.Error()))
+	}
+}
+
+// invalidFields explains why p can't be imported, or returns "" if it can.
+func invalidFields(p paper.Paper) string {
+	var problems []string
+	if strings.TrimSpace(p.DOI) == "" {
+		problems = append(problems, "missing DOI")
+	}
+	if strings.TrimSpace(p.Title) == "" {
+		problems = append(problems, "missing title")
+	}
+	if !p.PublicationDate.IsValid() {
+		d := p.PublicationDate
+		problems = append(problems, fmt.Sprintf("invalid publication date (year=%d month=%d day=%d)", d.Year, d.Month, d.Day))
+	}
+	if !p.Type.IsValid() {
+		problems = append(problems, fmt.Sprintf("invalid type %q", p.Type))
+	}
+	if ts := p.Metadata.DataSourceTimestamp; ts != "" {
+		if _, err := time.Parse(time.RFC3339, ts); err != nil {
+			problems = append(problems, fmt.Sprintf("invalid data source timestamp %q", ts))
+		}
+	}
+	return strings.Join(problems, "; ")
 }
 
 func toPaper(source *crossref.Paper) paper.Paper {

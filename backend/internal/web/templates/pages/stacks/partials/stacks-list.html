@@ -11,7 +11,7 @@
   <li class="list-row flex hover:bg-base-200">
     <div class="grow space-y-1">
       <a
-        hx-get="/app/stacks/detail/{{ .UUID }}"
+        hx-get="/app/stacks/{{ .UUID }}"
         hx-target="#page-shell"
         hx-select-oob="#sidebar:outerHTML"
         hx-swap="outerHTML"
@@ -43,12 +43,12 @@
   {{ end }}
 </ul>
 <form class="mt-6">
-  <input type="hidden" name="search" value="{{ .SearchOptions.Query }}" />
+  <input type="hidden" name="query" value="{{ .SearchOptions.Query }}" />
   <input type="hidden" name="sortBy" value="{{ if .SearchOptions.Desc }}-{{ end }}{{ .SearchOptions.SortBy }}" />
   <div class="flex join justify-center">
     <button
       class="join-item btn  {{ if lt .Page 2 }} btn-disabled {{ end }}"
-      hx-post="/app/stacks/search"
+      hx-get="/app/stacks"
       hx-include="closest form"
       hx-vals='{"page": {{ .PrevPage }}}'
       hx-target="#stack-results"
@@ -59,7 +59,7 @@
     <button
       type="button"
       class="join-item btn {{ if .IsActive }}btn-active{{ end }} {{ if .IsSeperator }}btn-disabled{{ end }} "
-      hx-post="/app/stacks/search"
+      hx-get="/app/stacks"
       hx-include="closest form"
       hx-vals='{"page": {{ .TargetPage }}}'
       hx-target="#stack-results"
@@ -70,7 +70,7 @@
     {{ end }}
     <button
       class="join-item btn {{ if not .HasNext }} btn-disabled {{ end }}"
-      hx-post="/app/stacks/search"
+      hx-get="/app/stacks"
       hx-include="closest form"
       hx-vals='{"page": {{ .NextPage }}}'
       hx-target="#stack-results"

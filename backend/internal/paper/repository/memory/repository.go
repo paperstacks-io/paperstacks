@@ -77,12 +77,31 @@ func (r *Repository) Update(_ context.Context, uuid string, paper domain.Paper) 
 
 	for i, item := range r.data {
 		if item.UUID == uuid {
+			paper.PDFStorageKey = item.PDFStorageKey
 			r.data[i] = paper
 			return nil
 		}
 	}
 
 	return domain.ErrPaperNotFound
+}
+
+func (r *Repository) AttachPDF(_ context.Context, uuid string, storageKey string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for i, item := range r.data {
+		if item.UUID == uuid {
+			r.data[i].PDFStorageKey = storageKey
+			return nil
+		}
+	}
+
+	return domain.ErrPaperNotFound
+}
+
+func (r *Repository) DetachPDF(ctx context.Context, uuid string) error {
+	return r.AttachPDF(ctx, uuid, "")
 }
 
 func (r *Repository) Delete(_ context.Context, uuid string) error {

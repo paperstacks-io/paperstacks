@@ -28,7 +28,7 @@
 <section
   class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs"
   hx-trigger="load"
-  hx-post="/app/stacks/stats"
+  hx-get="/app/stacks/stats"
   hx-swap="innerHTML"
 >
   <div class="stat h-24 skeleton"></div>
@@ -48,16 +48,17 @@
     </div>
   </div>
   <div class="card-body gap-4">
-    <form id="stack_search_form" hx-post="/app/stacks/search" hx-trigger="load" hx-target:inherited="#stack-results">
+    <form id="stack_search_form" hx-get="/app/stacks" hx-trigger="load" hx-target:inherited="#stack-results">
       <div class="flex flex-col gap-3 lg:flex-row">
         <label class="input input-bordered flex items-center gap-2 w-full">
           <svg data-src="https://unpkg.com/heroicons/20/solid/magnifying-glass.svg" class="h-4 w-4 opacity-50"></svg>
 
           <input
             type="search"
-            name="search"
+            name="query"
             placeholder="methodology..."
-            hx-post="/app/stacks/search"
+            hx-get="/app/stacks"
+            hx-include="closest form"
             hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
             hx-target="#stack-results"
             hx-vals='{"page": 1}'
@@ -67,7 +68,8 @@
         <select
           class="select select-bordered block w-40"
           name="sortBy"
-          hx-post="/app/stacks/my/search"
+          hx-get="/app/stacks"
+          hx-include="closest form"
           hx-trigger="change"
           hx-target="#stack-results"
           hx-vals='{"page": 1}'

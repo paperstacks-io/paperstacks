@@ -20,9 +20,6 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
-	docHttp "github.com/paperstacks.io/paperstacks/internal/document/http"
-	docMem "github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -45,6 +42,22 @@ func run(
 	cfg config.Config,
 ) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	var objectStore objectstorage.Store
+	if ok, _ := cfg.ObjectStorage.Validate(); ok {
+		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, logger)
+		if err != nil {
+			logger.Error("ObjectStorage config error", "error", err)
+			return err
+		}
+
+		if err := s3Store.Check(ctx); err != nil {
+			logger.Error("ObjectStorage check error", "error", err)
+			return err
+		}
+
+		objectStore = s3Store
+	}
+
 	hasDB := cfg.DatabaseURL != ""
 
 	var paperService *paperApp.PaperService
@@ -59,35 +72,17 @@ func run(
 			return fmt.Errorf("ping database: %w", err)
 		}
 
-		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db))
+		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db), objectStore)
 		userService = userApp.NewUserService(userPostgres.NewRepository(db))
 	} else {
-		paperService = paperApp.NewPaperService(paperMem.NewRepository())
+		paperService = paperApp.NewPaperService(paperMem.NewRepository(), objectStore)
 		userService = userApp.NewUserService(userMem.NewRepository())
 	}
 
 	doiService := doiApp.NewDOIService(nil)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(), paperService)
+	stackService := stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
-	docRepo := docMem.NewRepository()
-
-	var objectStore objectstorage.Store
-	if ok, _ := cfg.ObjectStorage.Validate(); ok {
-		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
-		if err != nil {
-			logger.Error("ObjectStorage config error", "error", err)
-			return err
-		}
-
-		if err := s3Store.Check(ctx); err != nil {
-			logger.Error("ObjectStorage check error", "error", err)
-			return err
-		}
-		objectStore = s3Store
-	}
-
-	documentService := docApp.NewDocumentService(docRepo, objectStore, paperService)
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
@@ -97,7 +92,6 @@ func run(
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
-	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
 	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))

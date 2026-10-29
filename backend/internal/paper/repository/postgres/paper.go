@@ -22,7 +22,7 @@ const paperColumns = `
 	publication_status_timestamp,
 	abstract,
 	keywords,
-	pdf_url
+	pdf_storage_key
 `
 
 func scanPapers(rows *sql.Rows) ([]domain.Paper, error) {
@@ -48,7 +48,7 @@ type rowScanner interface {
 func scanPaper(row rowScanner) (domain.Paper, error) {
 	pgTypes := pgtype.NewMap()
 	var paper domain.Paper
-	var doi, title, titleShort, paperType, publicationStatus, abstract, pdfURL sql.NullString
+	var doi, title, titleShort, paperType, publicationStatus, abstract, pdfStorageKey sql.NullString
 	var year, month, day sql.NullInt16
 	var statusTimestamp sql.NullTime
 
@@ -65,7 +65,7 @@ func scanPaper(row rowScanner) (domain.Paper, error) {
 		&statusTimestamp,
 		&abstract,
 		pgTypes.SQLScanner(&paper.Keywords),
-		&pdfURL,
+		&pdfStorageKey,
 	)
 	if err != nil {
 		return domain.Paper{}, err
@@ -79,7 +79,7 @@ func scanPaper(row rowScanner) (domain.Paper, error) {
 	paper.PublicationStatus = publicationStatus.String
 	paper.PublicationStatusTimestamp = formatTimestamp(statusTimestamp)
 	paper.Abstract = abstract.String
-	paper.PDFURL = pdfURL.String
+	paper.PDFStorageKey = pdfStorageKey.String
 
 	return paper, nil
 }
@@ -101,8 +101,7 @@ func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Pape
 			publication_status = $9,
 			publication_status_timestamp = $10,
 			abstract = $11,
-			keywords = $12,
-			pdf_url = $13
+			keywords = $12
 		WHERE uuid = $1`, args...)
 	if err != nil {
 		return wrapError("update paper", err)
@@ -123,10 +122,11 @@ func insertPaper(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
 	if err != nil {
 		return err
 	}
+	args = append(args, nullString(paper.PDFStorageKey))
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
-			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_url
+			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_storage_key
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`, args...)
 	return err
 }
@@ -150,6 +150,5 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		statusTimestamp,
 		nullString(paper.Abstract),
 		pgtype.FlatArray[string](paper.Keywords),
-		nullString(paper.PDFURL),
 	}, nil
 }

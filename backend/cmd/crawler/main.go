@@ -23,6 +23,10 @@ import (
 	papermemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 )
 
+// logDir is where each import run's log file is created, relative to the
+// backend root the command is run from (see Usage above).
+const logDir = "cmd/crawler/logs"
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -50,8 +54,8 @@ func run(ctx context.Context) error {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 
-	paperService := paperapp.NewPaperService(papermemory.NewRepository())
-	imp := importer.New(importer.Config{Dir: *dir}, log, paperService)
+	paperService := paperapp.NewPaperService(papermemory.NewRepository(), nil)
+	imp := importer.New(importer.Config{Dir: *dir, LogDir: logDir}, log, paperService)
 
 	return imp.Run(ctx)
 }
