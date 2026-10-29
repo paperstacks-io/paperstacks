@@ -248,7 +248,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 				}
 				return
 			}
-			if !strings.HasPrefix(response, `<div id="paper-pdf-`+paperUUID+`">`) || !strings.HasSuffix(response, "</div>") {
+			if !strings.HasPrefix(response, `<div id="paper-files"`) || !strings.Contains(response, `id="paper-pdf-`+paperUUID+`"`) || !strings.HasSuffix(response, "</div>") {
 				t.Fatalf("response is not the PDF section: %s", response)
 			}
 			for _, header := range []string{"HX-Location", "HX-Retarget", "HX-Reswap"} {
@@ -260,7 +260,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 				t.Fatalf("response contains unrelated content: %s", response)
 			}
 			if !strings.Contains(response, "<form") ||
-				!strings.Contains(response, `hx-target="#paper-pdf-`+paperUUID+`"`) ||
+				!strings.Contains(response, `hx-target="#paper-files"`) ||
 				!strings.Contains(response, `hx-swap="outerHTML"`) {
 				t.Fatalf("form does not replace the PDF section: %s", response)
 			}
@@ -280,7 +280,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 	}
 }
 
-func TestPaperInfoUploadURLIncludesStackUUID(t *testing.T) {
+func TestPaperInfoURLsIncludeStackUUID(t *testing.T) {
 	const stackUUID = "22222222-2222-4222-8222-222222222222"
 	paper := paperDomain.Paper{UUID: "11111111-1111-4111-8111-111111111111", Title: "Test paper"}
 	stackService := newTestStackService(paper)
@@ -298,19 +298,30 @@ func TestPaperInfoUploadURLIncludesStackUUID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, handler := range map[string]http.Handler{
-		"detail page":   handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
-		"paper partial": handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
+	for _, tt := range []struct {
+		name    string
+		handler http.Handler
+		want    string
+	}{
+		{
+			name:    "detail page",
+			handler: handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
+			want:    `hx-get="/app/stacks/` + stackUUID + `/papers/` + paper.UUID + `"`,
+		},
+		{
+			name:    "paper partial",
+			handler: handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
+			want:    `hx-put="/app/stacks/` + stackUUID + `/papers/` + paper.UUID + `/pdf"`,
+		},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/app/stacks/"+stackUUID, nil)
 			req.SetPathValue("stackUUID", stackUUID)
 			req.SetPathValue("paperUUID", paper.UUID)
 			rr := httptest.NewRecorder()
-			handler.ServeHTTP(rr, req)
-			want := `hx-put="/app/stacks/` + stackUUID + `/papers/` + paper.UUID + `/pdf"`
-			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), want) {
-				t.Fatalf("response = %d %s, want upload URL %s", rr.Code, rr.Body.String(), want)
+			tt.handler.ServeHTTP(rr, req)
+			if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), tt.want) {
+				t.Fatalf("response = %d %s, want stack-scoped URL %s", rr.Code, rr.Body.String(), tt.want)
 			}
 		})
 	}
