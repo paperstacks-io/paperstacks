@@ -46,7 +46,7 @@ func (im *Importer) Run(ctx context.Context) error {
 	im.log.Info("crawler import starting", slog.String("dir", im.cfg.Dir))
 	start := time.Now()
 
-	logFile, err := createLogFile(im.cfg.LogDir, start)
+	logFile, err := createLogFile(im.cfg.LogDir, start, "importer")
 	if err != nil {
 		return err
 	}
@@ -68,12 +68,12 @@ func (im *Importer) Run(ctx context.Context) error {
 }
 
 // createLogFile creates dir if needed and an empty log file in it named
-// after start, e.g. 20250315-143005-importer-log.txt.
-func createLogFile(dir string, start time.Time) (*os.File, error) {
+// after start and kind, e.g. 20250315-143005-importer-log.txt.
+func createLogFile(dir string, start time.Time, kind string) (*os.File, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("create log directory: %w", err)
 	}
-	name := start.Format("20060102-150405") + "-importer-log.txt"
+	name := start.Format("20060102-150405") + "-" + kind + "-log.txt"
 	f, err := os.Create(filepath.Join(dir, name))
 	if err != nil {
 		return nil, fmt.Errorf("create log file: %w", err)
