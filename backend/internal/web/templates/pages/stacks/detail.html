@@ -142,7 +142,7 @@
                   <div class="flex items-center gap-3">
                     <div>
                       <div class="font-bold">{{ .Title }}</div>
-                      <div class="text-base-content/60 text-sm">
+                      <div class="text-base-content/60 text-sm max-w-96 truncate">
                         {{ if .Metadata.JournalTitle }}{{ .Metadata.JournalTitle }}{{ else if .Metadata.BookTitle }}{{
                         .Metadata.BookTitle }}{{ else if .Metadata.SeriesTitle }}{{ .Metadata.SeriesTitle }}{{ else if
                         .Metadata.EventTitle }}{{ .Metadata.EventTitle }}{{ else }}{{ .Metadata.Institution }}{{ end }}
@@ -150,7 +150,11 @@
                     </div>
                   </div>
                 </td>
-                <td>{{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}</td>
+                <td>
+                  <div class="max-w-64 truncate">
+                    {{ range $i, $author := .Authors }}{{ if $i }}; {{ end }}{{ $author.FullName }}{{ end }}
+                  </div>
+                </td>
                 <td>{{ .PublicationDate }}</td>
                 <td class="text-right">
                   <div class="flex">
