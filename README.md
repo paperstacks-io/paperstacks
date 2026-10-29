@@ -18,7 +18,6 @@ Visit our [landing page](https://paperstacks.io/) for more information.
 - `docs/`: Contains more technical information and documentation about the project.
 - `backend/`: Contains the backend code, including API endpoints and the HTMX frontend (Server Side Rendering).
 - `db/`: Contains all database (PostgreSQL) related scripts.
-- `objectstorage/`: Contains the local S3-compatible object storage setup.
 
 ## Prerequisites
 
