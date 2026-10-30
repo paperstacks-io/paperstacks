@@ -343,7 +343,7 @@ func handleStackPaperCitation(
 	})
 }
 
-func handleStackPaperDetail(
+func handleStackPaperInfo(
 	logger *slog.Logger,
 	tmpl *template.Template,
 	paperService *paperApp.PaperService,
@@ -640,7 +640,7 @@ func handleStackVisibilityUpdate(
 func renderPaperPDFSection(w http.ResponseWriter, tmpl *template.Template, status int, data paperInfoData) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	return tmpl.ExecuteTemplate(w, "stacks/partials/paper-info-pdf", data)
+	return tmpl.ExecuteTemplate(w, "stacks/partials/paper-files", data)
 }
 
 func handlePaperUploadPDF(
