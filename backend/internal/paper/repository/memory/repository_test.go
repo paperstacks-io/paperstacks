@@ -2,10 +2,63 @@ package memory
 
 import (
 	"context"
+	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
+
+func TestPDFAttachmentPreservesPaperEdits(t *testing.T) {
+	ctx := context.Background()
+	repo := NewRepository()
+	paper := domain.Paper{UUID: "test-paper", Title: "Original", Authors: []domain.Author{{NameLast: "Author"}}, Metadata: domain.Metadata{Publisher: "Publisher"}}
+	if _, err := repo.Save(ctx, paper); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.AttachPDF(ctx, paper.UUID, "pdf/test.pdf"); err != nil {
+		t.Fatal(err)
+	}
+	want := paper
+	want.PDFStorageKey = "pdf/test.pdf"
+	got, err := repo.GetByUUID(ctx, paper.UUID)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("after attach = %#v, %v; want %#v", got, err, want)
+	}
+
+	paper.Title = "Edited"
+	if err := repo.Update(ctx, paper.UUID, paper); err != nil {
+		t.Fatal(err)
+	}
+	want.Title = paper.Title
+	got, err = repo.GetByUUID(ctx, paper.UUID)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("after stale edit = %#v, %v; want %#v", got, err, want)
+	}
+	if err := repo.DetachPDF(ctx, paper.UUID); err != nil {
+		t.Fatal(err)
+	}
+	// A stale edit must not restore a removed attachment either.
+	if err := repo.Update(ctx, paper.UUID, got); err != nil {
+		t.Fatal(err)
+	}
+	want.PDFStorageKey = ""
+	got, err = repo.GetByUUID(ctx, paper.UUID)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("after remove and stale edit = %#v, %v; want %#v", got, err, want)
+	}
+}
+
+func TestPDFAttachmentMissingPaper(t *testing.T) {
+	repo := NewRepository()
+	ctx := context.Background()
+	if err := repo.AttachPDF(ctx, "missing", "pdf/test.pdf"); !errors.Is(err, domain.ErrPaperNotFound) {
+		t.Fatalf("AttachPDF error = %v, want ErrPaperNotFound", err)
+	}
+	if err := repo.DetachPDF(ctx, "missing"); !errors.Is(err, domain.ErrPaperNotFound) {
+		t.Fatalf("DetachPDF error = %v, want ErrPaperNotFound", err)
+	}
+}
 
 func TestRepositoryGetByUUID(t *testing.T) {
 	t.Parallel()

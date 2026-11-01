@@ -28,7 +28,8 @@ func New() Config {
 			Endpoint:        getEnvOrDefault("S3_ENDPOINT_URL", ""),
 			AccessKeyID:     getEnvOrDefault("S3_ACCESS_KEY_ID", ""),
 			SecretAccessKey: getEnvOrDefault("S3_SECRET_ACCESS_KEY", ""),
-			Region:          getEnvOrDefault("S3_REGION", objectstorage.DefaultRegion),
+			Region:          getEnvOrDefault("S3_REGION", ""),
+			Bucket:          getEnvOrDefault("S3_BUCKET", ""),
 		},
 	}
 }

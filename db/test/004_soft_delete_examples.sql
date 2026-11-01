@@ -92,7 +92,7 @@ WHERE s.uuid = '00000000-0000-0000-0000-000000000002'
 --
 -- For papers, paper_author currently uses ON DELETE RESTRICT. Therefore those
 -- associations must be removed before the final paper DELETE. stack_paper,
--- and metadata are already configured with ON DELETE CASCADE. The pdf_url is
+-- and metadata are already configured with ON DELETE CASCADE. The pdf_storage_key is
 -- stored directly on paper and is removed with the row.
 --
 -- BEGIN;

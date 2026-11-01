@@ -19,6 +19,7 @@ type PutObjectInput struct {
 	Body        io.Reader
 	Size        int64
 	ContentType string
+	Metadata    map[string]string
 }
 
 type Object struct {
@@ -31,4 +32,5 @@ type ObjectInfo struct {
 	ETag        string
 	Size        int64
 	ContentType string
+	Metadata    map[string]string
 }
