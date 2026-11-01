@@ -90,6 +90,19 @@
       <div class="card-body">
         <h2 class="card-title">Papers</h2>
 
+        {{ if .Stack.DeletedPapers }}
+        <div class="alert alert-warning" role="status">
+          <div>
+            <p>Some papers in this stack have been deleted and are no longer available.</p>
+            <ul class="list-disc pl-5">
+              {{ range .Stack.DeletedPapers }}
+              <li>{{ if .Title }}{{ .Title }}{{ else }}Paper {{ .UUID }}{{ end }} — Deleted</li>
+              {{ end }}
+            </ul>
+          </div>
+        </div>
+        {{ end }}
+
         <form id="stack-paper-filter" data-stack-paper-filter autocomplete="off">
           <div class="flex flex-col gap-3 lg:flex-row">
             <label class="input input-sm w-full">

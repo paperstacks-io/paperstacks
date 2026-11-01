@@ -168,6 +168,9 @@ func handleListPapersInStack(
 		}
 
 		resp := NewPaperResponses(stack.Papers)
+		for _, paper := range stack.DeletedPapers {
+			resp = append(resp, PaperResponse{UUID: paper.UUID, Title: paper.Title, IsDeleted: true})
+		}
 		if err := server.Encode(w, r, http.StatusOK, resp); err != nil {
 			logger.Error("encode paper response", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

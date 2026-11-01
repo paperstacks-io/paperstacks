@@ -1,85 +1,90 @@
+// Package postgres persists papers and their bibliographic data in PostgreSQL.
 package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
-// Repository persists papers in PostgreSQL through database/sql.
+// Repository persists papers in PostgreSQL through native pgx.
 type Repository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
 var _ domain.Repository = (*Repository)(nil)
 
-func NewRepository(db *sql.DB) *Repository {
+// NewRepository shares the application's connection pool. Its owner closes it.
+func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
 func (r *Repository) GetByUUID(ctx context.Context, uuid string) (domain.Paper, error) {
-	paper, err := scanPaper(r.db.QueryRowContext(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE uuid = $1`, uuid))
-	if errors.Is(err, sql.ErrNoRows) {
+	paper, err := scanPaper(r.db.QueryRow(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE uuid = $1 AND deleted_at IS NULL`, uuid))
+	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Paper{}, domain.ErrPaperNotFound
 	}
 	if err != nil {
-		return domain.Paper{}, wrapError("get paper by UUID", err)
+		return domain.Paper{}, fmt.Errorf("get paper by UUID: %w", err)
 	}
 
 	papers := []domain.Paper{paper}
 	if err := r.hydrate(ctx, papers); err != nil {
-		return domain.Paper{}, wrapError("load paper by UUID", err)
+		return domain.Paper{}, fmt.Errorf("load paper by UUID: %w", err)
 	}
 
 	return papers[0], nil
 }
 
 func (r *Repository) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
-	paper, err := scanPaper(r.db.QueryRowContext(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE doi = $1`, doi))
-	if errors.Is(err, sql.ErrNoRows) {
+	paper, err := scanPaper(r.db.QueryRow(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE doi = $1 AND deleted_at IS NULL`, doi))
+	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Paper{}, domain.ErrPaperNotFound
 	}
 	if err != nil {
-		return domain.Paper{}, wrapError("get paper by DOI", err)
+		return domain.Paper{}, fmt.Errorf("get paper by DOI: %w", err)
 	}
 
 	papers := []domain.Paper{paper}
 	if err := r.hydrate(ctx, papers); err != nil {
-		return domain.Paper{}, wrapError("load paper by DOI", err)
+		return domain.Paper{}, fmt.Errorf("load paper by DOI: %w", err)
 	}
 
 	return papers[0], nil
 }
 
 func (r *Repository) List(ctx context.Context) ([]domain.Paper, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+paperColumns+` FROM public.paper ORDER BY uuid ASC`)
+	rows, err := r.db.Query(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE deleted_at IS NULL ORDER BY uuid ASC`)
 	if err != nil {
-		return nil, wrapError("list papers", err)
+		return nil, fmt.Errorf("list papers: %w", err)
 	}
 	defer rows.Close()
 
 	papers, err := scanPapers(rows)
 	if err != nil {
-		return nil, wrapError("list papers", err)
+		return nil, fmt.Errorf("list papers: %w", err)
 	}
 	if err := r.hydrate(ctx, papers); err != nil {
-		return nil, wrapError("load listed papers", err)
+		return nil, fmt.Errorf("load listed papers: %w", err)
 	}
 
 	return papers, nil
 }
 
 func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	if opts.SortBy != "" && opts.SortBy != "title" && opts.SortBy != "year" {
+		return domain.SearchResult{}, domain.ErrInvalidSearch
+	}
 	query := strings.ToLower(opts.Query)
 
 	const match = `
-		($1 = ''
+		deleted_at IS NULL AND ($1 = ''
 			OR strpos(lower(title), $1) > 0
 			OR EXISTS (
 				SELECT 1
@@ -89,8 +94,8 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 		)`
 
 	var total int
-	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM public.paper WHERE `+match, query).Scan(&total); err != nil {
-		return domain.SearchResult{}, wrapError("count papers", err)
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM public.paper WHERE `+match, query).Scan(&total); err != nil {
+		return domain.SearchResult{}, fmt.Errorf("count papers: %w", err)
 	}
 
 	page := max(1, opts.Page)
@@ -98,7 +103,11 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 	if pageSize < 1 {
 		pageSize = max(1, total)
 	}
-	offset := (page - 1) * pageSize
+	// Clamp pages before multiplication to avoid overflowing on untrusted input.
+	offset := total
+	if page-1 <= total/pageSize {
+		offset = (page - 1) * pageSize
+	}
 
 	orderBy := "uuid ASC"
 	switch opts.SortBy {
@@ -116,18 +125,18 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 		}
 	}
 
-	rows, err := r.db.QueryContext(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE `+match+` ORDER BY `+orderBy+` LIMIT $2 OFFSET $3`, query, pageSize, offset)
+	rows, err := r.db.Query(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE `+match+` ORDER BY `+orderBy+` LIMIT $2 OFFSET $3`, query, pageSize, offset)
 	if err != nil {
-		return domain.SearchResult{}, wrapError("search papers", err)
+		return domain.SearchResult{}, fmt.Errorf("search papers: %w", err)
 	}
 	defer rows.Close()
 
 	papers, err := scanPapers(rows)
 	if err != nil {
-		return domain.SearchResult{}, wrapError("search papers", err)
+		return domain.SearchResult{}, fmt.Errorf("search papers: %w", err)
 	}
 	if err := r.hydrate(ctx, papers); err != nil {
-		return domain.SearchResult{}, wrapError("load searched papers", err)
+		return domain.SearchResult{}, fmt.Errorf("load searched papers: %w", err)
 	}
 
 	return domain.SearchResult{
@@ -135,86 +144,81 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 		Total:    total,
 		Page:     page,
 		PageSize: pageSize,
-		HasNext:  offset+len(papers) < total,
+		HasNext:  len(papers) < total-offset,
 	}, nil
 }
 
 func (r *Repository) Save(ctx context.Context, paper domain.Paper) (domain.Paper, error) {
 	paper = paper.Normalize()
 
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return domain.Paper{}, wrapError("begin save paper", err)
+		return domain.Paper{}, fmt.Errorf("begin save paper: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(context.Background())
 
 	if err := insertPaper(ctx, tx, paper); err != nil {
-		return domain.Paper{}, wrapError("save paper", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			switch pgErr.ConstraintName {
+			case "paper_pk", "paper_doi_uq":
+				return domain.Paper{}, fmt.Errorf("save paper: %w: %w", domain.ErrPaperAlreadyExists, err)
+			}
+		}
+		return domain.Paper{}, fmt.Errorf("save paper: %w", err)
 	}
 	if err := insertChildren(ctx, tx, paper); err != nil {
-		return domain.Paper{}, wrapError("save paper", err)
+		return domain.Paper{}, fmt.Errorf("save paper: %w", err)
 	}
-	if err := tx.Commit(); err != nil {
-		return domain.Paper{}, wrapError("commit saved paper", err)
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Paper{}, fmt.Errorf("commit saved paper: %w", err)
 	}
 
 	return paper, nil
 }
 
 func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper) error {
+	if paper.UUID != "" && paper.UUID != uuid {
+		return domain.ErrUUIDMismatch
+	}
+	paper.UUID = uuid
 	paper = paper.Normalize()
 
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return wrapError("begin update paper", err)
+		return fmt.Errorf("begin update paper: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(context.Background())
 
 	if err := updatePaper(ctx, tx, uuid, paper); err != nil {
 		return err
 	}
 
 	if err := removePaperAuthors(ctx, tx, uuid); err != nil {
-		return wrapError("replace paper authors", err)
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM public.metadata WHERE uuid_paper = $1`, uuid); err != nil {
-		return wrapError("replace paper metadata", err)
+		return fmt.Errorf("replace paper authors: %w", err)
 	}
 	if err := insertChildren(ctx, tx, paper); err != nil {
-		return wrapError("replace paper children", err)
+		return fmt.Errorf("replace paper children: %w", err)
 	}
-	if err := tx.Commit(); err != nil {
-		return wrapError("commit updated paper", err)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit updated paper: %w", err)
 	}
 
 	return nil
 }
 
+// Delete marks an active paper as deleted; the database retention job purges it later.
 func (r *Repository) Delete(ctx context.Context, uuid string) error {
-	tx, err := r.db.BeginTx(ctx, nil)
+	result, err := r.db.Exec(ctx, `
+		UPDATE public.paper
+		SET deleted_at = statement_timestamp()
+		WHERE uuid = $1 AND deleted_at IS NULL`, uuid)
 	if err != nil {
-		return wrapError("begin delete paper", err)
+		return fmt.Errorf("soft delete paper: %w", err)
 	}
-	defer tx.Rollback()
-
-	if err := removePaperAuthors(ctx, tx, uuid); err != nil {
-		return wrapError("remove paper authors", err)
-	}
-	result, err := tx.ExecContext(ctx, `DELETE FROM public.paper WHERE uuid = $1`, uuid)
-	if err != nil {
-		return wrapError("delete paper", err)
-	}
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return wrapError("check deleted paper", err)
-	}
-	if changed == 0 {
+	if result.RowsAffected() == 0 {
 		return domain.ErrPaperNotFound
 	}
-	if err := tx.Commit(); err != nil {
-		return wrapError("commit deleted paper", err)
-	}
-
 	return nil
 }
 
@@ -239,20 +243,12 @@ func (r *Repository) hydrate(ctx context.Context, papers []domain.Paper) error {
 	return nil
 }
 
-func insertChildren(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
-	if err := insertMetadata(ctx, tx, paper.UUID, paper.Metadata); err != nil {
-		return fmt.Errorf("insert metadata: %w", err)
+func insertChildren(ctx context.Context, tx pgx.Tx, paper domain.Paper) error {
+	if err := upsertMetadata(ctx, tx, paper.UUID, paper.Metadata); err != nil {
+		return fmt.Errorf("upsert metadata: %w", err)
 	}
 	if err := insertAuthors(ctx, tx, paper.UUID, paper.Authors); err != nil {
 		return fmt.Errorf("insert authors: %w", err)
 	}
 	return nil
-}
-
-func wrapError(operation string, err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-		return fmt.Errorf("%s: %w: %w", operation, domain.ErrPaperAlreadyExists, err)
-	}
-	return fmt.Errorf("%s: %w", operation, err)
 }

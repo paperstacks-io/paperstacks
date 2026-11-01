@@ -1,8 +1,9 @@
 package postgres
 
 import (
-	"database/sql"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func timestampValue(value string) (any, error) {
@@ -16,7 +17,7 @@ func timestampValue(value string) (any, error) {
 	return parsed, nil
 }
 
-func formatTimestamp(value sql.NullTime) string {
+func formatTimestamp(value pgtype.Timestamptz) string {
 	if !value.Valid {
 		return ""
 	}

@@ -2,9 +2,10 @@
 package postgres
 
 import (
-	"database/sql"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	"github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
@@ -17,7 +18,7 @@ type stackDAO struct {
 	Name            string
 	OwnerExternalID string
 	OwnerEmail      string
-	OwnerORCID      sql.NullString
+	OwnerORCID      pgtype.Text
 	IsPublic        bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -25,13 +26,17 @@ type stackDAO struct {
 	OwnerUpdatedAt  time.Time
 }
 
+type stackPaperDAO struct {
+	UUID      string
+	Title     pgtype.Text
+	IsDeleted bool
+}
+
 const stackColumns = `s.uuid::text, s.name, s.owner_external_id, s.is_public,
  s.created_at, s.updated_at, u.email, u.orcid, u.created_at, u.updated_at`
 const stackFrom = ` FROM public.stack s JOIN public.app_user u ON u.external_id = s.owner_external_id`
 
-type rowScanner interface{ Scan(...any) error }
-
-func scanStack(row rowScanner) (domain.Stack, error) {
+func scanStack(row pgx.Row) (domain.Stack, error) {
 	var d stackDAO
 	if err := row.Scan(&d.UUID, &d.Name, &d.OwnerExternalID, &d.IsPublic,
 		&d.CreatedAt, &d.UpdatedAt, &d.OwnerEmail, &d.OwnerORCID, &d.OwnerCreatedAt, &d.OwnerUpdatedAt); err != nil {
