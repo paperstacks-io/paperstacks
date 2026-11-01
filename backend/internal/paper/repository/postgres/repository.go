@@ -197,9 +197,6 @@ func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper
 	if err := removePaperAuthors(ctx, tx, uuid); err != nil {
 		return fmt.Errorf("replace paper authors: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM public.metadata WHERE uuid_paper = $1`, uuid); err != nil {
-		return fmt.Errorf("replace paper metadata: %w", err)
-	}
 	if err := insertChildren(ctx, tx, paper); err != nil {
 		return fmt.Errorf("replace paper children: %w", err)
 	}
@@ -247,8 +244,8 @@ func (r *Repository) hydrate(ctx context.Context, papers []domain.Paper) error {
 }
 
 func insertChildren(ctx context.Context, tx pgx.Tx, paper domain.Paper) error {
-	if err := insertMetadata(ctx, tx, paper.UUID, paper.Metadata); err != nil {
-		return fmt.Errorf("insert metadata: %w", err)
+	if err := upsertMetadata(ctx, tx, paper.UUID, paper.Metadata); err != nil {
+		return fmt.Errorf("upsert metadata: %w", err)
 	}
 	if err := insertAuthors(ctx, tx, paper.UUID, paper.Authors); err != nil {
 		return fmt.Errorf("insert authors: %w", err)

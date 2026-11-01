@@ -66,7 +66,7 @@ func scanMetadata(row pgx.Row) (string, domain.Metadata, error) {
 	return d.PaperUUID, d.domain(), nil
 }
 
-func insertMetadata(ctx context.Context, tx pgx.Tx, uuid string, metadata domain.Metadata) error {
+func upsertMetadata(ctx context.Context, tx pgx.Tx, uuid string, metadata domain.Metadata) error {
 	timestamp, err := timestampValue(metadata.DataSourceTimestamp)
 	if err != nil {
 		return fmt.Errorf("parse data source timestamp: %w", err)
@@ -78,7 +78,27 @@ func insertMetadata(ctx context.Context, tx pgx.Tx, uuid string, metadata domain
 			funding, datasource, datasource_timestamp
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
-		)`,
+		)
+		ON CONFLICT (uuid_paper) DO UPDATE SET
+			publisher = EXCLUDED.publisher,
+			journal_title = EXCLUDED.journal_title,
+			journal_abbrev = EXCLUDED.journal_abbrev,
+			book_title = EXCLUDED.book_title,
+			series_title = EXCLUDED.series_title,
+			event_title = EXCLUDED.event_title,
+			event_place = EXCLUDED.event_place,
+			institution = EXCLUDED.institution,
+			pages = EXCLUDED.pages,
+			volume = EXCLUDED.volume,
+			issue = EXCLUDED.issue,
+			isbn = EXCLUDED.isbn,
+			issn = EXCLUDED.issn,
+			"reference" = EXCLUDED."reference",
+			license = EXCLUDED.license,
+			copyright = EXCLUDED.copyright,
+			funding = EXCLUDED.funding,
+			datasource = EXCLUDED.datasource,
+			datasource_timestamp = EXCLUDED.datasource_timestamp`,
 		uuid,
 		nullString(metadata.Publisher),
 		nullString(metadata.JournalTitle),

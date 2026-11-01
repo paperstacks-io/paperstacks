@@ -166,7 +166,7 @@ func TestPaperPostgresRepository(t *testing.T) {
 	if !found {
 		t.Fatal("paper missing from list")
 	}
-	// Fail after updating the parent and removing children: everything must roll back.
+	// Fail after updating the parent and removing author links: everything must roll back.
 	invalid := original
 	invalid.Title = "Must roll back"
 	invalid.Metadata.DataSourceTimestamp = "not-a-date"
@@ -177,6 +177,10 @@ func TestPaperPostgresRepository(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(saved, loaded) {
 		t.Fatalf("rollback lost data: %+v, %v", loaded, err)
 	}
+	var metadataKey int64
+	if err := db.QueryRow(ctx, `SELECT key FROM public.metadata WHERE uuid_paper=$1`, id).Scan(&metadataKey); err != nil {
+		t.Fatal(err)
+	}
 	changed := original
 	changed.UUID = ""
 	changed.Title = "Updated " + id
@@ -186,6 +190,37 @@ func TestPaperPostgresRepository(t *testing.T) {
 	loaded, err = repo.GetByUUID(ctx, id)
 	if err != nil || loaded.Title != changed.Title || len(loaded.Authors) != 2 || loaded.Metadata.Publisher != "Publisher" {
 		t.Fatalf("update: %+v, %v", loaded, err)
+	}
+	cleared := changed
+	cleared.Metadata = domain.Metadata{}
+	if err := repo.Update(ctx, id, cleared); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err = repo.GetByUUID(ctx, id)
+	if err != nil || !reflect.DeepEqual(loaded.Metadata, domain.Metadata{}) {
+		t.Fatalf("clear metadata: %+v, %v", loaded.Metadata, err)
+	}
+	if err := repo.Update(ctx, id, changed); err != nil {
+		t.Fatal(err)
+	}
+	var updatedMetadataKey int64
+	if err := db.QueryRow(ctx, `SELECT key FROM public.metadata WHERE uuid_paper=$1`, id).Scan(&updatedMetadataKey); err != nil {
+		t.Fatal(err)
+	}
+	if metadataKey != updatedMetadataKey {
+		t.Fatalf("metadata identity changed: got %d; want %d", updatedMetadataKey, metadataKey)
+	}
+	// Updating a paper without a metadata row must create that row.
+	if _, err := db.Exec(ctx, `DELETE FROM public.metadata WHERE uuid_paper=$1`, otherID); err != nil {
+		t.Fatal(err)
+	}
+	otherPaper := domain.Paper{UUID: otherID, Title: "Other " + id, Metadata: original.Metadata}
+	if err := repo.Update(ctx, otherID, otherPaper); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err = repo.GetByUUID(ctx, otherID)
+	if err != nil || !reflect.DeepEqual(loaded.Metadata, original.Metadata) {
+		t.Fatalf("create missing metadata: %+v, %v", loaded.Metadata, err)
 	}
 	// An author shared by another paper must survive deletion of the first paper.
 	var authorKey int64

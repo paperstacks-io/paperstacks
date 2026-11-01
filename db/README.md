@@ -63,20 +63,6 @@ behavior is defined.
 
 ## Tests
 
-Paper persistence uses separate DAO structs for SQL nullability and foreign keys;
-the domain model stays database-independent. The existing `DATABASE_URL` pool is
-shared and checked at startup. Paper, metadata, and ordered author associations
-are written in one transaction. Updates reject conflicting UUIDs. Updates keep
-authors used by other papers and removes only unreferenced authors/affiliations.
-Deletion sets deleted_at and preserves related data. Reads and updates exclude deleted papers. The soft-delete
-cleanup procedure permanently removes retained papers after 30 days.
-
-Run `make test` in `backend/` for database-independent repository unit tests.
-For real PostgreSQL tests, initialize a separate test database, set
-`PAPER_TEST_DATABASE_URL` to its `app_rw` connection string, and run
-`make test-integration` in `backend/`. Without this variable, the PostgreSQL test
-is skipped and the existing HTTP integration tests still run.
-
 Run `make db-init-smoke` from the repository root. It initializes a fresh database
 and executes `db/test/*_test.sql` with SQL errors treated as failures, including
 the metadata tests. The existing CI database job runs this target. Tests cover
