@@ -23,7 +23,7 @@ const paperColumns = `
 	publication_status_timestamp,
 	abstract,
 	keywords,
-	pdf_url
+	pdf_storage_key
 `
 
 func scanPapers(rows pgx.Rows) ([]domain.Paper, error) {
@@ -98,7 +98,7 @@ func insertPaper(ctx context.Context, tx pgx.Tx, paper domain.Paper) error {
 	_, err = tx.Exec(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
-			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_url
+			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_storage_key
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`, args...)
 	return err
 }
@@ -121,7 +121,7 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		nullString(paper.PublicationStatus),
 		statusTimestamp,
 		nullString(paper.Abstract),
-		paper.Keywords,
+		pgtype.FlatArray[string](paper.Keywords),
 		nullString(paper.PDFURL),
 	}, nil
 }

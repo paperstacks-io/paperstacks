@@ -5,13 +5,12 @@ import (
 	"strings"
 )
 
-const DefaultRegion = "eu-central-1"
-
 type Config struct {
 	Endpoint        string
 	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
+	Bucket          string
 }
 
 func (c Config) Validate() (bool, error) {
@@ -25,6 +24,9 @@ func (c Config) Validate() (bool, error) {
 	}
 	if strings.TrimSpace(c.SecretAccessKey) == "" {
 		missing = append(missing, "secret access key")
+	}
+	if strings.TrimSpace(c.Bucket) == "" {
+		missing = append(missing, "bucket")
 	}
 	if len(missing) > 0 {
 		return false, fmt.Errorf("%w: missing %s", ErrInvalidConfig, strings.Join(missing, ", "))

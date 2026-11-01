@@ -47,6 +47,22 @@ func run(
 	cfg config.Config,
 ) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	var objectStore objectstorage.Store
+	if ok, _ := cfg.ObjectStorage.Validate(); ok {
+		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, logger)
+		if err != nil {
+			logger.Error("ObjectStorage config error", "error", err)
+			return err
+		}
+
+		if err := s3Store.Check(ctx); err != nil {
+			logger.Error("ObjectStorage check error", "error", err)
+			return err
+		}
+
+		objectStore = s3Store
+	}
+
 	hasDB := cfg.DatabaseURL != ""
 
 	var paperService *paperApp.PaperService
@@ -69,11 +85,11 @@ func run(
 			return fmt.Errorf("ping database: %w", err)
 		}
 
-		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db))
+		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db), objectStore)
 		userService = userApp.NewUserService(userPostgres.NewRepository(db))
 		stackRepo = stackPostgres.NewRepository(db)
 	} else {
-		paperService = paperApp.NewPaperService(paperMem.NewRepository())
+		paperService = paperApp.NewPaperService(paperMem.NewRepository(), objectStore)
 		userService = userApp.NewUserService(userMem.NewRepository())
 		stackRepo = stackMem.NewRepository()
 	}
@@ -82,24 +98,6 @@ func run(
 	stackService := stackApp.NewStackService(stackRepo, paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
-	docRepo := docMem.NewRepository()
-
-	var objectStore objectstorage.Store
-	if ok, _ := cfg.ObjectStorage.Validate(); ok {
-		s3Store, err := objectstorage.NewS3Store(cfg.ObjectStorage, "paper", logger)
-		if err != nil {
-			logger.Error("ObjectStorage config error", "error", err)
-			return err
-		}
-
-		if err := s3Store.Check(ctx); err != nil {
-			logger.Error("ObjectStorage check error", "error", err)
-			return err
-		}
-		objectStore = s3Store
-	}
-
-	documentService := docApp.NewDocumentService(docRepo, objectStore, paperService)
 
 	rootMux := http.NewServeMux()
 	apiMux := http.NewServeMux()
@@ -109,7 +107,6 @@ func run(
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
-	docHttp.UploadDocumentRoute(apiMux, logger, documentService, sessionService)
 	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
 	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))

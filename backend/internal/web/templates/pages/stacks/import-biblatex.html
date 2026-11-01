@@ -5,7 +5,7 @@
       <ul>
         <li>
           <a
-            hx-get="/app/stacks/page"
+            hx-get="/app/stacks"
             hx-target="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
@@ -16,7 +16,7 @@
         </li>
         <li>
           <a
-            hx-get="/app/stacks/detail/{{ .Stack.UUID }}"
+            hx-get="/app/stacks/{{ .Stack.UUID }}"
             hx-target="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
@@ -43,7 +43,7 @@
   </div>
   <div class="px-6 pt-4 pb-6">
     <form
-      hx-post="/app/stacks/{{ .Stack.UUID }}/import/biblatex"
+      hx-post="/app/stacks/{{ .Stack.UUID }}/imports/biblatex"
       hx-encoding="multipart/form-data"
       hx-target="#biblatex-import-results"
       hx-indicator="#biblatex-import-indicator"
