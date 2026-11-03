@@ -14,6 +14,7 @@
   </form>
 </li>
 {{ $page := .PageName }} {{ range .Items}}
+{{ $stackPath := printf `stacks/%s/` .UUID }}
 <li>
   <a
     hx-get="/app/stacks/{{ .UUID }}"
@@ -22,7 +23,7 @@
     hx-swap="outerHTML"
     hx-select="#page-shell"
     hx-push-url="true"
-    class="justify-between {{ if eq $page (printf `stacks/%s` .UUID) }}menu-active{{ end }}"
+    class="justify-between {{ if eq $stackPath (printf `%.*s` (len $stackPath) (printf `%s/` $page)) }}menu-active{{ end }}"
   >
     <span>{{ .Name }}</span>
     <span class="badge badge-xs">{{ len .Papers }}</span>
