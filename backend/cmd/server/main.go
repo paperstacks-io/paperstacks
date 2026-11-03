@@ -14,13 +14,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
-	"github.com/paperstacks.io/paperstacks/internal/server"
-	"github.com/paperstacks.io/paperstacks/internal/web"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
@@ -28,6 +26,7 @@ import (
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
+	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -35,6 +34,7 @@ import (
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 	userPostgres "github.com/paperstacks.io/paperstacks/internal/user/repository/postgres"
+	"github.com/paperstacks.io/paperstacks/internal/web"
 )
 
 func run(
@@ -67,9 +67,8 @@ func run(
 		if err != nil {
 			return fmt.Errorf("parse database configuration: %w", err)
 		}
-		dbConfig.MaxConns = 4
-		dbConfig.MinConns = 0
-		dbConfig.MinIdleConns = 0
+		dbConfig.MaxConns = 10
+		dbConfig.MinIdleConns = 2
 		db, err := pgxpool.NewWithConfig(ctx, dbConfig)
 		if err != nil {
 			return fmt.Errorf("open database: %w", err)
