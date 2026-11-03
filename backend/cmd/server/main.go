@@ -69,9 +69,8 @@ func run(
 		if err != nil {
 			return fmt.Errorf("parse database configuration: %w", err)
 		}
-		dbConfig.MaxConns = 4
-		dbConfig.MinConns = 0
-		dbConfig.MinIdleConns = 0
+		dbConfig.MaxConns = 10
+		dbConfig.MinIdleConns = 2
 		db, err := pgxpool.NewWithConfig(ctx, dbConfig)
 		if err != nil {
 			return fmt.Errorf("open database: %w", err)
