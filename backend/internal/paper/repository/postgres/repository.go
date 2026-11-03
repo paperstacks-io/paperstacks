@@ -209,7 +209,7 @@ func (r *Repository) Update(ctx context.Context, uuid string, paper domain.Paper
 }
 
 func (r *Repository) AttachPDF(ctx context.Context, uuid string, PDFStorageKey string) error {
-	result, err := r.db.Exec(ctx, `UPDATE public.paper SET pdf_storage_key = $2 WHERE uuid = $1`, uuid, PDFStorageKey)
+	result, err := r.db.Exec(ctx, `UPDATE public.paper SET pdf_storage_key = $2 WHERE uuid = $1 AND deleted_at IS NULL`, uuid, PDFStorageKey)
 	if err != nil {
 		return fmt.Errorf("update paper attach PDF storage key: %w", err)
 	}

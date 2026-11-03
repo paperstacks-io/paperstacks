@@ -252,8 +252,21 @@ func TestPaperPostgresRepository(t *testing.T) {
 	if _, err := db.Exec(ctx, `INSERT INTO public.paper_author (uuid_paper,key_author,position) VALUES ($1,$2,0)`, otherID, authorKey); err != nil {
 		t.Fatal(err)
 	}
+	if err := repo.AttachPDF(ctx, id, original.PDFStorageKey); err != nil {
+		t.Fatal(err)
+	}
 	if err := repo.Delete(ctx, id); err != nil {
 		t.Fatal(err)
+	}
+	if err := repo.AttachPDF(ctx, id, "replacement.pdf"); !errors.Is(err, domain.ErrPaperNotFound) {
+		t.Fatalf("attach PDF to deleted paper: %v", err)
+	}
+	if err := repo.DetachPDF(ctx, id); !errors.Is(err, domain.ErrPaperNotFound) {
+		t.Fatalf("detach PDF from deleted paper: %v", err)
+	}
+	var retainedPDFKey string
+	if err := db.QueryRow(ctx, `SELECT pdf_storage_key FROM public.paper WHERE uuid=$1`, id).Scan(&retainedPDFKey); err != nil || retainedPDFKey != original.PDFStorageKey {
+		t.Fatalf("deleted paper PDF key changed: got %q, %v; want %q", retainedPDFKey, err, original.PDFStorageKey)
 	}
 	if _, err := repo.GetByUUID(ctx, id); !errors.Is(err, domain.ErrPaperNotFound) {
 		t.Fatalf("deleted paper: %v", err)
