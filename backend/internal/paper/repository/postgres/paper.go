@@ -47,7 +47,7 @@ func scanPaper(row pgx.Row) (domain.Paper, error) {
 	err := row.Scan(
 		&d.UUID, &d.DOI, &d.Title, &d.TitleShort,
 		&d.Year, &d.Month, &d.Day, &d.Type, &d.PublicationStatus,
-		&d.StatusTimestamp, &d.Abstract, &d.Keywords, &d.PDFURL,
+		&d.StatusTimestamp, &d.Abstract, &d.Keywords, &d.PDFStorageKey,
 	)
 	if err != nil {
 		return domain.Paper{}, err
@@ -121,6 +121,6 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		statusTimestamp,
 		nullString(paper.Abstract),
 		paper.Keywords,
-		nullString(paper.PDFURL),
+		nullString(paper.PDFStorageKey),
 	}, nil
 }
