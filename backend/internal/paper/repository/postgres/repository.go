@@ -42,6 +42,26 @@ func (r *Repository) GetByUUID(ctx context.Context, uuid string) (domain.Paper, 
 	return papers[0], nil
 }
 
+// GetByUUIDs loads active papers and their bibliographic data in batches.
+func (r *Repository) GetByUUIDs(ctx context.Context, uuids []string) ([]domain.Paper, error) {
+	if len(uuids) == 0 {
+		return []domain.Paper{}, nil
+	}
+	rows, err := r.db.Query(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE uuid = ANY($1::uuid[]) AND deleted_at IS NULL`, uuids)
+	if err != nil {
+		return nil, fmt.Errorf("get papers by UUIDs: %w", err)
+	}
+	papers, err := scanPapers(rows)
+	rows.Close() // Release the connection before loading bibliographic data.
+	if err != nil {
+		return nil, fmt.Errorf("scan papers by UUIDs: %w", err)
+	}
+	if err := r.hydrate(ctx, papers); err != nil {
+		return nil, fmt.Errorf("load papers by UUIDs: %w", err)
+	}
+	return papers, nil
+}
+
 func (r *Repository) GetByDOI(ctx context.Context, doi string) (domain.Paper, error) {
 	paper, err := scanPaper(r.db.QueryRow(ctx, `SELECT `+paperColumns+` FROM public.paper WHERE doi = $1 AND deleted_at IS NULL`, doi))
 	if errors.Is(err, pgx.ErrNoRows) {

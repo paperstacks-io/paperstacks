@@ -34,42 +34,93 @@ func (r *Repository) GetByUUID(ctx context.Context, id string) (domain.Stack, er
 	if err != nil {
 		return domain.Stack{}, fmt.Errorf("get stack: %w", err)
 	}
-	if err := r.loadPapers(ctx, &s); err != nil {
+	items := []domain.Stack{s}
+	if err := r.loadPapers(ctx, items); err != nil {
 		return domain.Stack{}, err
 	}
-	return s, nil
+	return items[0], nil
 }
 
-func (r *Repository) loadPapers(ctx context.Context, s *domain.Stack) error {
-	rows, err := r.db.Query(ctx, `SELECT sp.uuid_paper::text
+func (r *Repository) StatsByOwner(ctx context.Context, owner string) (domain.Stats, error) {
+	var stats domain.Stats
+	err := r.db.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE is_public),
+ (SELECT count(*) FROM public.stack_paper sp JOIN public.stack s ON s.uuid = sp.uuid_stack JOIN public.paper p ON p.uuid = sp.uuid_paper WHERE s.owner_external_id = $1 AND s.deleted_at IS NULL AND p.deleted_at IS NULL)
+ FROM public.stack WHERE owner_external_id = $1 AND deleted_at IS NULL`, owner).Scan(&stats.TotalStacks, &stats.PublicStacks, &stats.TotalPapers)
+	if err != nil {
+		return domain.Stats{}, fmt.Errorf("stack statistics: %w", err)
+	}
+	return stats, nil
+}
+
+func (r *Repository) SearchPublic(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
+	return r.search(ctx, `s.is_public`, nil, opts)
+}
+
+func (r *Repository) SearchByOwner(ctx context.Context, owner string, opts domain.SearchOptions) (domain.SearchResult, error) {
+	return r.search(ctx, `s.owner_external_id = $1`, []any{owner}, opts)
+}
+
+func (r *Repository) List(ctx context.Context, owner string) ([]domain.Stack, error) {
+	return r.list(ctx, ` WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 ORDER BY s.uuid`, owner)
+}
+
+func (r *Repository) ListPublic(ctx context.Context, owner string) ([]domain.Stack, error) {
+	return r.list(ctx, ` WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 AND s.is_public ORDER BY s.uuid`, owner)
+}
+
+func (r *Repository) CountPublic(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx, `SELECT count(*) FROM public.stack WHERE deleted_at IS NULL AND is_public`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count public stacks: %w", err)
+	}
+	return count, nil
+}
+
+func (r *Repository) loadPapers(ctx context.Context, stacks []domain.Stack) error {
+	if len(stacks) == 0 {
+		return nil
+	}
+	stackIDs := make([]string, len(stacks))
+	for i := range stacks {
+		stackIDs[i] = stacks[i].UUID
+	}
+	rows, err := r.db.Query(ctx, `SELECT sp.uuid_stack::text, sp.uuid_paper::text
 		FROM public.stack_paper sp JOIN public.paper p ON p.uuid = sp.uuid_paper
-		WHERE sp.uuid_stack = $1 AND p.deleted_at IS NULL ORDER BY sp.uuid_paper`, s.UUID)
+		WHERE sp.uuid_stack = ANY($1::uuid[]) AND p.deleted_at IS NULL ORDER BY sp.uuid_paper`, stackIDs)
 	if err != nil {
 		return fmt.Errorf("list stack papers: %w", err)
 	}
 	var paperIDs []string
+	links := make(map[string][]string, len(stacks))
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var stackID, paperID string
+		if err := rows.Scan(&stackID, &paperID); err != nil {
 			rows.Close()
 			return fmt.Errorf("scan stack paper: %w", err)
 		}
-		paperIDs = append(paperIDs, id)
+		paperIDs = append(paperIDs, paperID)
+		links[stackID] = append(links[stackID], paperID)
 	}
 	err = rows.Err()
 	rows.Close() // Release the connection before loading papers from the shared pool.
 	if err != nil {
 		return fmt.Errorf("read stack papers: %w", err)
 	}
-	for _, id := range paperIDs {
-		p, err := r.papers.GetByUUID(ctx, id)
-		if errors.Is(err, paperDomain.ErrPaperNotFound) {
-			continue
+	papers, err := r.papers.GetByUUIDs(ctx, paperIDs)
+	if err != nil {
+		return fmt.Errorf("load stack papers: %w", err)
+	}
+	byID := make(map[string]paperDomain.Paper, len(papers))
+	for _, p := range papers {
+		byID[p.UUID] = p
+	}
+	for i := range stacks {
+		for _, id := range links[stacks[i].UUID] {
+			if p, ok := byID[id]; ok {
+				stacks[i].Papers = append(stacks[i].Papers, p)
+			}
 		}
-		if err != nil {
-			return fmt.Errorf("load stack paper: %w", err)
-		}
-		s.Papers = append(s.Papers, p)
 	}
 	return nil
 }
@@ -93,48 +144,10 @@ func (r *Repository) list(ctx context.Context, suffix string, args ...any) ([]do
 	if err != nil {
 		return nil, fmt.Errorf("read stacks: %w", err)
 	}
-	for i := range items {
-		if err := r.loadPapers(ctx, &items[i]); err != nil {
-			return nil, err
-		}
+	if err := r.loadPapers(ctx, items); err != nil {
+		return nil, err
 	}
 	return items, nil
-}
-
-func (r *Repository) List(ctx context.Context, owner string) ([]domain.Stack, error) {
-	return r.list(ctx, ` WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 ORDER BY s.uuid`, owner)
-}
-
-func (r *Repository) ListPublic(ctx context.Context, owner string) ([]domain.Stack, error) {
-	return r.list(ctx, ` WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 AND s.is_public ORDER BY s.uuid`, owner)
-}
-
-func (r *Repository) CountPublic(ctx context.Context) (int, error) {
-	var count int
-	err := r.db.QueryRow(ctx, `SELECT count(*) FROM public.stack WHERE deleted_at IS NULL AND is_public`).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("count public stacks: %w", err)
-	}
-	return count, nil
-}
-
-func (r *Repository) StatsByOwner(ctx context.Context, owner string) (domain.Stats, error) {
-	var stats domain.Stats
-	err := r.db.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE is_public),
- (SELECT count(*) FROM public.stack_paper sp JOIN public.stack s ON s.uuid = sp.uuid_stack JOIN public.paper p ON p.uuid = sp.uuid_paper WHERE s.owner_external_id = $1 AND s.deleted_at IS NULL AND p.deleted_at IS NULL)
- FROM public.stack WHERE owner_external_id = $1 AND deleted_at IS NULL`, owner).Scan(&stats.TotalStacks, &stats.PublicStacks, &stats.TotalPapers)
-	if err != nil {
-		return domain.Stats{}, fmt.Errorf("stack statistics: %w", err)
-	}
-	return stats, nil
-}
-
-func (r *Repository) SearchPublic(ctx context.Context, opts domain.SearchOptions) (domain.SearchResult, error) {
-	return r.search(ctx, `s.is_public`, nil, opts)
-}
-
-func (r *Repository) SearchByOwner(ctx context.Context, owner string, opts domain.SearchOptions) (domain.SearchResult, error) {
-	return r.search(ctx, `s.owner_external_id = $1`, []any{owner}, opts)
 }
 
 func (r *Repository) search(ctx context.Context, filter string, args []any, opts domain.SearchOptions) (domain.SearchResult, error) {

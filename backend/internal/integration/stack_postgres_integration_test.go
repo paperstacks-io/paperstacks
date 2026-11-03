@@ -4,17 +4,30 @@ import (
 	"context"
 	"errors"
 	"os"
+	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
 	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackPostgres "github.com/paperstacks.io/paperstacks/internal/stack/repository/postgres"
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 )
+
+type stackQueryCounter struct{ atomic.Int64 }
+
+func (c *stackQueryCounter) TraceQueryStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
+	c.Add(1)
+	return ctx
+}
+
+func (*stackQueryCounter) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 // This test uses an initialized test database, with app_rw credentials. It only
 // removes its own uniquely named records and never resets an existing database.
@@ -30,6 +43,8 @@ func TestStackPostgresRepository(t *testing.T) {
 	poolConfig.MaxConns = 1
 	poolConfig.MinConns = 0
 	poolConfig.MinIdleConns = 0
+	counter := &stackQueryCounter{}
+	poolConfig.ConnConfig.Tracer = counter
 	db, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +59,9 @@ func TestStackPostgresRepository(t *testing.T) {
 	suffix := uuid.New().String()
 	owner := userDomain.NewUser("stack-test-"+suffix, suffix+"@example.invalid")
 	otherOwner := userDomain.NewUser("other-"+suffix, "other-"+suffix+"@example.invalid")
-	paper := paperDomain.Paper{UUID: uuid.New().String(), Title: "Repository integration paper"}
+	paper := paperDomain.Paper{UUID: uuid.New().String(), Title: "Repository integration paper",
+		Metadata: paperDomain.Metadata{Publisher: "Batch publisher"},
+		Authors:  []paperDomain.Author{{NameFirst: "Ada", NameLast: "Lovelace"}, {NameFirst: "Grace", NameLast: "Hopper"}}}
 	stack := *stackDomain.NewStack("Alpha "+suffix, owner)
 	stack.IsPublic = true
 	private := *stackDomain.NewStack("Beta "+suffix, owner)
@@ -57,6 +74,16 @@ func TestStackPostgresRepository(t *testing.T) {
 			if _, err := db.Exec(cleanup, `DELETE FROM public.stack WHERE uuid=$1`, id); err != nil {
 				t.Error(err)
 			}
+		}
+		var authorKeys []int64
+		if err := db.QueryRow(cleanup, `SELECT array_agg(key_author) FROM public.paper_author WHERE uuid_paper=$1`, paper.UUID).Scan(&authorKeys); err != nil {
+			t.Error(err)
+		}
+		if _, err := db.Exec(cleanup, `DELETE FROM public.paper_author WHERE uuid_paper=$1`, paper.UUID); err != nil {
+			t.Error(err)
+		}
+		if _, err := db.Exec(cleanup, `DELETE FROM public.author WHERE key=ANY($1::bigint[])`, authorKeys); err != nil {
+			t.Error(err)
 		}
 		if _, err := db.Exec(cleanup, `DELETE FROM public.paper WHERE uuid=$1`, paper.UUID); err != nil {
 			t.Error(err)
@@ -72,7 +99,7 @@ func TestStackPostgresRepository(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := db.Exec(ctx, `INSERT INTO public.paper (uuid,title) VALUES ($1,$2)`, paper.UUID, paper.Title); err != nil {
+	if _, err := paperPostgres.NewRepository(db).Save(ctx, paper); err != nil {
 		t.Fatal(err)
 	}
 	baseline, err := repo.CountPublic(ctx)
@@ -105,6 +132,9 @@ func TestStackPostgresRepository(t *testing.T) {
 	}
 	if loaded.Owner.Email != owner.Email || len(loaded.Papers) != 1 || loaded.Papers[0].Title != paper.Title {
 		t.Fatalf("loaded stack: %+v", loaded)
+	}
+	if !reflect.DeepEqual(loaded.Papers[0], paper) {
+		t.Fatalf("paper data: got %+v; want %+v", loaded.Papers[0], paper)
 	}
 	t.Run("concurrent reads share one connection", func(t *testing.T) {
 		var workers sync.WaitGroup
@@ -140,6 +170,56 @@ func TestStackPostgresRepository(t *testing.T) {
 	if err != nil || result.Total != 1 || len(result.Items) != 1 {
 		t.Fatalf("public search: %+v, %v", result, err)
 	}
+	t.Run("paper loading uses a fixed number of queries", func(t *testing.T) {
+		extra := paperDomain.Paper{UUID: uuid.New().String(), Title: "Second paper"}
+		t.Cleanup(func() {
+			cleanup, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if _, err := db.Exec(cleanup, `DELETE FROM public.paper WHERE uuid=$1`, extra.UUID); err != nil {
+				t.Error(err)
+			}
+			if err := repo.RemovePaper(cleanup, private.UUID, paper.UUID); err != nil {
+				t.Error(err)
+			}
+		})
+		if _, err := paperPostgres.NewRepository(db).Save(ctx, extra); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.AddPaper(ctx, stack.UUID, extra); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.AddPaper(ctx, private.UUID, paper); err != nil {
+			t.Fatal(err)
+		}
+		counter.Store(0)
+		items, err := repo.List(ctx, owner.ExternalID)
+		if err != nil || len(items) != 2 {
+			t.Fatalf("batch list: %+v, %v", items, err)
+		}
+		if count := counter.Load(); count != 5 {
+			t.Fatalf("list used %d queries; want 5", count)
+		}
+		for _, item := range items {
+			want := []paperDomain.Paper{paper}
+			if item.UUID == stack.UUID {
+				want = append(want, extra)
+				if want[0].UUID > want[1].UUID {
+					want[0], want[1] = want[1], want[0]
+				}
+			}
+			if !reflect.DeepEqual(item.Papers, want) {
+				t.Fatalf("stack %s papers: got %+v; want %+v", item.UUID, item.Papers, want)
+			}
+		}
+		counter.Store(0)
+		result, err := repo.SearchByOwner(ctx, owner.ExternalID, stackDomain.SearchOptions{SortBy: "name", PageSize: 1})
+		if err != nil || len(result.Items) != 1 || result.Items[0].UUID != stack.UUID || len(result.Items[0].Papers) != 2 {
+			t.Fatalf("batch search page: %+v, %v", result, err)
+		}
+		if count := counter.Load(); count != 6 {
+			t.Fatalf("search used %d queries; want 6", count)
+		}
+	})
 	wrongOwner := loaded
 	wrongOwner.Owner = otherOwner
 	if _, err := repo.Update(ctx, wrongOwner); !errors.Is(err, stackDomain.ErrStackNotFound) {
