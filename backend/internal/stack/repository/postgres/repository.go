@@ -81,7 +81,7 @@ func (r *Repository) List(ctx context.Context, owner string) ([]domain.Stack, er
 		FROM public.stack s
 		JOIN public.app_user u ON u.external_id = s.owner_external_id
 		WHERE s.deleted_at IS NULL AND s.owner_external_id = $1
-		ORDER BY s.uuid`
+		ORDER BY s.name`
 	rows, err := r.db.Query(ctx, query, owner)
 	if err != nil {
 		return nil, fmt.Errorf("list stacks: %w", err)
@@ -103,7 +103,7 @@ func (r *Repository) ListPublic(ctx context.Context, owner string) ([]domain.Sta
 		FROM public.stack s
 		JOIN public.app_user u ON u.external_id = s.owner_external_id
 		WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 AND s.is_public
-		ORDER BY s.uuid`
+		ORDER BY s.name`
 	rows, err := r.db.Query(ctx, query, owner)
 	if err != nil {
 		return nil, fmt.Errorf("list public stacks: %w", err)
@@ -137,7 +137,7 @@ func (r *Repository) loadPapers(ctx context.Context, stacks []domain.Stack) erro
 	}
 	rows, err := r.db.Query(ctx, `SELECT sp.uuid_stack, sp.uuid_paper
 		FROM public.stack_paper sp JOIN public.paper p ON p.uuid = sp.uuid_paper
-		WHERE sp.uuid_stack = ANY($1::uuid[]) AND p.deleted_at IS NULL ORDER BY sp.uuid_paper`, stackIDs)
+		WHERE sp.uuid_stack = ANY($1::uuid[]) AND p.deleted_at IS NULL`, stackIDs)
 	if err != nil {
 		return fmt.Errorf("list stack papers: %w", err)
 	}
