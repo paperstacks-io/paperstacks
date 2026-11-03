@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,6 +14,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
@@ -63,12 +63,18 @@ func run(
 	var paperService *paperApp.PaperService
 	var userService *userApp.UserService
 	if hasDB {
-		db, err := sql.Open("pgx", cfg.DatabaseURL)
+		dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+		if err != nil {
+			return fmt.Errorf("parse database configuration: %w", err)
+		}
+		dbConfig.MaxConns = 10
+		dbConfig.MinIdleConns = 2
+		db, err := pgxpool.NewWithConfig(ctx, dbConfig)
 		if err != nil {
 			return fmt.Errorf("open database: %w", err)
 		}
 		defer db.Close()
-		if err := db.PingContext(ctx); err != nil {
+		if err := db.Ping(ctx); err != nil {
 			return fmt.Errorf("ping database: %w", err)
 		}
 
