@@ -19,7 +19,6 @@ type StackRequest struct {
 }
 
 type StackResponse struct {
-	DeletedPapers []DeletedPaperResponse `json:"deleted_papers"`
 	UUID      string          `json:"uuid"`
 	Name      string          `json:"name"`
 	Owner     UserResponse    `json:"owner"`
@@ -27,11 +26,6 @@ type StackResponse struct {
 	IsPublic  bool            `json:"is_public"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
-}
-
-type DeletedPaperResponse struct {
-	UUID  string `json:"uuid"`
-	Title string `json:"title"`
 }
 
 type UserRequest struct {
@@ -65,7 +59,6 @@ type PaperRequest struct {
 }
 
 type PaperResponse struct {
-	IsDeleted                  bool                        `json:"is_deleted"`
 	UUID                       string                      `json:"uuid"`
 	DOI                        string                      `json:"doi"`
 	Title                      string                      `json:"title"`
@@ -165,17 +158,12 @@ func (s StackRequest) toDomain() domain.Stack {
 }
 
 func NewStackResponse(s domain.Stack) StackResponse {
-	deleted := make([]DeletedPaperResponse, len(s.DeletedPapers))
-	for i, paper := range s.DeletedPapers {
-		deleted[i] = DeletedPaperResponse{UUID: paper.UUID, Title: paper.Title}
-	}
 	papers := make([]PaperResponse, len(s.Papers))
 	for i, paper := range s.Papers {
 		papers[i] = NewPaperResponse(paper)
 	}
 
 	return StackResponse{
-		DeletedPapers: deleted,
 		UUID:      s.UUID,
 		Name:      s.Name,
 		Owner:     NewUserResponse(s.Owner),

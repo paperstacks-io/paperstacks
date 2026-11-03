@@ -31,9 +31,6 @@ type Stack struct {
 	// Papers contains all papers that belong to this stack.
 	Papers []paperDomain.Paper
 
-	// DeletedPapers keeps references to papers that are no longer available.
-	DeletedPapers []DeletedPaper
-
 	// IsPublic defines whether the stack is public or private.
 	IsPublic bool
 
@@ -42,12 +39,6 @@ type Stack struct {
 
 	// UpdatedAt records the last time the stack was modified.
 	UpdatedAt time.Time
-}
-
-// DeletedPaper identifies an unavailable paper without exposing its former content.
-type DeletedPaper struct {
-	UUID  string
-	Title string
 }
 
 func NewStack(name string, owner userDomain.User) *Stack {
