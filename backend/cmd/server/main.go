@@ -20,9 +20,6 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
-	docApp "github.com/paperstacks.io/paperstacks/internal/document/application"
-	docHttp "github.com/paperstacks.io/paperstacks/internal/document/http"
-	docMem "github.com/paperstacks.io/paperstacks/internal/document/repository/memory"
 	doiApp "github.com/paperstacks.io/paperstacks/internal/doi/application"
 	doiHttp "github.com/paperstacks.io/paperstacks/internal/doi/http"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -31,7 +28,6 @@ import (
 	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
-	stackDomain "github.com/paperstacks.io/paperstacks/internal/stack/domain"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	stackPostgres "github.com/paperstacks.io/paperstacks/internal/stack/repository/postgres"
@@ -67,7 +63,7 @@ func run(
 
 	var paperService *paperApp.PaperService
 	var userService *userApp.UserService
-	var stackRepo stackDomain.Repository
+	var stackService *stackApp.StackService
 	if hasDB {
 		dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 		if err != nil {
@@ -87,15 +83,14 @@ func run(
 
 		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db), objectStore)
 		userService = userApp.NewUserService(userPostgres.NewRepository(db))
-		stackRepo = stackPostgres.NewRepository(db)
+		stackService = stackApp.NewStackService(stackPostgres.NewRepository(db), paperService)
 	} else {
 		paperService = paperApp.NewPaperService(paperMem.NewRepository(), objectStore)
 		userService = userApp.NewUserService(userMem.NewRepository())
-		stackRepo = stackMem.NewRepository()
+		stackService = stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	}
 
 	doiService := doiApp.NewDOIService(nil)
-	stackService := stackApp.NewStackService(stackRepo, paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 
