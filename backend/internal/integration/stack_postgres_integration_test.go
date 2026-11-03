@@ -185,19 +185,29 @@ func TestStackPostgresRepository(t *testing.T) {
 	if err := repo.AddPaper(ctx, stack.UUID, paper); err != nil {
 		t.Fatal(err)
 	}
-	// A soft-deleted paper stays visible as a reference, but is not counted as active.
+	// Soft-deleted papers are omitted from stacks and active paper counts.
 	if _, err := db.Exec(ctx, `UPDATE public.paper SET deleted_at=statement_timestamp() WHERE uuid=$1`, paper.UUID); err != nil {
 		t.Fatal(err)
 	}
 	loaded, err = repo.GetByUUID(ctx, stack.UUID)
-	if err != nil || len(loaded.Papers) != 0 || len(loaded.DeletedPapers) != 1 || loaded.DeletedPapers[0].UUID != paper.UUID || loaded.DeletedPapers[0].Title != paper.Title {
-		t.Fatalf("deleted paper reference missing: %+v, %v", loaded, err)
+	if err != nil || len(loaded.Papers) != 0 {
+		t.Fatalf("deleted paper loaded: %+v, %v", loaded, err)
+	}
+	for _, list := range []func(context.Context, string) ([]stackDomain.Stack, error){repo.List, repo.ListPublic} {
+		items, err := list(ctx, owner.ExternalID)
+		if err != nil || len(items) == 0 {
+			t.Fatalf("list after paper deletion: %+v, %v", items, err)
+		}
+		for _, item := range items {
+			if len(item.Papers) != 0 {
+				t.Fatalf("list loaded deleted paper: %+v", item)
+			}
+		}
 	}
 	// A normal stack edit must not discard references omitted from the active papers list.
-	loaded.DeletedPapers = nil
 	edited, err := repo.Update(ctx, loaded)
-	if err != nil || len(edited.DeletedPapers) != 1 || edited.DeletedPapers[0].UUID != paper.UUID {
-		t.Fatalf("stack edit lost deleted paper reference: %+v, %v", edited, err)
+	if err != nil || len(edited.Papers) != 0 {
+		t.Fatalf("stack edit loaded deleted paper: %+v, %v", edited, err)
 	}
 	stats, err = repo.StatsByOwner(ctx, owner.ExternalID)
 	if err != nil || stats.TotalPapers != 0 {

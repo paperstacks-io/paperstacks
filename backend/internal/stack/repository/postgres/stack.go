@@ -26,12 +26,6 @@ type stackDAO struct {
 	OwnerUpdatedAt  time.Time
 }
 
-type stackPaperDAO struct {
-	UUID      string
-	Title     pgtype.Text
-	IsDeleted bool
-}
-
 const stackColumns = `s.uuid::text, s.name, s.owner_external_id, s.is_public,
  s.created_at, s.updated_at, u.email, u.orcid, u.created_at, u.updated_at`
 const stackFrom = ` FROM public.stack s JOIN public.app_user u ON u.external_id = s.owner_external_id`

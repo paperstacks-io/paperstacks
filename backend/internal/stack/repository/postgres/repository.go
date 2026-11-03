@@ -41,34 +41,29 @@ func (r *Repository) GetByUUID(ctx context.Context, id string) (domain.Stack, er
 }
 
 func (r *Repository) loadPapers(ctx context.Context, s *domain.Stack) error {
-	rows, err := r.db.Query(ctx, `SELECT sp.uuid_paper::text, p.title, p.deleted_at IS NOT NULL
+	rows, err := r.db.Query(ctx, `SELECT sp.uuid_paper::text
 		FROM public.stack_paper sp JOIN public.paper p ON p.uuid = sp.uuid_paper
-		WHERE sp.uuid_stack = $1 ORDER BY sp.uuid_paper`, s.UUID)
+		WHERE sp.uuid_stack = $1 AND p.deleted_at IS NULL ORDER BY sp.uuid_paper`, s.UUID)
 	if err != nil {
 		return fmt.Errorf("list stack papers: %w", err)
 	}
-	var references []stackPaperDAO
+	var paperIDs []string
 	for rows.Next() {
-		var reference stackPaperDAO
-		if err := rows.Scan(&reference.UUID, &reference.Title, &reference.IsDeleted); err != nil {
+		var id string
+		if err := rows.Scan(&id); err != nil {
 			rows.Close()
 			return fmt.Errorf("scan stack paper: %w", err)
 		}
-		references = append(references, reference)
+		paperIDs = append(paperIDs, id)
 	}
 	err = rows.Err()
 	rows.Close() // Release the connection before loading papers from the shared pool.
 	if err != nil {
 		return fmt.Errorf("read stack papers: %w", err)
 	}
-	for _, reference := range references {
-		if reference.IsDeleted {
-			s.DeletedPapers = append(s.DeletedPapers, domain.DeletedPaper{UUID: reference.UUID, Title: reference.Title.String})
-			continue
-		}
-		p, err := r.papers.GetByUUID(ctx, reference.UUID)
+	for _, id := range paperIDs {
+		p, err := r.papers.GetByUUID(ctx, id)
 		if errors.Is(err, paperDomain.ErrPaperNotFound) {
-			s.DeletedPapers = append(s.DeletedPapers, domain.DeletedPaper{UUID: reference.UUID, Title: reference.Title.String})
 			continue
 		}
 		if err != nil {
