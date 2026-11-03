@@ -13,8 +13,7 @@
     </fieldset>
   </form>
 </li>
-{{ $page := .PageName }} {{ range .Items}}
-{{ $stackPath := printf `stacks/%s/` .UUID }}
+{{ $page := .PageName }} {{ range .Items}} {{ $stackPath := printf `stacks/%s/` .UUID }}
 <li>
   <a
     hx-get="/app/stacks/{{ .UUID }}"
