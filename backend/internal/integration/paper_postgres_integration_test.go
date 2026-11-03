@@ -88,7 +88,7 @@ func TestPaperPostgresRepository(t *testing.T) {
 		UUID: id, DOI: "10.6700/" + id, Title: "Paper " + id, TitleShort: "Short",
 		PublicationDate: domain.Date{Year: 2026, Month: 10, Day: 18}, Type: domain.PublicationType("journal-article"),
 		PublicationStatus: "published", PublicationStatusTimestamp: "2026-10-18T10:00:00Z",
-		Abstract: "Abstract", Keywords: []string{"science", id}, PDFURL: "https://example.invalid/paper.pdf",
+		Abstract: "Abstract", Keywords: []string{"science", id}, PDFStorageKey: "papers/" + id + ".pdf",
 		Authors: []domain.Author{{NameFirst: "Ada", NameLast: "Lovelace", Affiliation: "Lab " + id}, {NameFirst: "Grace", NameLast: "Hopper"}},
 		Metadata: domain.Metadata{Publisher: "Publisher", JournalTitle: "Journal", JournalAbbrev: "J", BookTitle: "Book", SeriesTitle: "Series",
 			EventTitle: "Conference", EventLocation: "Berlin", Institution: "Institute", Pages: "1-9", Volume: "S1", Issue: "A",
@@ -98,6 +98,9 @@ func TestPaperPostgresRepository(t *testing.T) {
 	saved, err := repo.Save(ctx, original)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if saved.PDFStorageKey != "" {
+		t.Fatalf("new paper retained supplied PDF key: %q", saved.PDFStorageKey)
 	}
 	loaded, err := repo.GetByUUID(ctx, id)
 	if err != nil || !reflect.DeepEqual(saved, loaded) {
@@ -124,6 +127,25 @@ func TestPaperPostgresRepository(t *testing.T) {
 			}()
 		}
 		workers.Wait()
+	})
+	t.Run("PDF attachment is separate from paper writes", func(t *testing.T) {
+		if err := repo.AttachPDF(ctx, id, original.PDFStorageKey); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.Update(ctx, id, saved); err != nil {
+			t.Fatal(err)
+		}
+		got, err := repo.GetByUUID(ctx, id)
+		if err != nil || got.PDFStorageKey != original.PDFStorageKey {
+			t.Fatalf("update lost attached PDF: %+v, %v", got, err)
+		}
+		if err := repo.DetachPDF(ctx, id); err != nil {
+			t.Fatal(err)
+		}
+		got, err = repo.GetByUUID(ctx, id)
+		if err != nil || !reflect.DeepEqual(saved, got) {
+			t.Fatalf("detach PDF: got %+v, %v; want %+v", got, err, saved)
+		}
 	})
 	duplicateUUID := original
 	duplicateUUID.DOI = "10.6700/duplicate-uuid-" + id

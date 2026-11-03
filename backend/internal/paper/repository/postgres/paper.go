@@ -97,8 +97,8 @@ func insertPaper(ctx context.Context, tx pgx.Tx, paper domain.Paper) error {
 	_, err = tx.Exec(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
-			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_storage_key
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`, args...)
+			paper_type, publication_status, publication_status_timestamp, abstract, keywords
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, args...)
 	return err
 }
 
@@ -121,6 +121,5 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		statusTimestamp,
 		nullString(paper.Abstract),
 		paper.Keywords,
-		nullString(paper.PDFStorageKey),
 	}, nil
 }

@@ -150,6 +150,7 @@ func (r *Repository) Search(ctx context.Context, opts domain.SearchOptions) (dom
 
 func (r *Repository) Save(ctx context.Context, paper domain.Paper) (domain.Paper, error) {
 	paper = paper.Normalize()
+	paper.PDFStorageKey = ""
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
