@@ -27,7 +27,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) GetByUUID(ctx context.Context, id string) (domain.Stack, error) {
-	s, err := scanStack(r.db.QueryRow(ctx, `SELECT `+stackColumns+stackFrom+` WHERE s.uuid = $1 AND s.deleted_at IS NULL`, id))
+	const query = `
+		SELECT s.uuid, s.name, s.owner_external_id, s.is_public,
+		       s.created_at, s.updated_at, u.email, u.orcid, u.created_at, u.updated_at
+		FROM public.stack s
+		JOIN public.app_user u ON u.external_id = s.owner_external_id
+		WHERE s.uuid = $1 AND s.deleted_at IS NULL`
+	s, err := scanStack(r.db.QueryRow(ctx, query, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Stack{}, domain.ErrStackNotFound
 	}
@@ -42,10 +48,18 @@ func (r *Repository) GetByUUID(ctx context.Context, id string) (domain.Stack, er
 }
 
 func (r *Repository) StatsByOwner(ctx context.Context, owner string) (domain.Stats, error) {
+	const query = `
+		SELECT count(*), count(*) FILTER (WHERE is_public),
+		       (SELECT count(*)
+		        FROM public.stack_paper sp
+		        JOIN public.stack s ON s.uuid = sp.uuid_stack
+		        JOIN public.paper p ON p.uuid = sp.uuid_paper
+		        WHERE s.owner_external_id = $1
+		          AND s.deleted_at IS NULL AND p.deleted_at IS NULL)
+		FROM public.stack
+		WHERE owner_external_id = $1 AND deleted_at IS NULL`
 	var stats domain.Stats
-	err := r.db.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE is_public),
- (SELECT count(*) FROM public.stack_paper sp JOIN public.stack s ON s.uuid = sp.uuid_stack JOIN public.paper p ON p.uuid = sp.uuid_paper WHERE s.owner_external_id = $1 AND s.deleted_at IS NULL AND p.deleted_at IS NULL)
- FROM public.stack WHERE owner_external_id = $1 AND deleted_at IS NULL`, owner).Scan(&stats.TotalStacks, &stats.PublicStacks, &stats.TotalPapers)
+	err := r.db.QueryRow(ctx, query, owner).Scan(&stats.TotalStacks, &stats.PublicStacks, &stats.TotalPapers)
 	if err != nil {
 		return domain.Stats{}, fmt.Errorf("stack statistics: %w", err)
 	}
@@ -61,11 +75,47 @@ func (r *Repository) SearchByOwner(ctx context.Context, owner string, opts domai
 }
 
 func (r *Repository) List(ctx context.Context, owner string) ([]domain.Stack, error) {
-	return r.list(ctx, ` WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 ORDER BY s.uuid`, owner)
+	const query = `
+		SELECT s.uuid, s.name, s.owner_external_id, s.is_public,
+		       s.created_at, s.updated_at, u.email, u.orcid, u.created_at, u.updated_at
+		FROM public.stack s
+		JOIN public.app_user u ON u.external_id = s.owner_external_id
+		WHERE s.deleted_at IS NULL AND s.owner_external_id = $1
+		ORDER BY s.uuid`
+	rows, err := r.db.Query(ctx, query, owner)
+	if err != nil {
+		return nil, fmt.Errorf("list stacks: %w", err)
+	}
+	items, err := scanStacks(rows)
+	if err != nil {
+		return nil, fmt.Errorf("list stacks: %w", err)
+	}
+	if err := r.loadPapers(ctx, items); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (r *Repository) ListPublic(ctx context.Context, owner string) ([]domain.Stack, error) {
-	return r.list(ctx, ` WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 AND s.is_public ORDER BY s.uuid`, owner)
+	const query = `
+		SELECT s.uuid, s.name, s.owner_external_id, s.is_public,
+		       s.created_at, s.updated_at, u.email, u.orcid, u.created_at, u.updated_at
+		FROM public.stack s
+		JOIN public.app_user u ON u.external_id = s.owner_external_id
+		WHERE s.deleted_at IS NULL AND s.owner_external_id = $1 AND s.is_public
+		ORDER BY s.uuid`
+	rows, err := r.db.Query(ctx, query, owner)
+	if err != nil {
+		return nil, fmt.Errorf("list public stacks: %w", err)
+	}
+	items, err := scanStacks(rows)
+	if err != nil {
+		return nil, fmt.Errorf("list public stacks: %w", err)
+	}
+	if err := r.loadPapers(ctx, items); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (r *Repository) CountPublic(ctx context.Context) (int, error) {
@@ -85,7 +135,7 @@ func (r *Repository) loadPapers(ctx context.Context, stacks []domain.Stack) erro
 	for i := range stacks {
 		stackIDs[i] = stacks[i].UUID
 	}
-	rows, err := r.db.Query(ctx, `SELECT sp.uuid_stack::text, sp.uuid_paper::text
+	rows, err := r.db.Query(ctx, `SELECT sp.uuid_stack, sp.uuid_paper
 		FROM public.stack_paper sp JOIN public.paper p ON p.uuid = sp.uuid_paper
 		WHERE sp.uuid_stack = ANY($1::uuid[]) AND p.deleted_at IS NULL ORDER BY sp.uuid_paper`, stackIDs)
 	if err != nil {
@@ -125,31 +175,6 @@ func (r *Repository) loadPapers(ctx context.Context, stacks []domain.Stack) erro
 	return nil
 }
 
-func (r *Repository) list(ctx context.Context, suffix string, args ...any) ([]domain.Stack, error) {
-	rows, err := r.db.Query(ctx, `SELECT `+stackColumns+stackFrom+suffix, args...)
-	if err != nil {
-		return nil, fmt.Errorf("list stacks: %w", err)
-	}
-	items := make([]domain.Stack, 0)
-	for rows.Next() {
-		s, err := scanStack(rows)
-		if err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("scan stack: %w", err)
-		}
-		items = append(items, s)
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return nil, fmt.Errorf("read stacks: %w", err)
-	}
-	if err := r.loadPapers(ctx, items); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 func (r *Repository) search(ctx context.Context, filter string, args []any, opts domain.SearchOptions) (domain.SearchResult, error) {
 	order := "s.uuid"
 	switch opts.SortBy {
@@ -181,9 +206,21 @@ func (r *Repository) search(ctx context.Context, filter string, args []any, opts
 		offset = (page - 1) * size
 	}
 	args = append(args, size, offset)
-	suffix := fmt.Sprintf(`%s ORDER BY %s LIMIT $%d OFFSET $%d`, where, order, len(args)-1, len(args))
-	items, err := r.list(ctx, suffix, args...)
+	query := fmt.Sprintf(`
+		SELECT s.uuid, s.name, s.owner_external_id, s.is_public,
+		       s.created_at, s.updated_at, u.email, u.orcid, u.created_at, u.updated_at
+		FROM public.stack s
+		JOIN public.app_user u ON u.external_id = s.owner_external_id
+		%s ORDER BY %s LIMIT $%d OFFSET $%d`, where, order, len(args)-1, len(args))
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
+		return domain.SearchResult{}, fmt.Errorf("search stacks: %w", err)
+	}
+	items, err := scanStacks(rows)
+	if err != nil {
+		return domain.SearchResult{}, fmt.Errorf("search stacks: %w", err)
+	}
+	if err := r.loadPapers(ctx, items); err != nil {
 		return domain.SearchResult{}, err
 	}
 	return domain.SearchResult{

@@ -27,7 +27,7 @@ func replacePapers(ctx context.Context, tx pgx.Tx, s domain.Stack) error {
 // Keep the paper active until this transaction finishes linking it.
 func linkPaper(ctx context.Context, tx pgx.Tx, stackID, paperID string) (bool, error) {
 	var id string
-	err := tx.QueryRow(ctx, `SELECT uuid::text FROM public.paper WHERE uuid=$1 AND deleted_at IS NULL FOR SHARE`, paperID).Scan(&id)
+	err := tx.QueryRow(ctx, `SELECT uuid FROM public.paper WHERE uuid=$1 AND deleted_at IS NULL FOR SHARE`, paperID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, paperDomain.ErrPaperNotFound
 	}
@@ -115,7 +115,7 @@ func (r *Repository) changePaper(ctx context.Context, stackID, paperID string, a
 	}
 	defer tx.Rollback(context.Background())
 	var id string
-	err = tx.QueryRow(ctx, `SELECT uuid::text FROM public.stack WHERE uuid=$1 AND deleted_at IS NULL FOR UPDATE`, stackID).Scan(&id)
+	err = tx.QueryRow(ctx, `SELECT uuid FROM public.stack WHERE uuid=$1 AND deleted_at IS NULL FOR UPDATE`, stackID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ErrStackNotFound
 	}
