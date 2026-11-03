@@ -19,7 +19,7 @@ type paperDAO struct {
 	StatusTimestamp   pgtype.Timestamptz
 	Abstract          pgtype.Text
 	Keywords          []string
-	PDFURL            pgtype.Text
+	PDFStorageKey     pgtype.Text
 }
 
 func (d paperDAO) domain() domain.Paper {
@@ -34,7 +34,7 @@ func (d paperDAO) domain() domain.Paper {
 		PublicationStatusTimestamp: formatTimestamp(d.StatusTimestamp),
 		Abstract:                   d.Abstract.String,
 		Keywords:                   d.Keywords,
-		PDFURL:                     d.PDFURL.String,
+		PDFStorageKey:              d.PDFStorageKey.String,
 	}
 }
 
