@@ -31,8 +31,8 @@ import (
 // Default directories, relative to the backend root the command is run
 // from (see Usage above).
 const (
-	stateDir = "cmd/crossref-sync/state"
-	logDir   = "cmd/crossref-sync/logs"
+	stateDir = "tmp/crossref-sync/state"
+	logDir   = "tmp/crossref-sync/logs"
 )
 
 // defaultFrom is the first day crawled when a filter has no state yet:
@@ -91,7 +91,7 @@ func run(ctx context.Context) error {
 	}
 	printConfig(os.Stdout, cfg)
 
-	client := api.NewClient(api.DefaultBaseURL, *mailto, nil)
+	client := api.NewClient(api.DefaultBaseURL, *mailto, nil, log)
 	return importer.NewUpdater(cfg, log, client, importer.NoopWriter{}).Run(ctx)
 }
 

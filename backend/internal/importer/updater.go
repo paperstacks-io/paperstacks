@@ -65,7 +65,7 @@ func (u *Updater) Run(ctx context.Context) error {
 	}()
 
 	store := syncstate.NewStore(u.cfg.StateDir, filter)
-	from, err := store.NextFrom(u.cfg.From)
+	from, err := store.NextDayAfter(u.cfg.From)
 	if err != nil {
 		return err
 	}
@@ -90,6 +90,7 @@ func (u *Updater) Run(ctx context.Context) error {
 	)
 
 	for day := from; !day.After(u.cfg.Until); day = day.AddDate(0, 0, 1) {
+		u.log.Info("window starting", slog.String("filter", filter), slog.String("day", day.Format(time.DateOnly)))
 		entry, dayErr := u.syncDay(ctx, day, logFile)
 		entry.RunID = runID
 		if err := store.Append(entry); err != nil {
@@ -161,6 +162,13 @@ func (u *Updater) fetchDay(ctx context.Context, day time.Time, e *syncstate.Entr
 				return err
 			}
 		}
+		u.log.Info("page fetched",
+			slog.String("day", e.WindowFrom),
+			slog.Int("page", e.Requests),
+			slog.Int("fetched", e.Fetched),
+			slog.Int("total_results", e.TotalResults),
+			slog.Int("written", e.Written),
+		)
 
 		if page.NextCursor == "" {
 			// Without a cursor the next request would restart at page one.

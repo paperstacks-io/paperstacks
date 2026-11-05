@@ -100,15 +100,16 @@ func (s *Store) Load() ([]Entry, error) {
 	return entries, nil
 }
 
-// NextFrom returns the day after the latest completed window, or baseline
-// if no window has been completed yet.
-func (s *Store) NextFrom(baseline time.Time) (time.Time, error) {
+// NextDayAfter returns the day after the latest completed window, or baseline
+// if no window has been completed yet. Completed windows are appended in
+// ascending order, so the last completed entry is the latest one.
+func (s *Store) NextDayAfter(baseline time.Time) (time.Time, error) {
 	entries, err := s.Load()
 	if err != nil {
 		return time.Time{}, err
 	}
-	var last time.Time
-	for _, e := range entries {
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
 		if e.Status != StatusCompleted {
 			continue
 		}
@@ -116,12 +117,7 @@ func (s *Store) NextFrom(baseline time.Time) (time.Time, error) {
 		if err != nil {
 			return time.Time{}, fmt.Errorf("state entry window_until %q: %w", e.WindowUntil, err)
 		}
-		if until.After(last) {
-			last = until
-		}
+		return until.AddDate(0, 0, 1), nil
 	}
-	if last.IsZero() {
-		return baseline, nil
-	}
-	return last.AddDate(0, 0, 1), nil
+	return baseline, nil
 }

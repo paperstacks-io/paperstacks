@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +12,8 @@ import (
 )
 
 var day = time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+
+var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func TestFetchPageBuildsQuery(t *testing.T) {
 	tests := []struct {
@@ -47,7 +51,7 @@ func TestFetchPageBuildsQuery(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			page, err := NewClient(srv.URL, tt.mailto, nil).FetchPage(context.Background(), tt.filter, day, "abc")
+			page, err := NewClient(srv.URL, tt.mailto, nil, discard).FetchPage(context.Background(), tt.filter, day, "abc")
 			if err != nil {
 				t.Fatalf("FetchPage: %v", err)
 			}
@@ -70,7 +74,7 @@ func TestFetchPageRetriesRateLimited(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "", nil)
+	c := NewClient(srv.URL, "", nil, discard)
 	c.backoff = time.Millisecond
 	if _, err := c.FetchPage(context.Background(), FilterUpdateDate, day, FirstCursor); err != nil {
 		t.Fatalf("FetchPage: %v", err)
@@ -88,7 +92,7 @@ func TestFetchPageDoesNotRetryClientError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "", nil)
+	c := NewClient(srv.URL, "", nil, discard)
 	c.backoff = time.Millisecond
 	_, err := c.FetchPage(context.Background(), FilterUpdateDate, day, FirstCursor)
 	if err == nil || !strings.Contains(err.Error(), "invalid filter") {

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -58,10 +59,11 @@ type Client struct {
 	httpClient *http.Client
 	maxRetries int
 	backoff    time.Duration
+	log        *slog.Logger
 }
 
 // NewClient returns a Client for baseURL. mailto may be empty.
-func NewClient(baseURL, mailto string, httpClient *http.Client) *Client {
+func NewClient(baseURL, mailto string, httpClient *http.Client, log *slog.Logger) *Client {
 	if httpClient == nil {
 		// Full-record pages of 1000 works can be tens of megabytes.
 		httpClient = &http.Client{Timeout: 2 * time.Minute}
@@ -72,6 +74,7 @@ func NewClient(baseURL, mailto string, httpClient *http.Client) *Client {
 		httpClient: httpClient,
 		maxRetries: 5,
 		backoff:    2 * time.Second,
+		log:        log,
 	}
 }
 
@@ -95,6 +98,11 @@ func (c *Client) FetchPage(ctx context.Context, filter Filter, day time.Time, cu
 		if retry.after > 0 {
 			wait = retry.after
 		}
+		c.log.Warn("crossref request failed, retrying",
+			slog.Int("attempt", attempt+1),
+			slog.Duration("wait", wait),
+			slog.String("error", err.Error()),
+		)
 		if err := sleep(ctx, wait); err != nil {
 			return Page{}, err
 		}

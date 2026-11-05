@@ -8,17 +8,17 @@ import (
 
 var baseline = time.Date(2026, 2, 25, 0, 0, 0, 0, time.UTC)
 
-func TestNextFromEmptyStateReturnsBaseline(t *testing.T) {
-	got, err := NewStore(t.TempDir(), "update-date").NextFrom(baseline)
+func TestNextDayAfterEmptyStateReturnsBaseline(t *testing.T) {
+	got, err := NewStore(t.TempDir(), "update-date").NextDayAfter(baseline)
 	if err != nil {
-		t.Fatalf("NextFrom: %v", err)
+		t.Fatalf("NextDayAfter: %v", err)
 	}
 	if !got.Equal(baseline) {
-		t.Errorf("NextFrom = %s, want %s", got, baseline)
+		t.Errorf("NextDayAfter = %s, want %s", got, baseline)
 	}
 }
 
-func TestNextFromResumesAfterLastCompletedWindow(t *testing.T) {
+func TestNextDayAfterResumesAfterLastCompletedWindow(t *testing.T) {
 	s := NewStore(t.TempDir(), "update-date")
 	for _, e := range []Entry{
 		{WindowFrom: "2026-03-01", WindowUntil: "2026-03-01", Status: StatusCompleted},
@@ -30,12 +30,12 @@ func TestNextFromResumesAfterLastCompletedWindow(t *testing.T) {
 		}
 	}
 
-	got, err := s.NextFrom(baseline)
+	got, err := s.NextDayAfter(baseline)
 	if err != nil {
-		t.Fatalf("NextFrom: %v", err)
+		t.Fatalf("NextDayAfter: %v", err)
 	}
 	if want := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC); !got.Equal(want) {
-		t.Errorf("NextFrom = %s, want %s", got, want)
+		t.Errorf("NextDayAfter = %s, want %s", got, want)
 	}
 
 	entries, err := s.Load()
@@ -53,12 +53,12 @@ func TestStoresAreSeparatePerFilter(t *testing.T) {
 		t.Fatalf("Append: %v", err)
 	}
 
-	got, err := NewStore(dir, "index-date").NextFrom(baseline)
+	got, err := NewStore(dir, "index-date").NextDayAfter(baseline)
 	if err != nil {
-		t.Fatalf("NextFrom: %v", err)
+		t.Fatalf("NextDayAfter: %v", err)
 	}
 	if !got.Equal(baseline) {
-		t.Errorf("index-date NextFrom = %s, want baseline %s", got, baseline)
+		t.Errorf("index-date NextDayAfter = %s, want baseline %s", got, baseline)
 	}
 }
 
