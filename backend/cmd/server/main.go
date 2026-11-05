@@ -30,6 +30,7 @@ import (
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
+	stackPostgres "github.com/paperstacks.io/paperstacks/internal/stack/repository/postgres"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
@@ -62,6 +63,7 @@ func run(
 
 	var paperService *paperApp.PaperService
 	var userService *userApp.UserService
+	var stackService *stackApp.StackService
 	if hasDB {
 		dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 		if err != nil {
@@ -80,13 +82,14 @@ func run(
 
 		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db), objectStore)
 		userService = userApp.NewUserService(userPostgres.NewRepository(db))
+		stackService = stackApp.NewStackService(stackPostgres.NewRepository(db), paperService)
 	} else {
 		paperService = paperApp.NewPaperService(paperMem.NewRepository(), objectStore)
 		userService = userApp.NewUserService(userMem.NewRepository())
+		stackService = stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	}
 
 	doiService := doiApp.NewDOIService(nil)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 
