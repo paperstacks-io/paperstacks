@@ -2,10 +2,11 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -22,10 +23,10 @@ const paperColumns = `
 	publication_status_timestamp,
 	abstract,
 	keywords,
-	pdf_url
+	pdf_storage_key
 `
 
-func scanPapers(rows *sql.Rows) ([]domain.Paper, error) {
+func scanPapers(rows pgx.Rows) ([]domain.Paper, error) {
 	papers := make([]domain.Paper, 0)
 	for rows.Next() {
 		paper, err := scanPaper(rows)
@@ -41,55 +42,25 @@ func scanPapers(rows *sql.Rows) ([]domain.Paper, error) {
 	return papers, nil
 }
 
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanPaper(row rowScanner) (domain.Paper, error) {
-	pgTypes := pgtype.NewMap()
-	var paper domain.Paper
-	var doi, title, titleShort, paperType, publicationStatus, abstract, pdfURL sql.NullString
-	var year, month, day sql.NullInt16
-	var statusTimestamp sql.NullTime
-
+func scanPaper(row pgx.Row) (domain.Paper, error) {
+	var d paperDAO
 	err := row.Scan(
-		&paper.UUID,
-		&doi,
-		&title,
-		&titleShort,
-		&year,
-		&month,
-		&day,
-		&paperType,
-		&publicationStatus,
-		&statusTimestamp,
-		&abstract,
-		pgTypes.SQLScanner(&paper.Keywords),
-		&pdfURL,
+		&d.UUID, &d.DOI, &d.Title, &d.TitleShort,
+		&d.Year, &d.Month, &d.Day, &d.Type, &d.PublicationStatus,
+		&d.StatusTimestamp, &d.Abstract, &d.Keywords, &d.PDFStorageKey,
 	)
 	if err != nil {
 		return domain.Paper{}, err
 	}
-
-	paper.DOI = doi.String
-	paper.Title = title.String
-	paper.TitleShort = titleShort.String
-	paper.PublicationDate = domain.Date{Year: int(year.Int16), Month: int(month.Int16), Day: int(day.Int16)}
-	paper.Type = domain.PublicationType(paperType.String)
-	paper.PublicationStatus = publicationStatus.String
-	paper.PublicationStatusTimestamp = formatTimestamp(statusTimestamp)
-	paper.Abstract = abstract.String
-	paper.PDFURL = pdfURL.String
-
-	return paper, nil
+	return d.domain(), nil
 }
 
-func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Paper) error {
+func updatePaper(ctx context.Context, tx pgx.Tx, uuid string, paper domain.Paper) error {
 	args, err := paperArguments(uuid, paper)
 	if err != nil {
-		return wrapError("prepare paper update", err)
+		return fmt.Errorf("prepare paper update: %w", err)
 	}
-	result, err := tx.ExecContext(ctx, `
+	result, err := tx.Exec(ctx, `
 		UPDATE public.paper
 		SET doi = $2,
 			title = $3,
@@ -101,16 +72,16 @@ func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Pape
 			publication_status = $9,
 			publication_status_timestamp = $10,
 			abstract = $11,
-			keywords = $12,
-			pdf_url = $13
-		WHERE uuid = $1`, args...)
+			keywords = $12
+		WHERE uuid = $1 AND deleted_at IS NULL`, args...)
 	if err != nil {
-		return wrapError("update paper", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "paper_doi_uq" {
+			return fmt.Errorf("update paper: %w: %w", domain.ErrPaperAlreadyExists, err)
+		}
+		return fmt.Errorf("update paper: %w", err)
 	}
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return wrapError("check updated paper", err)
-	}
+	changed := result.RowsAffected()
 	if changed == 0 {
 		return domain.ErrPaperNotFound
 	}
@@ -118,16 +89,16 @@ func updatePaper(ctx context.Context, tx *sql.Tx, uuid string, paper domain.Pape
 	return nil
 }
 
-func insertPaper(ctx context.Context, tx *sql.Tx, paper domain.Paper) error {
+func insertPaper(ctx context.Context, tx pgx.Tx, paper domain.Paper) error {
 	args, err := paperArguments(paper.UUID, paper)
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.Exec(ctx, `
 		INSERT INTO public.paper (
 			uuid, doi, title, title_short, publication_year, publication_month, publication_day,
-			paper_type, publication_status, publication_status_timestamp, abstract, keywords, pdf_url
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`, args...)
+			paper_type, publication_status, publication_status_timestamp, abstract, keywords
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, args...)
 	return err
 }
 
@@ -149,7 +120,6 @@ func paperArguments(uuid string, paper domain.Paper) ([]any, error) {
 		nullString(paper.PublicationStatus),
 		statusTimestamp,
 		nullString(paper.Abstract),
-		pgtype.FlatArray[string](paper.Keywords),
-		nullString(paper.PDFURL),
+		paper.Keywords,
 	}, nil
 }

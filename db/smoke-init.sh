@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-compose_file="$script_dir/compose.yaml"
+compose_file="$script_dir/../compose.yaml"
 compose_project="paperstacks-db-smoke"
 secrets_dir="$(mktemp -d)"
 compose_override="$secrets_dir/compose.smoke.yaml"
@@ -14,6 +14,8 @@ compose_started=false
 super_password="paperstacks-super-smoke"
 app_rw_password="paperstacks-rw-smoke"
 app_ro_password="paperstacks-ro-smoke"
+# Compose interpolates every service, even when only db is started; this password is URL-safe.
+export DB_APP_RW_PASSWORD_URLENCODED="$app_rw_password"
 
 on_exit() {
   status=$?

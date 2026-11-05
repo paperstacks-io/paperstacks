@@ -68,9 +68,18 @@ func renderErrorToast(w http.ResponseWriter, tmpl *template.Template, message st
 }
 
 func renderToast(w http.ResponseWriter, tmpl *template.Template, templateName string, data toastData) error {
+	return renderToastStatus(w, tmpl, http.StatusOK, templateName, data)
+}
+
+func renderErrorToastStatus(w http.ResponseWriter, tmpl *template.Template, status int, message string) error {
+	return renderToastStatus(w, tmpl, status, "shared/partials/toast/error", toastData{Message: message})
+}
+
+func renderToastStatus(w http.ResponseWriter, tmpl *template.Template, status int, templateName string, data toastData) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("HX-Retarget", "#toast-host")
 	w.Header().Set("HX-Reswap", "innerHTML")
+	w.WriteHeader(status)
 
 	return tmpl.ExecuteTemplate(w, templateName, data)
 }

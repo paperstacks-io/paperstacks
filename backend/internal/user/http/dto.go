@@ -8,10 +8,10 @@ import (
 )
 
 type UserResponse struct {
-	ExternalID string    `json:"externalId"`
+	ExternalID string    `json:"external_id"`
 	Email      string    `json:"email"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 func NewUserResponse(user domain.User) UserResponse {
@@ -26,10 +26,10 @@ func NewUserResponse(user domain.User) UserResponse {
 type StackResponse struct {
 	UUID      string    `json:"uuid"`
 	Name      string    `json:"name"`
-	OwnerID   string    `json:"ownerId"`
-	IsPublic  bool      `json:"isPublic"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	OwnerID   string    `json:"owner_id"`
+	IsPublic  bool      `json:"is_public"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func NewStackResponse(stack stackDomain.Stack) StackResponse {

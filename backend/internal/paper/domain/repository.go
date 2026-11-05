@@ -22,7 +22,10 @@ type Repository interface {
 
 	// commands
 	Save(ctx context.Context, paper Paper) (Paper, error)
+	// Update preserves the PDF attachment; use AttachPDF or DetachPDF to change it.
 	Update(ctx context.Context, uuid string, paper Paper) error
+	AttachPDF(ctx context.Context, uuid string, storageKey string) error
+	DetachPDF(ctx context.Context, uuid string) error
 	Delete(ctx context.Context, uuid string) error
 }
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"uuid"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
@@ -16,12 +17,14 @@ const (
 )
 
 type PaperService struct {
-	repo domain.Repository
+	repo    domain.Repository
+	storage objectstorage.Store
 }
 
-func NewPaperService(repo domain.Repository) *PaperService {
+func NewPaperService(repo domain.Repository, storage objectstorage.Store) *PaperService {
 	return &PaperService{
-		repo: repo,
+		repo:    repo,
+		storage: storage,
 	}
 }
 

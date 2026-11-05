@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/paperstacks.io/paperstacks/internal/paper/bibliography"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -45,7 +46,7 @@ func (f fakePaperGetter) Create(_ context.Context, paper paperDomain.Paper) (pap
 }
 
 func newTestStackService() *StackService {
-	return NewStackService(memory.NewRepository(), fakePaperGetter{
+	return NewStackService(memory.NewRepository(nil), fakePaperGetter{
 		papers: map[string]paperDomain.Paper{
 			existingPaperUUID: {
 				UUID:  existingPaperUUID,
@@ -139,7 +140,7 @@ func TestEnsureDefaultCreatesOnePrivateEmptyStack(t *testing.T) {
 func TestEnsureDefaultAcceptsConcurrentCreation(t *testing.T) {
 	t.Parallel()
 
-	service := NewStackService(duplicateDefaultStackRepository{Repository: memory.NewRepository()}, nil)
+	service := NewStackService(duplicateDefaultStackRepository{Repository: memory.NewRepository(nil)}, nil)
 
 	if err := service.EnsureDefault(context.Background(), userDomain.User{ExternalID: "default-user"}); err != nil {
 		t.Fatalf("EnsureDefault() error = %v, want nil", err)
@@ -162,6 +163,8 @@ func TestServiceUpdateModifiesUpdateAt(t *testing.T) {
 
 	service := newTestStackService()
 	stack := domain.NewStack("Update Test Stack", userDomain.User{ExternalID: "0", Email: "testUser@example.com"})
+	// Do not rely on the system clock advancing between Create and Update.
+	stack.UpdatedAt = stack.UpdatedAt.Add(-time.Hour)
 	originalUpdatedAt := stack.UpdatedAt
 	err := service.Create(context.Background(), *stack)
 	if err != nil {

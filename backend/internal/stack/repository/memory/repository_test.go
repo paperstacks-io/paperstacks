@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 	paperMemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
@@ -39,7 +40,7 @@ func TestSeedDataUsesPaperSeedData(t *testing.T) {
 func TestRepositoryCreateReturnsAlreadyExists(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 	ctx := context.Background()
 
 	stackOne := domain.NewStack("already-exists Stack", user)
@@ -62,7 +63,7 @@ func TestRepositoryCreateReturnsAlreadyExists(t *testing.T) {
 func TestRepositoryUpdateReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	_, err := repo.Update(context.Background(), domain.Stack{
 		Name:  "non-existent Stack",
@@ -77,7 +78,7 @@ func TestRepositoryUpdateReturnsNotFound(t *testing.T) {
 func TestRepositoryCreateAndDelete(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	err := repo.Create(context.Background(), domain.Stack{
 		UUID:  "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1",
@@ -97,7 +98,7 @@ func TestRepositoryCreateAndDelete(t *testing.T) {
 func TestRepositoryGetByUUIDReturnsStack(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	stack, err := repo.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
 	if err != nil {
@@ -112,7 +113,7 @@ func TestRepositoryGetByUUIDReturnsStack(t *testing.T) {
 func TestRepositoryGetByUUIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	_, err := repo.GetByUUID(context.Background(), "unknown-stack")
 	if err != domain.ErrStackNotFound {
@@ -123,7 +124,7 @@ func TestRepositoryGetByUUIDReturnsNotFound(t *testing.T) {
 func TestRepositoryListReturnsAllUserStacks(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	stacks, err := repo.List(context.Background(), user.ExternalID)
 	if err != nil {
@@ -144,7 +145,7 @@ func TestRepositoryListReturnsAllUserStacks(t *testing.T) {
 func TestRepositoryListPublicReturnsOnlyPublicUserStacks(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 	publicStackOne := domain.Stack{
 		UUID:     "da572e9d-4d1d-4c17-9034-b3f0fbc6cdf1",
 		Name:     "Public Stack",
@@ -194,7 +195,7 @@ func TestRepositoryListPublicReturnsOnlyPublicUserStacks(t *testing.T) {
 func TestRepositoryAddPaperDoesNotAddDuplicatePaper(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	initialStack, err := repo.GetByUUID(context.Background(), "9e1a819a-24ab-47b6-be29-92b49325e4c2")
 	if err != nil {
@@ -229,7 +230,7 @@ func TestRepositoryAddPaperDoesNotAddDuplicatePaper(t *testing.T) {
 func TestRepositoryAddPaperReturnsStackNotFound(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	err := repo.AddPaper(context.Background(), "unknown-stack", paperDomain.Paper{
 		UUID: "36583bb4-8cdc-554e-bcf5-f67b60d0b290",
@@ -242,7 +243,7 @@ func TestRepositoryAddPaperReturnsStackNotFound(t *testing.T) {
 func TestRepositoryRemovePaperReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	err := repo.RemovePaper(context.Background(), "unknown-stack", "paper-1")
 	if err != domain.ErrStackNotFound {
@@ -253,7 +254,7 @@ func TestRepositoryRemovePaperReturnsNotFound(t *testing.T) {
 func TestRepositorySearchByName(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	publicStack := domain.Stack{
 		UUID:     "2070926b-0afc-4471-8e2f-37a29fed20ea",
@@ -287,7 +288,7 @@ func TestRepositorySearchByName(t *testing.T) {
 func TestRepositorySearchEmptyQueryReturnsAllStacks(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	stacks := []domain.Stack{
 		{
@@ -396,7 +397,7 @@ func countPublicSeedStacks() int {
 func TestRepositorySearchPaginatesResults(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 
 	stacks := []domain.Stack{
 		{
@@ -449,7 +450,7 @@ func TestRepositorySearchPaginatesResults(t *testing.T) {
 func TestRepositorySearchSortByUpdatedAtDescending(t *testing.T) {
 	t.Parallel()
 
-	repo := NewRepository()
+	repo := NewRepository(nil)
 	ctx := context.Background()
 
 	stackOne := domain.NewStack("sort-created Stack One", user)
@@ -460,6 +461,11 @@ func TestRepositorySearchSortByUpdatedAtDescending(t *testing.T) {
 
 	stackThree := domain.NewStack("sort-created Stack Three", user)
 	stackThree.IsPublic = true
+
+	// Creation calls can share the same clock tick, especially on Windows.
+	stackOne.UpdatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	stackTwo.UpdatedAt = stackOne.UpdatedAt.Add(time.Hour)
+	stackThree.UpdatedAt = stackTwo.UpdatedAt.Add(time.Hour)
 
 	stacks := []domain.Stack{
 		*stackOne,
