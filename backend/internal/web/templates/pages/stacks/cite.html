@@ -8,6 +8,7 @@
           <a
             hx-get="/app/stacks"
             hx-target="#page-shell"
+            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -20,6 +21,7 @@
           <a
             hx-get="/app/stacks/{{ .Stack.UUID }}"
             hx-target="#page-shell"
+            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
