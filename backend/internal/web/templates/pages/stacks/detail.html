@@ -8,6 +8,7 @@
           <a
             hx-get="/app/stacks"
             hx-target="#page-shell"
+            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -28,6 +29,7 @@
       class="btn btn-sm"
       hx-get="/app/stacks/{{ .Stack.UUID }}/imports/biblatex"
       hx-target="#page-shell"
+      hx-select="#page-shell"
       hx-select-oob="#sidebar:outerHTML"
       hx-swap="outerHTML"
       hx-push-url="true"
@@ -176,6 +178,7 @@
                       hx-get="/app/stacks/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
                       hx-on::click="event.stopPropagation()"
                       hx-target="#page-shell"
+                      hx-select="#page-shell"
                       hx-select-oob="#sidebar:outerHTML"
                       hx-swap="outerHTML"
                       hx-push-url="true"
