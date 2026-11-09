@@ -243,6 +243,11 @@
     const searchInput = form.querySelector("[data-stack-paper-search]")
     const sortSelect = form.querySelector("[data-stack-paper-sort]")
     const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
+    const params = new URLSearchParams(window.location.search)
+    searchInput.value = params.get("search") || ""
+    const sortValue = params.get("sortBy")
+    sortSelect.value = Array.from(sortSelect.options).some((option) => option.value === sortValue) ? sortValue : "-year"
+
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
     const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
       const year = Number.parseInt(element.dataset.year || "0", 10)
@@ -304,12 +309,24 @@
       if (visibleCount) visibleCount.textContent = String(shown)
     }
 
+    function updatePaperFilter() {
+      applyPaperFilter()
+
+      const url = new URL(window.location.href)
+      if (searchInput.value) url.searchParams.set("search", searchInput.value)
+      else url.searchParams.delete("search")
+      if (sortSelect.value !== "-year") url.searchParams.set("sortBy", sortSelect.value)
+      else url.searchParams.delete("sortBy")
+
+      if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url)
+    }
+
     form.addEventListener("submit", (event) => {
       event.preventDefault()
-      applyPaperFilter()
+      updatePaperFilter()
     })
-    searchInput.addEventListener("input", applyPaperFilter)
-    sortSelect.addEventListener("change", applyPaperFilter)
+    searchInput.addEventListener("input", updatePaperFilter)
+    sortSelect.addEventListener("change", updatePaperFilter)
 
     applyPaperFilter()
   })()
