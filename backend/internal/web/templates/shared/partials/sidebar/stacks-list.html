@@ -1,31 +1,37 @@
 {{ define "shared/partials/sidebar/stacks-list" }}
-<li class="menu-title">
-  <span>Stacks</span>
-</li>
 
 <li>
-  <form novalidate hx-post="/app/stacks" hx-target="#toast-host" hx-select="" hx-push-url="false" hx-swap="innerHTML">
-    <fieldset class="fieldset">
-      <div class="join">
-        <input type="text" name="name" class="input input-sm join-item" placeholder="new stack" />
-        <button type="submit" class="btn btn-sm join-item">Create</button>
-      </div>
-    </fieldset>
-  </form>
+  <h2 class="menu-title">My Stacks</h2>
+  <ul>
+    <form novalidate hx-post="/app/stacks" hx-target="#toast-host" hx-select="" hx-push-url="false" hx-swap="innerHTML">
+      <fieldset class="group fieldset">
+        <input type="text" name="name" class="input input-sm" placeholder="Create new stack" />
+        <button
+          type="submit"
+          class="btn btn-sm btn-primary hidden group-focus-within:inline-flex group-has-[input:not(:placeholder-shown)]:inline-flex"
+        >
+          Create Stack
+        </button>
+      </fieldset>
+    </form>
+
+    {{ $page := .PageName }} {{ range .Items}} {{ $stackPath := printf `stacks/%s/` .UUID }}
+    <li>
+      <a
+        hx-get="/app/stacks/{{ .UUID }}"
+        hx-target="#page-shell"
+        hx-select-oob="#sidebar:outerHTML"
+        hx-swap="outerHTML"
+        hx-select="#page-shell"
+        hx-push-url="true"
+        class="justify-between {{ if eq $stackPath (printf `%.*s` (len $stackPath) (printf `%s/` $page)) }}menu-active{{ end }}"
+      >
+        <span>{{ .Name }}</span>
+        <span class="badge badge-xs">{{ len .Papers }}</span>
+      </a>
+    </li>
+    {{ end }}
+  </ul>
 </li>
-{{ $page := .PageName }} {{ range .Items}} {{ $stackPath := printf `stacks/%s/` .UUID }}
-<li>
-  <a
-    hx-get="/app/stacks/{{ .UUID }}"
-    hx-target="#page-shell"
-    hx-select-oob="#sidebar:outerHTML"
-    hx-swap="outerHTML"
-    hx-select="#page-shell"
-    hx-push-url="true"
-    class="justify-between {{ if eq $stackPath (printf `%.*s` (len $stackPath) (printf `%s/` $page)) }}menu-active{{ end }}"
-  >
-    <span>{{ .Name }}</span>
-    <span class="badge badge-xs">{{ len .Papers }}</span>
-  </a>
-</li>
-{{ end }} {{ end }}
+
+{{ end }}
