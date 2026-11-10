@@ -26,17 +26,12 @@ test-integration: ## Run all integration tests
 	$(GOCMD) test $(INTEGRATION_PACKAGE) -coverprofile=coverage.out
 
 .PHONY: build
-build: build-server build-pdfextractor ## Build all
+build: build-server ## Build all
 
 .PHONY: build-server
 build-server: ## Build server application
 	mkdir -p $(BINARY_DIR)
 	$(GOCMD) build $(BUILD_LDFLAGS) -o $(BINARY_DIR)/server ./cmd/server/
-
-.PHONY: build-pdfextractor
-build-pdfextractor: ## Build pdfextractor application
-	mkdir -p $(BINARY_DIR)
-	$(GOCMD) build $(BUILD_LDFLAGS) -o $(BINARY_DIR)/pdfextractor ./cmd/pdfextractor/
 
 .PHONY: build-docker
 build-docker: ## Build Docker image for server
