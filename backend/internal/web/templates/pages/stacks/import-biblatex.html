@@ -7,6 +7,7 @@
           <a
             hx-get="/app/stacks"
             hx-target="#page-shell"
+            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -18,6 +19,7 @@
           <a
             hx-get="/app/stacks/{{ .Stack.UUID }}"
             hx-target="#page-shell"
+            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -53,6 +55,14 @@
         <legend class="fieldset-legend">Pick or drop a BibLaTeX file</legend>
         <input type="file" name="bib_file" accept=".bib" required class="file-input w-full" />
         <label class="label">Allowed filetype: *.bib (max size 10MB)</label>
+      </fieldset>
+
+      <fieldset class="fieldset mx-auto max-w-md">
+        <legend class="fieldset-legend">Target stack</legend>
+        <div class="text-xl font-semibold">{{ .Stack.Name }}</div>
+      </fieldset>
+
+      <fieldset class="fieldset mx-auto max-w-md">
         <button type="submit" class="btn btn-primary" hx-disable="this">Import papers</button>
       </fieldset>
     </form>

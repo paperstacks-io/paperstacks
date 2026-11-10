@@ -4,7 +4,7 @@
 </li>
 
 <li>
-  <form novalidate hx-post="/app/stacks" hx-target="#toast-host" hx-swap="innerHTML">
+  <form novalidate hx-post="/app/stacks" hx-target="#toast-host" hx-select="" hx-push-url="false" hx-swap="innerHTML">
     <fieldset class="fieldset">
       <div class="join">
         <input type="text" name="name" class="input input-sm join-item" placeholder="new stack" />
@@ -13,7 +13,7 @@
     </fieldset>
   </form>
 </li>
-{{ $page := .PageName }} {{ range .Items}}
+{{ $page := .PageName }} {{ range .Items}} {{ $stackPath := printf `stacks/%s/` .UUID }}
 <li>
   <a
     hx-get="/app/stacks/{{ .UUID }}"
@@ -22,7 +22,7 @@
     hx-swap="outerHTML"
     hx-select="#page-shell"
     hx-push-url="true"
-    class="justify-between {{ if eq $page (printf `stacks/%s` .UUID) }}menu-active{{ end }}"
+    class="justify-between {{ if eq $stackPath (printf `%.*s` (len $stackPath) (printf `%s/` $page)) }}menu-active{{ end }}"
   >
     <span>{{ .Name }}</span>
     <span class="badge badge-xs">{{ len .Papers }}</span>

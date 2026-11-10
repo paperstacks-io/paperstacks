@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,6 +14,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/build"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
@@ -30,6 +30,7 @@ import (
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
+	stackPostgres "github.com/paperstacks.io/paperstacks/internal/stack/repository/postgres"
 	userApp "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMem "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
@@ -62,25 +63,33 @@ func run(
 
 	var paperService *paperApp.PaperService
 	var userService *userApp.UserService
+	var stackService *stackApp.StackService
 	if hasDB {
-		db, err := sql.Open("pgx", cfg.DatabaseURL)
+		dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+		if err != nil {
+			return fmt.Errorf("parse database configuration: %w", err)
+		}
+		dbConfig.MaxConns = 10
+		dbConfig.MinIdleConns = 2
+		db, err := pgxpool.NewWithConfig(ctx, dbConfig)
 		if err != nil {
 			return fmt.Errorf("open database: %w", err)
 		}
 		defer db.Close()
-		if err := db.PingContext(ctx); err != nil {
+		if err := db.Ping(ctx); err != nil {
 			return fmt.Errorf("ping database: %w", err)
 		}
 
 		paperService = paperApp.NewPaperService(paperPostgres.NewRepository(db), objectStore)
 		userService = userApp.NewUserService(userPostgres.NewRepository(db))
+		stackService = stackApp.NewStackService(stackPostgres.NewRepository(db), paperService)
 	} else {
 		paperService = paperApp.NewPaperService(paperMem.NewRepository(), objectStore)
 		userService = userApp.NewUserService(userMem.NewRepository())
+		stackService = stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	}
 
 	doiService := doiApp.NewDOIService(nil)
-	stackService := stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
 	userProvisioner := userApp.NewUserProvisioner(userService, stackService)
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 
