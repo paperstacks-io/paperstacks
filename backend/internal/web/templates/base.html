@@ -75,7 +75,7 @@
         hx-push-url:inherited="true"
       >
         <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
-        <ul class="menu w-full overflow-y-auto">
+        <ul class="menu overflow-y-auto">
           <li>
             <a hx-get="/app/" class="{{ if eq .PageName `home` }}menu-active{{ end }}">
               <svg data-src="https://unpkg.com/heroicons/20/solid/home.svg" class="size-4"></svg>
@@ -110,7 +110,7 @@
             hx-get="/app/partials/sidebar/stacks-list"
             hx-trigger="load"
             hx-target="this"
-            hx-select="li"
+            hx-select=""
             hx-swap="outerHTML"
             hx-push-url="false"
             class="flex justify-center items-center"
