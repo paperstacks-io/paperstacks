@@ -49,6 +49,14 @@ services:
       - db_app_rw_password
       - db_app_ro_password
 
+  grobid:
+    image: docker.io/grobid/grobid:${GROBID_VERSION:-0.9.1-full}
+    init: true
+    ulimits:
+      core: 0
+    ports:
+      - "127.0.0.1:8070:8070"
+
 secrets:
   db_super_password:
     file: ./secrets/db_super_password.txt

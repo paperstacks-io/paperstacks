@@ -1,6 +1,8 @@
 package web
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"html/template"
 	"io"
@@ -8,6 +10,7 @@ import (
 	"mime"
 	"net/http"
 	"slices"
+	"time"
 
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -702,7 +705,7 @@ func handlePaperUploadPDF(
 		}
 		defer file.Close()
 
-		_, err = paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
+		storageKey, err := paperService.UploadPDF(r.Context(), paperDomain.UploadPDFOptions{
 			PaperUUID: paperUUID,
 			FileName:  header.Filename,
 			File:      file,
@@ -723,6 +726,8 @@ func handlePaperUploadPDF(
 			return
 		}
 
+		extractPDFXMLInBackground(r.Context(), logger, paperService, paperUUID, storageKey, file)
+
 		data.Paper, err = paperService.GetByUUID(r.Context(), paperUUID)
 		if err != nil {
 			logger.Error("get paper after PDF upload", "paperUUID", paperUUID, "error", err.Error())
@@ -734,6 +739,42 @@ func handlePaperUploadPDF(
 			logger.Error("render PDF section after upload", "paperUUID", paperUUID, "error", err.Error())
 		}
 	})
+}
+
+// pdfXMLExtractionTimeout bounds background XML extraction after a PDF upload.
+const pdfXMLExtractionTimeout = 5 * time.Minute
+
+// extractPDFXMLInBackground buffers the already uploaded PDF (bounded by
+// domain.PDFMaxFileSize) and extracts its XML in a goroutine, so a slow or
+// failing extraction never affects the upload or its HTTP response.
+func extractPDFXMLInBackground(
+	ctx context.Context,
+	logger *slog.Logger,
+	paperService *paperApp.PaperService,
+	paperUUID string,
+	storageKey string,
+	file io.ReadSeeker,
+) {
+	if !paperService.XMLExtractionEnabled() {
+		return
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		logger.Warn("rewind PDF for XML extraction", "paperUUID", paperUUID, "error", err.Error())
+		return
+	}
+	pdf, err := io.ReadAll(io.LimitReader(file, paperDomain.PDFMaxFileSize))
+	if err != nil {
+		logger.Warn("read PDF for XML extraction", "paperUUID", paperUUID, "error", err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), pdfXMLExtractionTimeout)
+	go func() {
+		defer cancel()
+		if _, err := paperService.ExtractPDFXML(ctx, storageKey, bytes.NewReader(pdf)); err != nil {
+			logger.Warn("extract paper XML after PDF upload", "paperUUID", paperUUID, "error", err.Error())
+		}
+	}()
 }
 
 func handlePaperDeletePDF(
