@@ -64,8 +64,8 @@ func (u *Updater) Run(ctx context.Context) error {
 		}
 	}()
 
-	store := syncstate.NewStore(u.cfg.StateDir, filter)
-	from, err := store.NextDayAfter(u.cfg.From)
+	storage := syncstate.NewFilterStorage(u.cfg.StateDir, filter)
+	from, err := storage.NextDayAfter(u.cfg.From)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (u *Updater) Run(ctx context.Context) error {
 		u.log.Info("window starting", slog.String("filter", filter), slog.String("day", day.Format(time.DateOnly)))
 		entry, dayErr := u.syncDay(ctx, day, logFile)
 		entry.RunID = runID
-		if err := store.Append(entry); err != nil {
+		if err := storage.Append(entry); err != nil {
 			return errors.Join(dayErr, err)
 		}
 		u.log.Info("window complete",

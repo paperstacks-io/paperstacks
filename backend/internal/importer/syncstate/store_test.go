@@ -9,7 +9,7 @@ import (
 var baseline = time.Date(2026, 2, 25, 0, 0, 0, 0, time.UTC)
 
 func TestNextDayAfterEmptyStateReturnsBaseline(t *testing.T) {
-	got, err := NewStore(t.TempDir(), "update-date").NextDayAfter(baseline)
+	got, err := NewFilterStorage(t.TempDir(), "update-date").NextDayAfter(baseline)
 	if err != nil {
 		t.Fatalf("NextDayAfter: %v", err)
 	}
@@ -19,7 +19,7 @@ func TestNextDayAfterEmptyStateReturnsBaseline(t *testing.T) {
 }
 
 func TestNextDayAfterResumesAfterLastCompletedWindow(t *testing.T) {
-	s := NewStore(t.TempDir(), "update-date")
+	s := NewFilterStorage(t.TempDir(), "update-date")
 	for _, e := range []Entry{
 		{WindowFrom: "2026-03-01", WindowUntil: "2026-03-01", Status: StatusCompleted},
 		{WindowFrom: "2026-03-02", WindowUntil: "2026-03-02", Status: StatusCompleted},
@@ -47,13 +47,13 @@ func TestNextDayAfterResumesAfterLastCompletedWindow(t *testing.T) {
 	}
 }
 
-func TestStoresAreSeparatePerFilter(t *testing.T) {
+func TestFilterStoragesAreSeparatePerFilter(t *testing.T) {
 	dir := t.TempDir()
-	if err := NewStore(dir, "update-date").Append(Entry{WindowUntil: "2026-03-10", Status: StatusCompleted}); err != nil {
+	if err := NewFilterStorage(dir, "update-date").Append(Entry{WindowUntil: "2026-03-10", Status: StatusCompleted}); err != nil {
 		t.Fatalf("Append: %v", err)
 	}
 
-	got, err := NewStore(dir, "index-date").NextDayAfter(baseline)
+	got, err := NewFilterStorage(dir, "index-date").NextDayAfter(baseline)
 	if err != nil {
 		t.Fatalf("NextDayAfter: %v", err)
 	}

@@ -98,7 +98,7 @@ func TestUpdaterSyncsEachDayAndRecordsState(t *testing.T) {
 		t.Errorf("written DOIs = %v, want [10.1/valid-1 10.1/valid-2]", writer.dois)
 	}
 
-	entries, err := syncstate.NewStore(stateDir, "update-date").Load()
+	entries, err := syncstate.NewFilterStorage(stateDir, "update-date").Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestUpdaterResumesAtFailedDay(t *testing.T) {
 		t.Errorf("fetched days = %v, want stop after 2026-03-02", failing.days)
 	}
 
-	entries, err := syncstate.NewStore(stateDir, "update-date").Load()
+	entries, err := syncstate.NewFilterStorage(stateDir, "update-date").Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

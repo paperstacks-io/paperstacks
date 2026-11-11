@@ -43,18 +43,18 @@ type Entry struct {
 	Error        string    `json:"error"`
 }
 
-// Store is the state file of one filter, <dir>/<filter>.jsonl.
-type Store struct {
+// FilterStorage is the state file of one filter, <dir>/<filter>.jsonl.
+type FilterStorage struct {
 	path string
 }
 
-// NewStore returns the Store for filter in dir.
-func NewStore(dir, filter string) *Store {
-	return &Store{path: filepath.Join(dir, filter+".jsonl")}
+// NewFilterStorage returns the FilterStorage for filter in dir.
+func NewFilterStorage(dir, filter string) *FilterStorage {
+	return &FilterStorage{path: filepath.Join(dir, filter+".jsonl")}
 }
 
 // Append adds e as a new line, creating dir and the file if needed.
-func (s *Store) Append(e Entry) error {
+func (s *FilterStorage) Append(e Entry) error {
 	line, err := json.Marshal(e)
 	if err != nil {
 		return fmt.Errorf("encode state entry: %w", err)
@@ -75,7 +75,7 @@ func (s *Store) Append(e Entry) error {
 
 // Load returns all entries in file order, or none if the file does not
 // exist yet.
-func (s *Store) Load() ([]Entry, error) {
+func (s *FilterStorage) Load() ([]Entry, error) {
 	f, err := os.Open(s.path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -103,7 +103,7 @@ func (s *Store) Load() ([]Entry, error) {
 // NextDayAfter returns the day after the latest completed window, or baseline
 // if no window has been completed yet. Completed windows are appended in
 // ascending order, so the last completed entry is the latest one.
-func (s *Store) NextDayAfter(baseline time.Time) (time.Time, error) {
+func (s *FilterStorage) NextDayAfter(baseline time.Time) (time.Time, error) {
 	entries, err := s.Load()
 	if err != nil {
 		return time.Time{}, err
