@@ -1,7 +1,10 @@
 package syncstate
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -44,6 +47,50 @@ func TestNextDayAfterResumesAfterLastCompletedWindow(t *testing.T) {
 	}
 	if len(entries) != 3 || entries[2].Status != StatusFailed {
 		t.Errorf("Load = %+v, want 3 entries ending with failed", entries)
+	}
+}
+
+func TestAppendWritesSlogLineThatLoadsBack(t *testing.T) {
+	dir := t.TempDir()
+	want := Entry{
+		RunID:        "20261111-030000",
+		Filter:       "update-date",
+		WindowFrom:   "2026-03-01",
+		WindowUntil:  "2026-03-01",
+		Status:       StatusFailed,
+		StartedAt:    time.Date(2026, 11, 11, 3, 0, 0, 0, time.UTC),
+		FinishedAt:   time.Date(2026, 11, 11, 3, 2, 41, 0, time.UTC),
+		TotalResults: 65382,
+		Fetched:      12000,
+		Written:      11991,
+		Invalid:      8,
+		ParseErrors:  1,
+		Requests:     13,
+		Error:        "crossref unavailable",
+	}
+	s := NewFilterStorage(dir, "update-date")
+	if err := s.Append(want); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(dir, "update-date.jsonl"))
+	if err != nil {
+		t.Fatalf("read state file: %v", err)
+	}
+	var line map[string]any
+	if err := json.Unmarshal(raw, &line); err != nil {
+		t.Fatalf("state line is not JSON: %v", err)
+	}
+	if line["level"] != "INFO" || line["msg"] != "window complete" || line["time"] == nil {
+		t.Errorf("state line %s lacks slog time/level/msg", raw)
+	}
+
+	entries, err := s.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(entries) != 1 || entries[0] != want {
+		t.Errorf("Load = %+v, want %+v", entries, want)
 	}
 }
 
