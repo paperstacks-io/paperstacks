@@ -49,6 +49,20 @@ services:
       - db_app_rw_password
       - db_app_ro_password
 
+  barman:
+    profiles: [backup]
+    build:
+      context: ./db/backup
+    init: true
+    restart: unless-stopped
+    volumes:
+      - barman_data:/var/lib/barman
+    secrets:
+      - db_barman_password
+
+volumes:
+  barman_data:
+
 secrets:
   db_super_password:
     file: ./secrets/db_super_password.txt
@@ -56,4 +70,6 @@ secrets:
     file: ./secrets/db_app_rw_password.txt
   db_app_ro_password:
     file: ./secrets/db_app_ro_password.txt
+  db_barman_password:
+    file: ./secrets/db_barman_password.txt
 
