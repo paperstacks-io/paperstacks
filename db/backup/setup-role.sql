@@ -1,7 +1,11 @@
 \getenv backup_password PAPERSTACKS_BACKUP_PASSWORD
 BEGIN;
 SELECT 'CREATE ROLE paperstacks_backup'
-WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'paperstacks_backup')
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM pg_roles
+    WHERE rolname = 'paperstacks_backup'
+)
 \gexec
 ALTER ROLE paperstacks_backup LOGIN REPLICATION NOSUPERUSER NOCREATEDB NOCREATEROLE
   PASSWORD :'backup_password';
@@ -19,7 +23,9 @@ CREATE TABLE IF NOT EXISTS backup_jobs.weekly_full (
     requested bigint NOT NULL DEFAULT 1,
     completed bigint NOT NULL DEFAULT 0
 );
-INSERT INTO backup_jobs.weekly_full DEFAULT VALUES ON CONFLICT DO NOTHING;
+INSERT INTO backup_jobs.weekly_full
+DEFAULT VALUES
+ON CONFLICT DO NOTHING;
 GRANT USAGE ON SCHEMA backup_jobs TO paperstacks_backup;
 GRANT SELECT, UPDATE (completed) ON backup_jobs.weekly_full TO paperstacks_backup;
 COMMIT;
@@ -28,6 +34,9 @@ COMMIT;
 SELECT cron.schedule_in_database(
     'barman-weekly-full',
     '0 2 * * 0',
-    $$UPDATE backup_jobs.weekly_full SET requested = requested + 1;$$,
+    $$
+    UPDATE backup_jobs.weekly_full
+    SET requested = requested + 1;
+    $$,
     'postgres'
 );

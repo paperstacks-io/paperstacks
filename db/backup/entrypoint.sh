@@ -21,16 +21,24 @@ run_weekly_backups() {
   local conn='host=db port=5432 dbname=postgres user=paperstacks_backup passfile=/tmp/paperstacks-barman.pgpass connect_timeout=5'
   while true; do
     if request=$(psql -XAt -v ON_ERROR_STOP=1 "$conn" <<'SQL'
-SELECT requested FROM backup_jobs.weekly_full
+SELECT requested
+FROM backup_jobs.weekly_full
 WHERE requested > completed
-  AND EXISTS (SELECT FROM pg_replication_slots WHERE slot_name = 'paperstacks_barman' AND active);
+  AND EXISTS (
+    SELECT 1
+    FROM pg_replication_slots
+    WHERE slot_name = 'paperstacks_barman'
+      AND active
+  );
 SQL
     ); then
       if [[ $request =~ ^[0-9]+$ ]] &&
         barman -c /etc/paperstacks/barman.conf switch-wal --force --archive --archive-timeout 120 paperstacks &&
         barman -c /etc/paperstacks/barman.conf backup --wait paperstacks; then
         psql -X -v ON_ERROR_STOP=1 -v request="$request" "$conn" <<'SQL' ||
-UPDATE backup_jobs.weekly_full SET completed = GREATEST(completed, :'request'::bigint);
+-- Acknowledge only the request this backup started with, without moving backwards.
+UPDATE backup_jobs.weekly_full
+SET completed = GREATEST(completed, :'request'::bigint);
 SQL
           echo "Could not acknowledge the backup; the request remains pending" >&2
       fi
