@@ -9,7 +9,8 @@
 //	0 4 * * 0  cd /path/to/backend && go run ./cmd/crossref-sync -filter index-date
 //
 // Set CROSSREF_MAILTO (or -mailto) to use Crossref's polite pool.
-// Changes are not stored yet: works are handed to importer.NoopWriter.
+// Works are upserted into the PostgreSQL database at DATABASE_URL, which
+// may also be set in a .env file.
 package main
 
 import (
@@ -24,8 +25,13 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/joho/godotenv/autoload"
+
 	"github.com/paperstacks.io/paperstacks/internal/importer"
 	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/api"
+	paperapp "github.com/paperstacks.io/paperstacks/internal/paper/application"
+	paperpostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
 )
 
 // Default directories, relative to the backend root the command is run
@@ -91,8 +97,32 @@ func run(ctx context.Context) error {
 	}
 	printConfig(os.Stdout, cfg)
 
+	db, err := openDatabase(ctx)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	writer := importer.NewServiceWriter(paperapp.NewPaperService(paperpostgres.NewRepository(db), nil))
 	client := api.NewClient(api.DefaultBaseURL, *mailto, nil, log)
-	return importer.NewUpdater(cfg, log, client, importer.NoopWriter{}).Run(ctx)
+	return importer.NewUpdater(cfg, log, client, writer).Run(ctx)
+}
+
+// openDatabase connects to the PostgreSQL database at DATABASE_URL.
+func openDatabase(ctx context.Context) (*pgxpool.Pool, error) {
+	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		return nil, fmt.Errorf("DATABASE_URL is not set")
+	}
+	db, err := pgxpool.New(ctx, url)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+	if err := db.Ping(ctx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+	return db, nil
 }
 
 func printConfig(w io.Writer, cfg importer.UpdaterConfig) {

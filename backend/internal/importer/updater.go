@@ -12,6 +12,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/api"
 	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/parser"
 	"github.com/paperstacks.io/paperstacks/internal/importer/syncstate"
+	paper "github.com/paperstacks.io/paperstacks/internal/paper/domain"
 )
 
 // PageFetcher fetches one cursor page of works matching filter on day.
@@ -200,7 +201,14 @@ func (u *Updater) writeItem(ctx context.Context, item json.RawMessage, e *syncst
 		return nil
 	}
 
-	if err := u.writer.Upsert(ctx, p); err != nil {
+	err = u.writer.Upsert(ctx, p)
+	if errors.Is(err, paper.ErrPaperAlreadyExists) {
+		// The DOI belongs to a soft-deleted paper; retrying won't help.
+		e.Invalid++
+		u.writeLogEntry(logFile, e.WindowFrom, rec.DOI, err.Error())
+		return nil
+	}
+	if err != nil {
 		return fmt.Errorf("write paper %s: %w", rec.DOI, err)
 	}
 	e.Written++

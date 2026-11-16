@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -160,5 +161,33 @@ func TestUpdaterRefusesWhenLocked(t *testing.T) {
 	}
 	if len(fetcher.days) != 0 {
 		t.Errorf("fetched days = %v, want none", fetcher.days)
+	}
+}
+
+type existingDOIWriter struct{}
+
+func (existingDOIWriter) Upsert(context.Context, paper.Paper) error {
+	return fmt.Errorf("save paper: %w", paper.ErrPaperAlreadyExists)
+}
+
+func TestUpdaterCountsExistingDOIAsInvalid(t *testing.T) {
+	fetcher := &fakeFetcher{pages: map[string]api.Page{
+		"2026-03-01/*": {TotalResults: 1, NextCursor: "c1", Items: items(
+			`{"DOI":"10.1/deleted","title":["Deleted"],"type":"journal-article"}`,
+		)},
+	}}
+	stateDir := t.TempDir()
+
+	if err := newTestUpdater(t, stateDir, fetcher, existingDOIWriter{}, "2026-03-01").Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	entries, err := syncstate.NewFilterStorage(stateDir, "update-date").Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Status != syncstate.StatusCompleted ||
+		entries[0].Invalid != 1 || entries[0].Written != 0 {
+		t.Errorf("entries = %+v, want one completed entry with 1 invalid", entries)
 	}
 }
