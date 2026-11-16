@@ -8,18 +8,17 @@
 
 <ul class="space-y-4 mt-4">
   {{ range .Items }}
-  <li class="list-row flex hover:bg-base-200">
+  <li
+    class="list-row flex hover:bg-base-100 cursor-pointer"
+    hx-get="/app/stacks/{{ .UUID }}"
+    hx-target="#page-shell"
+    hx-select="#page-shell"
+    hx-select-oob="#sidebar:outerHTML"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+  >
     <div class="grow space-y-1">
-      <a
-        hx-get="/app/stacks/{{ .UUID }}"
-        hx-target="#page-shell"
-        hx-select-oob="#sidebar:outerHTML"
-        hx-swap="outerHTML"
-        hx-push-url="true"
-        class="font-bold hover:underline"
-      >
-        {{ .Name }}
-      </a>
+      <a class="font-bold"> {{ .Name }} </a>
 
       <p class="text-sm">Collection of papers by {{ .Owner.Email }}</p>
 
@@ -28,16 +27,6 @@
       </p>
 
       <p class="text-xs">last update: {{ .CreatedAt.Format "Jan 02, 2006" }}</p>
-    </div>
-
-    <div class="flex items-center gap-2 pt-10 text-base-content/60">
-      <button class="btn btn-square btn-ghost btn-sm" onclick="alert('Not implemented yet!')">
-        <svg data-src="https://unpkg.com/heroicons/24/outline/clipboard-document.svg" class="h-6 w-6"></svg>
-      </button>
-
-      <button class="btn btn-square btn-ghost btn-sm" onclick="alert('Not implemented yet!')">
-        <svg data-src="https://unpkg.com/heroicons/24/outline/ellipsis-vertical.svg" class="h-6 w-6"></svg>
-      </button>
     </div>
   </li>
   {{ end }}

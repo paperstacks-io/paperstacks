@@ -8,6 +8,7 @@
           <a
             hx-get="/app/stacks"
             hx-target="#page-shell"
+            hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -21,22 +22,23 @@
   </div>
   <div class="flex flex-wrap gap-2">
     <a class="btn btn-sm" href="/app/stacks/{{ .Stack.UUID }}/bibliography/biblatex">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-up-tray.svg" class="size-4"></svg>
+      <svg data-src="https://unpkg.com/heroicons/24/outline/arrow-up-tray.svg" class="size-4"></svg>
       Export as BibLaTeX
     </a>
     <a
       class="btn btn-sm"
       hx-get="/app/stacks/{{ .Stack.UUID }}/imports/biblatex"
       hx-target="#page-shell"
+      hx-select="#page-shell"
       hx-select-oob="#sidebar:outerHTML"
       hx-swap="outerHTML"
       hx-push-url="true"
     >
-      <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-down-tray.svg" class="size-4"></svg>
+      <svg data-src="https://unpkg.com/heroicons/24/outline/arrow-down-tray.svg" class="size-4"></svg>
       Import from BibLaTeX
     </a>
     <button class="btn btn-sm" type="button" onclick="modal_confirm_delete.showModal()">
-      <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
+      <svg data-src="https://unpkg.com/heroicons/24/outline/trash.svg" class="size-4"></svg>
       Delete
     </button>
   </div>
@@ -93,7 +95,7 @@
         <form id="stack-paper-filter" data-stack-paper-filter autocomplete="off">
           <div class="flex flex-col gap-3 lg:flex-row">
             <label class="input input-sm w-full">
-              <svg data-src="https://unpkg.com/heroicons/20/solid/funnel.svg" class="h-4 w-4 opacity-50"></svg>
+              <svg data-src="https://unpkg.com/heroicons/24/outline/funnel.svg" class="h-4 w-4 opacity-50"></svg>
               <input
                 id="stack-paper-search"
                 data-stack-paper-search
@@ -176,6 +178,7 @@
                       hx-get="/app/stacks/{{ $.Stack.UUID }}/papers/{{ .UUID }}/citation"
                       hx-on::click="event.stopPropagation()"
                       hx-target="#page-shell"
+                      hx-select="#page-shell"
                       hx-select-oob="#sidebar:outerHTML"
                       hx-swap="outerHTML"
                       hx-push-url="true"
@@ -240,6 +243,11 @@
     const searchInput = form.querySelector("[data-stack-paper-search]")
     const sortSelect = form.querySelector("[data-stack-paper-sort]")
     const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
+    const params = new URLSearchParams(window.location.search)
+    searchInput.value = params.get("search") || ""
+    const sortValue = params.get("sortBy")
+    sortSelect.value = Array.from(sortSelect.options).some((option) => option.value === sortValue) ? sortValue : "-year"
+
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
     const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
       const year = Number.parseInt(element.dataset.year || "0", 10)
@@ -301,12 +309,24 @@
       if (visibleCount) visibleCount.textContent = String(shown)
     }
 
+    function updatePaperFilter() {
+      applyPaperFilter()
+
+      const url = new URL(window.location.href)
+      if (searchInput.value) url.searchParams.set("search", searchInput.value)
+      else url.searchParams.delete("search")
+      if (sortSelect.value !== "-year") url.searchParams.set("sortBy", sortSelect.value)
+      else url.searchParams.delete("sortBy")
+
+      if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url)
+    }
+
     form.addEventListener("submit", (event) => {
       event.preventDefault()
-      applyPaperFilter()
+      updatePaperFilter()
     })
-    searchInput.addEventListener("input", applyPaperFilter)
-    sortSelect.addEventListener("change", applyPaperFilter)
+    searchInput.addEventListener("input", updatePaperFilter)
+    sortSelect.addEventListener("change", updatePaperFilter)
 
     applyPaperFilter()
   })()
