@@ -89,21 +89,19 @@
             </a>
           </li>
           <li>
-            <details name="sidebar-group">
-              <summary>
-                <svg data-src="https://unpkg.com/heroicons/24/outline/trash.svg" class="size-4"></svg>
-                Legacy
-              </summary>
-              <ul>
-                <li>
-                  <a hx-get="/app/papers" class="{{ if eq .PageName `papers` }}menu-active{{ end }}">Papers</a>
-                </li>
-              </ul>
-            </details>
+            <a hx-get="/app/papers" class="{{ if eq .PageName `papers` }}menu-active{{ end }}">
+              <svg data-src="https://unpkg.com/heroicons/24/outline/book-open.svg" class="size-4"></svg>
+              All My Papers
+            </a>
+          </li>
+          <li class="tooltip" data-tip="coming soon">
+            <a disabled>
+              <svg data-src="https://unpkg.com/heroicons/24/outline/globe-alt.svg" class="size-4"></svg>
+              Public Stacks
+            </a>
           </li>
 
           {{ if .Session.IsValid }}
-          <div class="divider"></div>
 
           <div
             hx-get="/app/partials/sidebar/stacks-list"
