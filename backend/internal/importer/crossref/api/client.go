@@ -82,8 +82,9 @@ func NewClient(baseURL, mailto string, httpClient *http.Client, log *slog.Logger
 }
 
 // FetchPage returns the page at cursor of all works of an imported type
-// (domain.ImportedWorkTypes) matching filter on day (UTC, inclusive). Pass FirstCursor to start; continue with
-// Page.NextCursor until a page has no items. Rate limiting (429), server
+// (domain.ImportedWorkTypes) matching filter on day (UTC, inclusive).
+// Pass FirstCursor to start; continue with Page.NextCursor until a page has no items.
+// Rate limiting (429), server
 // errors and transport errors are retried with exponential backoff.
 func (c *Client) FetchPage(ctx context.Context, filter Filter, day time.Time, cursor string) (Page, error) {
 	endpoint := c.pageURL(filter, day, cursor)
