@@ -14,7 +14,10 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/paperstacks.io/paperstacks/internal/importer/crossref/domain"
 )
 
 // DefaultBaseURL is the public Crossref REST API.
@@ -78,8 +81,8 @@ func NewClient(baseURL, mailto string, httpClient *http.Client, log *slog.Logger
 	}
 }
 
-// FetchPage returns the page at cursor of all works matching filter on
-// day (UTC, inclusive). Pass FirstCursor to start; continue with
+// FetchPage returns the page at cursor of all works of an imported type
+// (domain.ImportedWorkTypes) matching filter on day (UTC, inclusive). Pass FirstCursor to start; continue with
 // Page.NextCursor until a page has no items. Rate limiting (429), server
 // errors and transport errors are retried with exponential backoff.
 func (c *Client) FetchPage(ctx context.Context, filter Filter, day time.Time, cursor string) (Page, error) {
@@ -113,7 +116,12 @@ func (c *Client) FetchPage(ctx context.Context, filter Filter, day time.Time, cu
 func (c *Client) pageURL(filter Filter, day time.Time, cursor string) string {
 	d := day.UTC().Format(time.DateOnly)
 	q := url.Values{}
-	q.Set("filter", fmt.Sprintf("from-%s:%s,until-%s:%s", filter, d, filter, d))
+	// Crossref ORs repeated filters of the same name and ANDs different ones.
+	filters := []string{fmt.Sprintf("from-%s:%s", filter, d), fmt.Sprintf("until-%s:%s", filter, d)}
+	for _, t := range domain.ImportedWorkTypes {
+		filters = append(filters, "type:"+string(t))
+	}
+	q.Set("filter", strings.Join(filters, ","))
 	q.Set("rows", strconv.Itoa(pageSize))
 	q.Set("cursor", cursor)
 	if c.mailto != "" {

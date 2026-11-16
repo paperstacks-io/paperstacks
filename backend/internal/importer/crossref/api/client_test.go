@@ -16,14 +16,15 @@ var day = time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func TestFetchPageBuildsQuery(t *testing.T) {
+	const wantTypes = "type:journal-article,type:proceedings-article,type:book,type:dissertation"
 	tests := []struct {
 		name       string
 		filter     Filter
 		mailto     string
 		wantFilter string
 	}{
-		{"update-date public pool", FilterUpdateDate, "", "from-update-date:2026-03-01,until-update-date:2026-03-01"},
-		{"index-date polite pool", FilterIndexDate, "dev@example.org", "from-index-date:2026-03-01,until-index-date:2026-03-01"},
+		{"update-date public pool", FilterUpdateDate, "", "from-update-date:2026-03-01,until-update-date:2026-03-01," + wantTypes},
+		{"index-date polite pool", FilterIndexDate, "dev@example.org", "from-index-date:2026-03-01,until-index-date:2026-03-01," + wantTypes},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
