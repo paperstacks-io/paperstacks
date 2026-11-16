@@ -1,1 +1,2 @@
 * text=auto
+db/**/*.sh text eol=lf
