@@ -51,7 +51,7 @@
         <!-- Header for small screen size -->
         <header class="col-span-12 flex items-center gap-1 lg:hidden">
           <label for="my-drawer" class="btn btn-square btn-ghost drawer-button" aria-label="Open sidebar">
-            <svg data-src="https://unpkg.com/heroicons/20/solid/bars-3.svg" class="h-5 w-5"></svg>
+            <svg data-src="https://unpkg.com/heroicons/24/outline/bars-3.svg" class="h-5 w-5"></svg>
           </label>
           <div class="grow">
             <h1 class="page-title lg:text-xl lg:font-light opacity-50 uppercase">papersttacks.io</h1>
@@ -78,21 +78,20 @@
         <ul class="menu overflow-y-auto">
           <li>
             <a hx-get="/app/" class="{{ if eq .PageName `home` }}menu-active{{ end }}">
-              <svg data-src="https://unpkg.com/heroicons/20/solid/home.svg" class="size-4"></svg>
+              <svg data-src="https://unpkg.com/heroicons/24/outline/home.svg" class="size-4"></svg>
               Home
             </a>
           </li>
-
           <li>
             <a hx-get="/app/stacks" class="{{ if eq .PageName `stacks` }}menu-active{{ end }}">
-              <svg data-src="https://unpkg.com/heroicons/20/solid/rectangle-stack.svg" class="size-4"></svg>
+              <svg data-src="https://unpkg.com/heroicons/24/outline/rectangle-stack.svg" class="size-4"></svg>
               Stacks Overview
             </a>
           </li>
           <li>
             <details name="sidebar-group">
               <summary>
-                <svg data-src="https://unpkg.com/heroicons/20/solid/trash.svg" class="size-4"></svg>
+                <svg data-src="https://unpkg.com/heroicons/24/outline/trash.svg" class="size-4"></svg>
                 Legacy
               </summary>
               <ul>
@@ -139,21 +138,24 @@
 
             <li>
               <a hx-get="/app/settings" class="{{ if eq .PageName `settings` }}menu-active{{ end }}">
-                <svg data-src="https://unpkg.com/heroicons/20/solid/adjustments-vertical.svg" class="size-4"></svg>
+                <svg data-src="https://unpkg.com/heroicons/24/outline/adjustments-vertical.svg" class="size-4"></svg>
                 Settings
               </a>
             </li>
 
             <li>
               <a hx-post="/app/auth/logout">
-                <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-right-on-rectangle.svg" class="size-4"></svg>
+                <svg
+                  data-src="https://unpkg.com/heroicons/24/outline/arrow-right-on-rectangle.svg"
+                  class="size-4"
+                ></svg>
                 Logout
               </a>
             </li>
             {{ else }}
             <li>
               <a hx-get="/app/auth" class="btn btn-sm btn-primary">
-                <svg data-src="https://unpkg.com/heroicons/20/solid/arrow-left-on-rectangle.svg" class="size-4"></svg>
+                <svg data-src="https://unpkg.com/heroicons/24/outline/arrow-left-on-rectangle.svg" class="size-4"></svg>
                 Login
               </a>
             </li>
