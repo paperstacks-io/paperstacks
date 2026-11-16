@@ -231,6 +231,9 @@ func toPaper(source *crossref.Paper) paper.Paper {
 	if target.Type == "proceedings-article" {
 		target.Type = paper.PublicationTypeConferenceArticle
 	}
+	if target.Type == "dissertation" {
+		target.Type = paper.PublicationTypeThesis
+	}
 	if !target.Type.IsValid() {
 		target.Type = ""
 	}

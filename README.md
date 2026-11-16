@@ -21,7 +21,7 @@ Visit our [landing page](https://paperstacks.io/) for more information.
 
 ## Prerequisites
 
-[Docker](https://www.docker.com/products/docker-desktop/) with Compose are required to run the project locally. Please ensure you have them installed before proceeding.
+[Docker](https://www.docker.com/products/docker-desktop/) or [Podman](https://podman.io) with Compose are required to run the project locally. Please ensure you have them installed before proceeding.
 
 Passwords and credentials for the database are stored in the `secrets` directory that is ignored by git.
 Run `make secrets` to create the necessary files with random passwords.
