@@ -2,6 +2,8 @@
 
 <li>
   <h2 class="menu-title">My Stacks</h2>
+</li>
+
   <ul>
     <form novalidate hx-post="/app/stacks" hx-target="#toast-host" hx-select="" hx-push-url="false" hx-swap="innerHTML">
       <fieldset class="group fieldset">
@@ -14,6 +16,7 @@
         </button>
       </fieldset>
     </form>
+  </ul>
 
     {{ $page := .PageName }} {{ range .Items}} {{ $stackPath := printf `stacks/%s/` .UUID }}
     <li>
@@ -32,6 +35,5 @@
     </li>
     {{ end }}
   </ul>
-</li>
 
 {{ end }}
