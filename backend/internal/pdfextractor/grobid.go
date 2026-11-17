@@ -1,6 +1,3 @@
-// Package pdfextractor provides a client for the GROBID service, which extracts
-// structured TEI-XML from scientific PDFs, and a parser that maps that TEI-XML
-// to the paper domain model.
 package pdfextractor
 
 import (
@@ -26,12 +23,9 @@ const (
 	pdfSignature        = "%PDF-"
 )
 
-var (
-	ErrNilPDF          = errors.New("pdf reader is nil")
-	ErrInvalidPDF      = errors.New("invalid or unreadable PDF: missing %PDF- header")
-	ErrEmptyExtraction = errors.New("grobid returned empty XML content")
-	ErrServiceBusy     = errors.New("grobid service is busy (HTTP 503)")
-)
+var ErrServiceBusy = errors.New("grobid service is busy (HTTP 503)")
+
+var _ Extractor = (*GrobidClient)(nil)
 
 // GrobidClient communicates with a GROBID HTTP service to extract
 // structured TEI-XML from scientific PDFs.

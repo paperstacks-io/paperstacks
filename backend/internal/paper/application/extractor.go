@@ -11,20 +11,16 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	"github.com/paperstacks.io/paperstacks/internal/pdfextractor"
 )
 
 const xmlContentType = "application/xml"
-
-// XMLExtractor extracts structured XML from a PDF stream.
-type XMLExtractor interface {
-	ExtractFulltext(ctx context.Context, pdf io.Reader) ([]byte, error)
-}
 
 type keyWalker interface {
 	Walk(ctx context.Context, prefix string, fn func(key string) error) error
 }
 
-func (s *PaperService) SetXMLExtractor(extractor XMLExtractor) {
+func (s *PaperService) SetXMLExtractor(extractor pdfextractor.Extractor) {
 	s.xmlExtractor = extractor
 }
 
