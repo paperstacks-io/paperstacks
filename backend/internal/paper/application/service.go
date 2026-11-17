@@ -17,8 +17,9 @@ const (
 )
 
 type PaperService struct {
-	repo    domain.Repository
-	storage objectstorage.Store
+	repo         domain.Repository
+	storage      objectstorage.Store
+	xmlExtractor XMLExtractor
 }
 
 func NewPaperService(repo domain.Repository, storage objectstorage.Store) *PaperService {
