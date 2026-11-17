@@ -118,23 +118,16 @@ func handleStacksDetailPage(
 			return
 		}
 
-		selectedPaper := paperDomain.Paper{}
-		if len(stack.Papers) > 0 {
-			selectedPaper = stack.Papers[0]
-		}
-
 		data := struct {
 			pageData
-			Stack         stackDomain.Stack
-			SelectedPaper paperInfoData
-			CreatedAt     string
-			UpdatedAt     string
+			Stack     stackDomain.Stack
+			CreatedAt string
+			UpdatedAt string
 		}{
-			pageData:      newPageData(r, hankoAPIURL),
-			Stack:         stack,
-			SelectedPaper: paperInfoData{Paper: selectedPaper, StackUUID: stack.UUID},
-			CreatedAt:     stack.CreatedAt.Format("2006-01-02 15:04"),
-			UpdatedAt:     stack.UpdatedAt.Format("2006-01-02 15:04"),
+			pageData:  newPageData(r, hankoAPIURL),
+			Stack:     stack,
+			CreatedAt: stack.CreatedAt.Format("2006-01-02 15:04"),
+			UpdatedAt: stack.UpdatedAt.Format("2006-01-02 15:04"),
 		}
 
 		renderTemplate(w, r, tmpl, data)
