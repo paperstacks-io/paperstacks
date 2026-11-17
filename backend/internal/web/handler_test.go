@@ -264,7 +264,8 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 				!strings.Contains(response, `hx-swap="outerHTML"`) {
 				t.Fatalf("form does not replace the PDF section: %s", response)
 			}
-			if strings.Contains(response, `type="file"`) || !strings.Contains(response, "Download") {
+			if strings.Contains(response, `type="file"`) || !strings.Contains(response, "Open") ||
+				!strings.Contains(response, `href="/app/papers/`+paperUUID+`/pdf"`) {
 				t.Fatalf("unexpected PDF controls: %s", response)
 			}
 
