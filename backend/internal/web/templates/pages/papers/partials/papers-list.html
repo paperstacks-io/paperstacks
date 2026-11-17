@@ -1,4 +1,7 @@
-{{ define "papers/partials/papers-list" }} {{ if eq .Total 0 }}
+{{ define "papers/partials/papers-list" }}
+
+<!-- prettier-ignore -->
+{{ if eq .Total 0 }}
 <p class="text-sm opacity-60">No papers found</p>
 {{ else }}
 <p>{{ .Total }} papers found</p>

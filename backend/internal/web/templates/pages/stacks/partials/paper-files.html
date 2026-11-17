@@ -14,8 +14,13 @@
           <label class="label" for="paper-pdf-file-{{ .UUID }}">PDF</label>
           {{ if .PDFStorageKey }}
           <div class="grid gap-2 sm:grid-cols-2">
-            <a class="btn btn-sm join-item" href="/app/papers/{{ .UUID }}/pdf" onclick="event.stopPropagation()">
-              Download
+            <a
+              class="btn btn-sm join-item"
+              href="/app/papers/{{ .UUID }}/pdf"
+              target="_blank"
+              onclick="event.stopPropagation()"
+            >
+              Open
             </a>
             <button
               class="btn btn-sm join-item"
