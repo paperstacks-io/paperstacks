@@ -92,7 +92,7 @@ func handlePaperDownloadPDF(
 		defer pdf.Body.Close()
 
 		w.Header().Set("Content-Type", paperDomain.PDFContentType)
-		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{
 			"filename": pdf.FileName,
 		}))
 		if _, err := io.Copy(w, pdf.Body); err != nil {
