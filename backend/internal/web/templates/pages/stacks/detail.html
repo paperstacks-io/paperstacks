@@ -189,21 +189,13 @@
                 <td class="text-right">
                   <div class="flex">
                     <div class="tooltip" data-tip="Open">
-                      <a
-                        {{
-                        if
-                        not
-                        .PDFStorageKey
-                        }}
-                        disabled
-                        {{
-                        end
-                        }}
+                      <!-- prettier-ignore -->
+                      <a 
+                        {{ if not .PDFStorageKey }} disabled {{ end }}
                         class="btn btn-ghost btn-xs"
                         type="button"
                         href="/app/papers/{{ .UUID }}/pdf"
-                        target="_blank"
-                      >
+                        target="_blank" >
                         <svg
                           data-src="https://unpkg.com/heroicons/24/outline/document.svg"
                           class="h-4 w-4 opacity-50"
@@ -281,6 +273,8 @@
         <h2 class="card-title">Stack Settings</h2>
         <label class="label cursor-pointer justify-between">
           Public (visible to everyone)
+
+          <!-- prettier-ignore -->
           <input
             type="checkbox"
             class="toggle toggle-success"
@@ -291,13 +285,7 @@
             hx-swap="innerHTML"
             hx-disable="this"
             hx-on::after:request="if (event.detail.ctx.response.status >= 400) this.checked = !this.checked"
-            {{
-            if
-            .Stack.IsPublic
-            }}checked="checked"
-            {{
-            end
-            }}
+            {{ if .Stack.IsPublic }}checked="checked" {{ end }}
           />
         </label>
       </div>
