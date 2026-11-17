@@ -50,8 +50,9 @@ services:
       - db_app_ro_password
 
   grobid:
-    image: docker.io/grobid/grobid:${GROBID_VERSION:-0.9.1-full}
+    image: docker.io/grobid/grobid:0.9.1-full
     init: true
+    cpus: 1
     ulimits:
       core: 0
     ports:
