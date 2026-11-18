@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	paper "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	"github.com/paperstacks.io/paperstacks/internal/pdfextractor/tei"
 )
 
 func TestParseTEIFullDocument(t *testing.T) {
@@ -178,5 +179,43 @@ func TestParseTEIErrors(t *testing.T) {
 	}
 	if _, err := ParseTEI(strings.NewReader("<<<not valid xml")); err == nil {
 		t.Fatal("ParseTEI(invalid) expected error, got nil")
+	}
+}
+
+func TestPaperFromDocument(t *testing.T) {
+	t.Parallel()
+
+	doc := tei.Document{
+		Header: tei.Header{
+			FileDesc: tei.FileDesc{
+				TitleStmt: tei.TitleStmt{
+					Titles: []tei.Title{{Type: "main", Value: "Direct Document Mapping"}},
+				},
+				SourceDesc: tei.SourceDesc{
+					BiblStruct: tei.BiblStruct{
+						Analytic: tei.Analytic{
+							Authors: []tei.Author{{
+								PersName: tei.PersName{
+									Forenames: []tei.Forename{{Type: "first", Value: "Ada"}},
+									Surname:   "Lovelace",
+								},
+							}},
+							Idnos: []tei.Idno{{Type: "DOI", Value: "10.1000/ada"}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := PaperFromDocument(doc)
+	if got.Title != "Direct Document Mapping" {
+		t.Errorf("Title = %q, want %q", got.Title, "Direct Document Mapping")
+	}
+	if got.DOI != "10.1000/ada" {
+		t.Errorf("DOI = %q, want %q", got.DOI, "10.1000/ada")
+	}
+	if len(got.Authors) != 1 || got.Authors[0].NameLast != "Lovelace" {
+		t.Errorf("Authors = %+v, want Ada Lovelace", got.Authors)
 	}
 }
