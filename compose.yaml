@@ -56,7 +56,7 @@ services:
     ulimits:
       core: 0
     ports:
-      - "127.0.0.1:8070:8070"
+      - "8070:8070"
 
 secrets:
   db_super_password:
