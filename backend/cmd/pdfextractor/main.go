@@ -25,7 +25,7 @@ import (
 	"github.com/paperstacks.io/paperstacks/internal/pdfextractor"
 )
 
-const defaultGrobidURL = "http://localhost:8070"
+const storagePrefix = "pdf/"
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -39,13 +39,6 @@ func main() {
 
 func run(ctx context.Context) error {
 	cfg := config.New()
-	grobidDefault := cfg.GrobidURL
-	if grobidDefault == "" {
-		grobidDefault = defaultGrobidURL
-	}
-
-	grobidURL := flag.String("grobid-url", grobidDefault, "Base URL of the GROBID service")
-	prefix := flag.String("prefix", "pdf/", "Object storage key prefix to scan")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	flag.Parse()
 
@@ -63,7 +56,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	grobidClient := pdfextractor.NewGrobidClient(*grobidURL, nil)
+	grobidClient := pdfextractor.NewGrobidClient(cfg.GrobidURL, nil)
 	if err := grobidClient.Check(ctx); err != nil {
 		return err
 	}
@@ -71,5 +64,5 @@ func run(ctx context.Context) error {
 	paperService := paperapp.NewPaperService(nil, s3Store)
 	paperService.SetXMLExtractor(grobidClient)
 
-	return paperService.SyncPDFXMLs(ctx, *prefix, log)
+	return paperService.SyncPDFXMLs(ctx, storagePrefix, log)
 }

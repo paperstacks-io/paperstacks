@@ -25,7 +25,7 @@ func New() Config {
 		Port:        getEnvOrDefault("PORT", "8080"),
 		DatabaseURL: getEnvOrDefault("DATABASE_URL", ""),
 		HankoAPIURL: getEnvOrDefault("HANKO_API_URL", ""),
-		GrobidURL:   getEnvOrDefault("GROBID_URL", ""),
+		GrobidURL:   getEnvOrDefault("GROBID_URL", "http://localhost:8070"),
 		ObjectStorage: objectstorage.Config{
 			Endpoint:        getEnvOrDefault("S3_ENDPOINT_URL", ""),
 			AccessKeyID:     getEnvOrDefault("S3_ACCESS_KEY_ID", ""),
