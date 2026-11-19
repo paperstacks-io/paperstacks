@@ -8,22 +8,81 @@ import (
 	"strings"
 
 	paper "github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	"github.com/paperstacks.io/paperstacks/internal/pdfextractor/tei"
 )
 
-// ParseTEI parses a GROBID TEI-XML document from r and maps its bibliographic
-// metadata (title, authors, abstract, DOI, publication date, keywords, venue,
-// and references) to the internal paper.Paper domain model.
+// ParseTEI decodes a GROBID TEI-XML document from r and maps it to paper.Paper.
 func ParseTEI(r io.Reader) (paper.Paper, error) {
 	if r == nil {
 		return paper.Paper{}, fmt.Errorf("parse TEI XML: nil reader")
 	}
 
-	var doc teiDocument
+	var doc tei.Document
 	if err := xml.NewDecoder(r).Decode(&doc); err != nil {
 		return paper.Paper{}, fmt.Errorf("decode TEI XML: %w", err)
 	}
 
-	return doc.toPaper().Normalize(), nil
+	return PaperFromDocument(doc), nil
+}
+
+// PaperFromDocument maps a decoded tei.Document (title, authors, abstract, DOI,
+// publication date, keywords, venue, and references) to the internal paper.Paper
+// domain model.
+func PaperFromDocument(doc tei.Document) paper.Paper {
+	bibl := doc.Header.FileDesc.SourceDesc.BiblStruct
+
+	title := firstTitle(doc.Header.FileDesc.TitleStmt.Titles)
+	if title == "" {
+		title = firstTitle(bibl.Analytic.Titles)
+	}
+
+	doi := findIdno(bibl.Analytic.Idnos, "DOI")
+	if doi == "" {
+		doi = findIdno(bibl.Monogr.Idnos, "DOI")
+	}
+	if doi == "" {
+		doi = findIdno(bibl.Idnos, "DOI")
+	}
+
+	pubDate := parseTEIDates(doc.Header.FileDesc.PublicationStmt.Dates)
+	if pubDate.Year == 0 {
+		pubDate = parseTEIDates(bibl.Monogr.Imprint.Dates)
+	}
+
+	authors := mapAuthors(bibl.Analytic.Authors)
+	if len(authors) == 0 {
+		authors = mapAuthors(bibl.Monogr.Authors)
+	}
+
+	publisher := strings.TrimSpace(bibl.Monogr.Imprint.Publisher)
+	if publisher == "" {
+		publisher = strings.TrimSpace(doc.Header.FileDesc.PublicationStmt.Publisher)
+	}
+
+	journalTitle, journalAbbrev := firstJournalTitles(bibl.Monogr.Titles)
+	volume, issue, pages := parseBiblScopes(bibl.Monogr.Imprint.BiblScopes)
+
+	return paper.Paper{
+		DOI:             doi,
+		Title:           title,
+		Authors:         authors,
+		PublicationDate: pubDate,
+		Abstract:        extractAbstract(doc.Header.ProfileDesc.Abstract),
+		Keywords:        extractKeywords(doc.Header.ProfileDesc.TextClass.Keywords),
+		Type:            paper.PublicationTypeJournalArticle,
+		Metadata: paper.Metadata{
+			Publisher:     publisher,
+			JournalTitle:  journalTitle,
+			JournalAbbrev: journalAbbrev,
+			Volume:        volume,
+			Issue:         issue,
+			Pages:         pages,
+			ISSN:          findAllIdnos(bibl.Monogr.Idnos, "ISSN"),
+			ISBN:          findAllIdnos(bibl.Monogr.Idnos, "ISBN"),
+			References:    extractReferences(doc.Text.Back),
+			DataSource:    "grobid_extraction",
+		},
+	}.Normalize()
 }
 
 // MissingFields returns the names of any core metadata fields (title, authors,
@@ -51,206 +110,7 @@ func MissingFields(p paper.Paper) []string {
 	return missing
 }
 
-type teiDocument struct {
-	XMLName xml.Name  `xml:"TEI"`
-	Header  teiHeader `xml:"teiHeader"`
-	Text    teiText   `xml:"text"`
-}
-
-type teiHeader struct {
-	FileDesc    teiFileDesc    `xml:"fileDesc"`
-	ProfileDesc teiProfileDesc `xml:"profileDesc"`
-}
-
-type teiFileDesc struct {
-	TitleStmt       teiTitleStmt       `xml:"titleStmt"`
-	PublicationStmt teiPublicationStmt `xml:"publicationStmt"`
-	SourceDesc      teiSourceDesc      `xml:"sourceDesc"`
-}
-
-type teiTitleStmt struct {
-	Titles []teiTitle `xml:"title"`
-}
-
-type teiTitle struct {
-	Level string `xml:"level,attr"`
-	Type  string `xml:"type,attr"`
-	Value string `xml:",chardata"`
-}
-
-type teiPublicationStmt struct {
-	Publisher string    `xml:"publisher"`
-	Dates     []teiDate `xml:"date"`
-}
-
-type teiDate struct {
-	Type  string `xml:"type,attr"`
-	When  string `xml:"when,attr"`
-	Value string `xml:",chardata"`
-}
-
-type teiSourceDesc struct {
-	BiblStruct teiBiblStruct `xml:"biblStruct"`
-}
-
-type teiBiblStruct struct {
-	Analytic teiAnalytic `xml:"analytic"`
-	Monogr   teiMonogr   `xml:"monogr"`
-	Idnos    []teiIdno   `xml:"idno"`
-}
-
-type teiAnalytic struct {
-	Titles  []teiTitle  `xml:"title"`
-	Authors []teiAuthor `xml:"author"`
-	Idnos   []teiIdno   `xml:"idno"`
-}
-
-type teiMonogr struct {
-	Titles  []teiTitle  `xml:"title"`
-	Authors []teiAuthor `xml:"author"`
-	Idnos   []teiIdno   `xml:"idno"`
-	Imprint teiImprint  `xml:"imprint"`
-}
-
-type teiImprint struct {
-	Publisher  string         `xml:"publisher"`
-	Dates      []teiDate      `xml:"date"`
-	BiblScopes []teiBiblScope `xml:"biblScope"`
-}
-
-type teiBiblScope struct {
-	Unit  string `xml:"unit,attr"`
-	From  string `xml:"from,attr"`
-	To    string `xml:"to,attr"`
-	Value string `xml:",chardata"`
-}
-
-type teiAuthor struct {
-	PersName     teiPersName      `xml:"persName"`
-	Idnos        []teiIdno        `xml:"idno"`
-	Affiliations []teiAffiliation `xml:"affiliation"`
-}
-
-type teiPersName struct {
-	Forenames []teiForename `xml:"forename"`
-	Surname   string        `xml:"surname"`
-}
-
-type teiForename struct {
-	Type  string `xml:"type,attr"`
-	Value string `xml:",chardata"`
-}
-
-type teiAffiliation struct {
-	OrgNames []string `xml:"orgName"`
-}
-
-type teiIdno struct {
-	Type  string `xml:"type,attr"`
-	Value string `xml:",chardata"`
-}
-
-type teiProfileDesc struct {
-	TextClass teiTextClass `xml:"textClass"`
-	Abstract  teiAbstract  `xml:"abstract"`
-}
-
-type teiTextClass struct {
-	Keywords teiKeywords `xml:"keywords"`
-}
-
-type teiKeywords struct {
-	Terms []string `xml:"term"`
-	Raw   string   `xml:",chardata"`
-}
-
-type teiAbstract struct {
-	Paragraphs []string  `xml:"p"`
-	Divs       []teiDivP `xml:"div"`
-}
-
-type teiDivP struct {
-	Paragraphs []string `xml:"p"`
-}
-
-type teiText struct {
-	Back teiBack `xml:"back"`
-}
-
-type teiBack struct {
-	Divs     []teiBackDiv  `xml:"div"`
-	ListBibl []teiBiblItem `xml:"listBibl>biblStruct"`
-}
-
-type teiBackDiv struct {
-	Type     string        `xml:"type,attr"`
-	ListBibl []teiBiblItem `xml:"listBibl>biblStruct"`
-}
-
-type teiBiblItem struct {
-	Analytic teiAnalytic `xml:"analytic"`
-	Monogr   teiMonogr   `xml:"monogr"`
-	Idnos    []teiIdno   `xml:"idno"`
-}
-
-func (d *teiDocument) toPaper() paper.Paper {
-	bibl := d.Header.FileDesc.SourceDesc.BiblStruct
-
-	title := pickTitle(d.Header.FileDesc.TitleStmt.Titles)
-	if title == "" {
-		title = pickTitle(bibl.Analytic.Titles)
-	}
-
-	doi := findIdno(bibl.Analytic.Idnos, "DOI")
-	if doi == "" {
-		doi = findIdno(bibl.Monogr.Idnos, "DOI")
-	}
-	if doi == "" {
-		doi = findIdno(bibl.Idnos, "DOI")
-	}
-
-	pubDate := parseTEIDates(d.Header.FileDesc.PublicationStmt.Dates)
-	if pubDate.Year == 0 {
-		pubDate = parseTEIDates(bibl.Monogr.Imprint.Dates)
-	}
-
-	authors := mapAuthors(bibl.Analytic.Authors)
-	if len(authors) == 0 {
-		authors = mapAuthors(bibl.Monogr.Authors)
-	}
-
-	publisher := strings.TrimSpace(bibl.Monogr.Imprint.Publisher)
-	if publisher == "" {
-		publisher = strings.TrimSpace(d.Header.FileDesc.PublicationStmt.Publisher)
-	}
-
-	journalTitle, journalAbbrev := pickJournalTitles(bibl.Monogr.Titles)
-	volume, issue, pages := parseBiblScopes(bibl.Monogr.Imprint.BiblScopes)
-
-	return paper.Paper{
-		DOI:             doi,
-		Title:           title,
-		Authors:         authors,
-		PublicationDate: pubDate,
-		Abstract:        extractAbstract(d.Header.ProfileDesc.Abstract),
-		Keywords:        extractKeywords(d.Header.ProfileDesc.TextClass.Keywords),
-		Type:            paper.PublicationTypeJournalArticle,
-		Metadata: paper.Metadata{
-			Publisher:     publisher,
-			JournalTitle:  journalTitle,
-			JournalAbbrev: journalAbbrev,
-			Volume:        volume,
-			Issue:         issue,
-			Pages:         pages,
-			ISSN:          findAllIdnos(bibl.Monogr.Idnos, "ISSN"),
-			ISBN:          findAllIdnos(bibl.Monogr.Idnos, "ISBN"),
-			References:    extractReferences(d.Text.Back),
-			DataSource:    "grobid_extraction",
-		},
-	}
-}
-
-func pickTitle(titles []teiTitle) string {
+func firstTitle(titles []tei.Title) string {
 	for _, t := range titles {
 		if strings.EqualFold(t.Type, "main") && strings.TrimSpace(t.Value) != "" {
 			return strings.TrimSpace(t.Value)
@@ -264,7 +124,7 @@ func pickTitle(titles []teiTitle) string {
 	return ""
 }
 
-func pickJournalTitles(titles []teiTitle) (mainTitle, abbrev string) {
+func firstJournalTitles(titles []tei.Title) (mainTitle, abbrev string) {
 	for _, t := range titles {
 		val := strings.TrimSpace(t.Value)
 		if val == "" {
@@ -283,7 +143,7 @@ func pickJournalTitles(titles []teiTitle) (mainTitle, abbrev string) {
 	return mainTitle, abbrev
 }
 
-func findIdno(idnos []teiIdno, kind string) string {
+func findIdno(idnos []tei.Idno, kind string) string {
 	for _, id := range idnos {
 		if strings.EqualFold(id.Type, kind) && strings.TrimSpace(id.Value) != "" {
 			return strings.TrimSpace(id.Value)
@@ -292,7 +152,7 @@ func findIdno(idnos []teiIdno, kind string) string {
 	return ""
 }
 
-func findAllIdnos(idnos []teiIdno, kind string) []string {
+func findAllIdnos(idnos []tei.Idno, kind string) []string {
 	var out []string
 	for _, id := range idnos {
 		if strings.EqualFold(id.Type, kind) {
@@ -304,7 +164,7 @@ func findAllIdnos(idnos []teiIdno, kind string) []string {
 	return out
 }
 
-func mapAuthors(raw []teiAuthor) []paper.Author {
+func mapAuthors(raw []tei.Author) []paper.Author {
 	var authors []paper.Author
 	for _, a := range raw {
 		var first, middle string
@@ -361,7 +221,7 @@ func mapAuthors(raw []teiAuthor) []paper.Author {
 	return authors
 }
 
-func parseTEIDates(dates []teiDate) paper.Date {
+func parseTEIDates(dates []tei.Date) paper.Date {
 	for _, d := range dates {
 		if strings.EqualFold(d.Type, "published") || d.Type == "" {
 			if parsed := parseISODate(d.When); parsed.Year != 0 {
@@ -401,7 +261,7 @@ func parseISODate(s string) paper.Date {
 	return paper.Date{Year: year, Month: month, Day: day}
 }
 
-func parseBiblScopes(scopes []teiBiblScope) (volume, issue, pages string) {
+func parseBiblScopes(scopes []tei.BiblScope) (volume, issue, pages string) {
 	for _, s := range scopes {
 		val := strings.TrimSpace(s.Value)
 		switch strings.ToLower(s.Unit) {
@@ -431,7 +291,7 @@ func parseBiblScopes(scopes []teiBiblScope) (volume, issue, pages string) {
 	return volume, issue, pages
 }
 
-func extractAbstract(abs teiAbstract) string {
+func extractAbstract(abs tei.Abstract) string {
 	var paragraphs []string
 	for _, p := range abs.Paragraphs {
 		if trimmed := strings.TrimSpace(p); trimmed != "" {
@@ -448,7 +308,7 @@ func extractAbstract(abs teiAbstract) string {
 	return strings.Join(paragraphs, "\n\n")
 }
 
-func extractKeywords(kw teiKeywords) []string {
+func extractKeywords(kw tei.Keywords) []string {
 	var out []string
 	for _, t := range kw.Terms {
 		if trimmed := strings.TrimSpace(t); trimmed != "" {
@@ -467,7 +327,7 @@ func extractKeywords(kw teiKeywords) []string {
 	return out
 }
 
-func extractReferences(back teiBack) []string {
+func extractReferences(back tei.Back) []string {
 	items := back.ListBibl
 	for _, div := range back.Divs {
 		items = append(items, div.ListBibl...)
@@ -486,9 +346,9 @@ func extractReferences(back teiBack) []string {
 			refs = append(refs, doi)
 			continue
 		}
-		title := pickTitle(item.Analytic.Titles)
+		title := firstTitle(item.Analytic.Titles)
 		if title == "" {
-			title = pickTitle(item.Monogr.Titles)
+			title = firstTitle(item.Monogr.Titles)
 		}
 		if title != "" {
 			refs = append(refs, title)
