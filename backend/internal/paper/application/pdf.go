@@ -57,7 +57,7 @@ func (s *PaperService) attachPDF(ctx context.Context, paperUUID string, storageK
 	return s.repo.AttachPDF(ctx, strings.TrimSpace(paperUUID), storageKey)
 }
 
-// DeletePDF deletes the paper's stored PDF, then clears its attachment.
+// DeletePDF deletes the paper's stored PDF (and its extracted XML if present), then clears its attachment.
 func (s *PaperService) DeletePDF(ctx context.Context, paperUUID string) error {
 	paper, err := s.GetByUUID(ctx, paperUUID)
 	if err != nil {
@@ -66,6 +66,7 @@ func (s *PaperService) DeletePDF(ctx context.Context, paperUUID string) error {
 	if paper.PDFStorageKey == "" {
 		return nil
 	}
+	_ = s.storage.Delete(ctx, xmlStorageKey(paper.PDFStorageKey))
 	if err := s.storage.Delete(ctx, paper.PDFStorageKey); err != nil {
 		return fmt.Errorf("failed to delete stored PDF: %w", err)
 	}

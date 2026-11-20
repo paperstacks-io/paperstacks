@@ -135,3 +135,29 @@ func (s *S3Store) Exists(ctx context.Context, key string) (bool, error) {
 
 	return true, nil
 }
+
+func (s *S3Store) Walk(ctx context.Context, prefix string, fn func(key string) error) error {
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(prefix),
+	})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("list objects with prefix %q: %w", prefix, err)
+		}
+
+		for _, obj := range page.Contents {
+			key := aws.ToString(obj.Key)
+			if key == "" {
+				continue
+			}
+			if err := fn(key); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

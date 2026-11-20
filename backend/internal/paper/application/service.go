@@ -8,6 +8,7 @@ import (
 
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	"github.com/paperstacks.io/paperstacks/internal/paper/domain"
+	"github.com/paperstacks.io/paperstacks/internal/pdfextractor"
 )
 
 const (
@@ -17,8 +18,9 @@ const (
 )
 
 type PaperService struct {
-	repo    domain.Repository
-	storage objectstorage.Store
+	repo         domain.Repository
+	storage      objectstorage.Store
+	xmlExtractor pdfextractor.Extractor
 }
 
 func NewPaperService(repo domain.Repository, storage objectstorage.Store) *PaperService {
