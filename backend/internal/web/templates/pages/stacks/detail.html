@@ -67,46 +67,7 @@
 </dialog>
 
 <!-- empty stack -->
-{{ if not .Stack.Papers }}
-<section class="card bg-base-200 col-span-12 shadow-xs" aria-labelledby="empty-stack-title">
-  <div class="card-body items-center gap-6 px-6 py-12 text-center sm:py-20">
-    <div class="bg-base-100 rounded-box flex size-20 items-center justify-center shadow-xs" aria-hidden="true">
-      <svg
-        data-src="https://unpkg.com/heroicons/24/outline/rectangle-stack.svg"
-        class="size-10 text-base-content/60"
-      ></svg>
-    </div>
-    <div class="max-w-md space-y-3">
-      <h2 id="empty-stack-title" class="text-2xl font-semibold tracking-tight sm:text-3xl">Add your first papers</h2>
-      <p class="text-base-content/70 text-base leading-relaxed">
-        Your stack is ready for a little research. Import a BibLaTeX file to start building your collection.
-      </p>
-    </div>
-    <div class="card-actions w-full justify-center">
-      <button
-        class="btn btn-primary w-full sm:w-auto"
-        type="button"
-        hx-get="/app/stacks/{{ .Stack.UUID }}/imports/biblatex"
-        hx-target="#page-shell"
-        hx-select="#page-shell"
-        hx-select-oob="#sidebar:outerHTML"
-        hx-swap="outerHTML"
-        hx-push-url="true"
-      >
-        <svg
-          data-src="https://unpkg.com/heroicons/24/outline/arrow-down-tray.svg"
-          class="size-4"
-          aria-hidden="true"
-        ></svg>
-        Import from BibLaTeX
-      </button>
-    </div>
-    <p class="text-base-content/60 max-w-sm text-sm leading-relaxed">
-      Moving from Zotero or Mendeley? Export your references as a BibLaTeX (.bib) file first.
-    </p>
-  </div>
-</section>
-{{ end }}
+{{ if not .Stack.Papers }} {{ template "stacks/partials/empty-stack" . }} {{ end }}
 
 <!-- stats -->
 {{ if .Stack.Papers }}
