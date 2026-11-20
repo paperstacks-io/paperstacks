@@ -1,0 +1,25 @@
+services:
+  paperstacks:
+    image: ghcr.io/paperstacks-io/paperstacks:latest
+    restart: unless-stopped
+
+    environment:
+      HOST: 0.0.0.0
+      PORT: 80
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router
+      - "traefik.http.routers.paperstacks.rule=Host(`paperstacks.95.217.168.198.sslip.io`)"
+      - "traefik.http.routers.paperstacks.entrypoints=websecure"
+      - "traefik.http.routers.paperstacks.tls=true"
+      - "traefik.http.routers.paperstacks.tls.certresolver=letsencrypt"
+      # Backend service
+      - "traefik.http.services.paperstacks.loadbalancer.server.port=80"
+      # Docker network
+      - "traefik.docker.network=traefik"
+
+networks:
+  traefik:
+    external: true
