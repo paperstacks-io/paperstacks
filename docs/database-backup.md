@@ -1,125 +1,96 @@
-# PostgreSQL full backups
+# Database backups and recovery
 
-Create the credential files with `make secrets`, then start the database with
-`docker compose up -d db` and wait for initialization
-to finish. From a shell with Make and Docker Compose available, run:
+Run the commands below from the repository root.
+For a new installation, create credentials with `make secrets` and
+start the database with `docker compose up -d db` before taking a backup.
+
+## Run a backup
 
 ```sh
 make db-backup-full
-```
-
-The database init scripts create the dedicated `paperstacks_backup` login
-with replication privileges and enable password-authenticated replication
-connections on directly attached networks. The backup target starts a
-temporary container from the existing database image and reads the backup
-password from the `db_backup_password` Docker secret.
-
-The Make targets run the shared `db/backup.sh` script inside the temporary
-container. The script selects full or incremental mode, creates and verifies
-the archives, and updates `latest`. The container is removed after the command.
-
-For an existing database, run `make secrets` and recreate the database
-container with `docker compose up -d db` to mount the new secret. Then apply
-the role initialization and access setup once. Re-running `001_init.sql`
-also reapplies the application role passwords and permissions from the current
-secrets and initialization definitions:
-
-```sh
-docker compose exec -T --user postgres db psql -X -v ON_ERROR_STOP=1 \
-  -U postgres -d postgres -f /docker-entrypoint-initdb.d/001_init.sql
-docker compose exec -T --user postgres db \
-  sh /docker-entrypoint-initdb.d/008_configure_backup_access.sh
-```
-
-`pg_basebackup` takes a full physical copy of the entire PostgreSQL cluster
-while the application can continue reading and writing. It includes the WAL
-required to recover that backup. For subsequent changes, run:
-
-```sh
 make db-backup-incremental
 ```
 
-This uses the manifest referenced by `latest`, which points to the last
-successfully verified full or incremental backup in the same volume.
-Create a new full backup first when adopting this mechanism for an older
-backup volume without a `latest` link. A new full backup starts a new chain.
-PostgreSQL must have `summarize_wal=on`, as configured in Compose. Apply the
-updated Compose configuration to existing database containers before taking
-the new base backup. If required WAL summaries have expired, take a new full
-backup.
+| Argument | Meaning |
+| --- | --- |
+| `db-backup-full` | Create a complete backup that can be restored independently. |
+| `db-backup-incremental` | Back up changes since the latest successful backup in the selected directory. Requires an existing backup. |
+| `BACKUP_DIR=/absolute/path` | Choose the host directory where backups are saved. Defaults to `./backups`; relative paths are resolved from the directory where Make runs. |
 
-Both commands store gzip-compressed archives. A backup is first written to
-a `.partial` directory and published under its timestamp after verification.
-Failed runs leave partial directories for inspection and keep `latest`
-pointing to the previous backup. A volume-local lock prevents overlapping
-commands. After an abrupt container termination, remove `.backup-lock`
-only after confirming that no backup is still running.
-
-For incremental recovery, extract the full backup and every dependent
-incremental backup into separate directories, including each WAL archive
-into its respective `pg_wal` directory and its manifest into the root.
-Verify each extracted backup with `pg_verifybackup`, then combine the chain
-in chronological order:
+For example:
 
 ```sh
-pg_combinebackup -o /restore /extracted/full /extracted/incremental-1 /extracted/incremental-2
-pg_verifybackup /restore
+make db-backup-full BACKUP_DIR=/srv/backups/paperstacks/postgres
+make db-backup-incremental BACKUP_DIR=/srv/backups/paperstacks/postgres
 ```
 
-Start PostgreSQL using the combined directory. Keep the complete dependency
-chain for every incremental backup you want to recover. PostgreSQL checks
-the manifest against the running cluster and rejects incompatible bases.
+Use the same `BACKUP_DIR` for a full backup and its subsequent incremental
+backups. The host directory must be writable by the backup container. The
+database remains available for reads and writes during either kind of backup.
 
-Each invocation writes a UTC timestamp directory into the Docker volume
-`paperstacks_db_backups`. Existing directories cause the command to fail,
-preventing an existing backup from being overwritten. `pg_verifybackup`
-checks the completed backup against its manifest using `--no-parse-wal`.
-PostgreSQL 18 cannot parse WAL directly inside tar archives. The function
-test additionally verifies the extracted backup, including its required WAL.
-A failed verification
-leaves the directory for inspection. Only a successful command ending with
-`Verified backup` should be considered a verified backup.
+## Expected result: full backup
 
-List the saved directories:
+A successful backup creates files on the host system like in this example:
 
-Each backup uses gzip-compressed tar format. With the current default
-tablespace configuration, each timestamp directory contains three files:
-`base.tar.gz`, `pg_wal.tar.gz` and `backup_manifest`. Additional tablespaces
-produce additional archives. Extract `base.tar.gz` into the restore data
-directory and `pg_wal.tar.gz` into its `pg_wal` subdirectory before starting
-PostgreSQL.
-
-```sh
-docker compose run --rm --no-deps -T --entrypoint /bin/sh \
-  -v paperstacks_db_backups:/backups:ro db -c 'ls -1 /backups'
+```text
+backups/
+├── 2026-11-23_T120000Z/
+│   ├── base.tar.gz
+│   ├── pg_wal.tar.gz
+│   └── backup_manifest
+└── latest -> 2026-11-23_T120000Z
 ```
 
-The volume contains administrator credentials and database contents, and
-shares the Docker host's storage. Copy backups to separate storage for
-protection against host or disk failure. Backup retention is manual.
-Files stored outside PostgreSQL need their own backup.
+The backup contains the entire PostgreSQL cluster, including all databases,
+roles, and the recovery logs needed to restore it. It does not include files
+stored outside PostgreSQL. It is a physical backup, not a SQL dump.
 
-The backup contains the source cluster's `pg_cron` extension. A restore test
-must use a PostgreSQL image with that extension installed and keep scheduled
-jobs disabled in the isolated restored instance.
+Each full backup is independent of earlier backups. Creating a new full backup
+starts a new incremental chain. Existing backups are retained; `latest` identifies
+the most recent successful backup of either kind.
 
-See the [PostgreSQL pg_basebackup documentation](https://www.postgresql.org/docs/18/app-pgbasebackup.html).
+## Expected result: incremental backup
 
-## Function test
+An incremental backup creates another timestamped directory with the same archive
+filenames and prints the same success message. It uses the backup identified by
+`latest` as its reference, then becomes the new `latest` itself.
 
-With Bash, Make and Docker Compose available, run from the repository root:
+It stores changed data relative to that reference and may be smaller than a full
+backup; the size depends on database activity. It cannot be restored on its own.
+For example, restoring the last backup in this sequence requires all three:
 
-```sh
-bash db/test-backup.sh
+```text
+2026-11-23_T120000Z  full
+2026-11-23_T130000Z  incremental
+2026-11-23_T140000Z  incremental
 ```
 
-The script creates an isolated Compose project with temporary credentials and
-its own backup volume. It invokes the real Make targets for two full backups
-and two chained incremental backups, checks online reads and writes, then
-stops the source. It restores the first full backup and separately combines
-and restores the incremental chain. It verifies the expected test values and disables scheduled
-jobs in the restored database. Test containers, volumes and the temporary
-restore image are removed on exit.
+Keep the original full backup and every dependent incremental backup. Record
+which backup starts each chain; directory names do not indicate the backup type.
+If no reference backup is available, or PostgreSQL reports that the required WAL
+summaries are unavailable, create a new full backup.
 
-`BACKUP_VOLUME` is configurable in the Make target so the test can use its
-own volume.
+## Failed backups
+
+If backup creation or verification fails, no new backup files are written to the
+host backup directory. Existing backups and `latest` remain unchanged. The
+command exits with an error; read its output before retrying.
+
+A failure while transferring an already verified backup to the host, such as a
+full disk or interrupted container, can leave an incomplete timestamp directory.
+A failure while updating `latest` can also leave a backup that is not referenced
+by `latest`. Do not treat a run as successful unless it exits successfully and
+prints `Verified backup`.
+
+If a retry reports a stale lock, first confirm that no backup is running, then
+remove `.backup-lock` from the selected host backup directory.
+
+## Restore a backup
+
+These instructions target Linux, PostgreSQL 18, and the project's default
+configuration without additional tablespaces. Install the PostgreSQL 18 tools
+`pg_verifybackup`, `pg_waldump`, and `pg_combinebackup` on the host. The restored
+server must use PostgreSQL 18 with the required extensions, including `pg_cron`;
+the project's database service supplies those extensions.
+
+Detailed information about the restore process will be provided later.
