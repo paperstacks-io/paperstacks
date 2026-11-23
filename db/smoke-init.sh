@@ -84,6 +84,7 @@ compose_args=(--project-name "$compose_project" --file "$compose_file" --file "$
 printf '%s\n' "$super_password" >"$secrets_dir/db_super_password"
 printf '%s\n' "$app_rw_password" >"$secrets_dir/db_app_rw_password"
 printf '%s\n' "$app_ro_password" >"$secrets_dir/db_app_ro_password"
+printf '%s\n' 'paperstacks-backup-smoke' >"$secrets_dir/db_backup_password"
 
 cat >"$compose_override" <<EOF
 services:
@@ -96,6 +97,8 @@ secrets:
     file: $secrets_dir/db_app_rw_password
   db_app_ro_password:
     file: $secrets_dir/db_app_ro_password
+  db_backup_password:
+    file: $secrets_dir/db_backup_password
 EOF
 
 compose_started=true

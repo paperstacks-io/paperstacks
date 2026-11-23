@@ -4,7 +4,8 @@ SECRETS_DIR := secrets
 SECRETS_FILES := \
 	db_app_ro_password.txt \
 	db_app_rw_password.txt \
-	db_super_password.txt
+	db_super_password.txt \
+	db_backup_password.txt
 
 secrets: ## Create secret credential files if they don't exist
 	@mkdir -p $(SECRETS_DIR)
@@ -21,24 +22,16 @@ db-init-smoke: ## Smoke test Postgres init scripts against a fresh database
 	./db/smoke-init.sh
 
 .PHONY: help
-.PHONY: db-backup-full
+.PHONY: db-backup-full db-backup-incremental
 BACKUP_VOLUME ?= paperstacks_db_backups
 db-backup-full: ## Create a versioned full PostgreSQL backup in a Docker volume
-	docker compose exec -T --user postgres db sh -eu -c '\
-		rule="host replication postgres samenet scram-sha-256"; \
-		if ! grep -Fxq "$$rule" "$$PGDATA/pg_hba.conf"; then \
-			printf "\n%s\n" "$$rule" >> "$$PGDATA/pg_hba.conf"; \
-		fi; \
-		psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c "SELECT pg_reload_conf()"'
+db-backup-incremental: ## Back up changes since the latest successful backup
+
+db-backup-full db-backup-incremental:
 	docker compose run --rm --no-deps -T --entrypoint /bin/sh \
-		-v "$(BACKUP_VOLUME):/backups" db -eu -c '\
-		export PGPASSWORD="$$(cat /run/secrets/db_super_password)"; \
-		backup_dir="/backups/$$(date -u +%Y%m%dT%H%M%SZ)"; \
-		mkdir "$$backup_dir"; \
-		pg_basebackup --host=db --username=postgres --no-password \
-			--pgdata="$$backup_dir" --wal-method=stream --checkpoint=fast --progress; \
-		pg_verifybackup "$$backup_dir"; \
-		echo "Verified full backup: $$backup_dir"'
+		-v "$(BACKUP_VOLUME):/backups" \
+		-v "./db/backup.sh:/db/backup.sh:ro" \
+		db /db/backup.sh $(patsubst db-backup-%,%,$@)
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
