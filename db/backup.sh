@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+mode="${1:-full}"
+if [ "$mode" != full ] && [ "$mode" != incremental ]; then
+  echo "Usage: backup.sh [full|incremental]" >&2
+  exit 1
+fi
+
 PGPASSWORD="$(cat /run/secrets/db_backup_password)"
 export PGPASSWORD
 if ! mkdir /backups/.backup-lock; then
@@ -8,12 +14,6 @@ if ! mkdir /backups/.backup-lock; then
   exit 1
 fi
 trap 'rmdir /backups/.backup-lock' EXIT
-
-mode="${1:-full}"
-if [ "$mode" != full ] && [ "$mode" != incremental ]; then
-  echo "Usage: backup.sh [full|incremental]" >&2
-  exit 1
-fi
 
 incremental_arg=""
 if [ "$mode" = incremental ]; then
@@ -37,7 +37,10 @@ pg_verifybackup --no-parse-wal /tmp/backup
 # Transfer the backup to the host only after verification succeeds.
 backup_name="$(date -u +%Y-%m-%d_T%H%M%SZ)"
 backup_dir="/backups/$backup_name"
-test ! -e "$backup_dir"
+if [ -e "$backup_dir" ]; then
+  echo "Backup destination already exists: $backup_dir" >&2
+  exit 1
+fi
 mv /tmp/backup "$backup_dir"
 ln -sfn "$backup_name" /backups/latest
 echo "Verified backup: $backup_dir"
