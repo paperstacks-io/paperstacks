@@ -1,13 +1,15 @@
 \set ON_ERROR_STOP on
 
--- Create application login roles with least privilege.
+-- Create application and backup login roles with least privilege.
 DO $$
 DECLARE
   app_rw_password text;
   app_ro_password text;
+  backup_password text;
 BEGIN
   app_rw_password := regexp_replace(pg_read_file('/run/secrets/db_app_rw_password'), '\s+$', '');
   app_ro_password := regexp_replace(pg_read_file('/run/secrets/db_app_ro_password'), '\s+$', '');
+  backup_password := regexp_replace(pg_read_file('/run/secrets/db_backup_password'), '\s+$', '');
 
   IF app_rw_password IS NULL OR app_rw_password = '' THEN
     RAISE EXCEPTION 'app_rw_password secret is empty or missing';
@@ -15,6 +17,10 @@ BEGIN
 
   IF app_ro_password IS NULL OR app_ro_password = '' THEN
     RAISE EXCEPTION 'app_ro_password secret is empty or missing';
+  END IF;
+
+  IF backup_password IS NULL OR backup_password = '' THEN
+    RAISE EXCEPTION 'db_backup_password secret is empty or missing';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_rw') THEN
@@ -40,6 +46,15 @@ BEGIN
       app_ro_password
     );
   END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'paperstacks_backup') THEN
+    CREATE ROLE paperstacks_backup;
+  END IF;
+
+  EXECUTE format(
+    'ALTER ROLE paperstacks_backup LOGIN REPLICATION NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD %L',
+    backup_password
+  );
 END
 $$;
 

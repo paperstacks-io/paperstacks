@@ -15,6 +15,7 @@ services:
       - "8080:8080"
     environment:
       HOST: 0.0.0.0
+      DATABASE_URL:
 
   db:
     image: postgres:18-alpine
@@ -32,6 +33,8 @@ services:
       - cron.timezone=UTC
       - -c
       - cron.use_background_workers=on
+      - -c
+      - summarize_wal=on
     # set shared memory limit when using docker compose
     shm_size: 128mb
     ports:
@@ -48,6 +51,44 @@ services:
       - db_super_password
       - db_app_rw_password
       - db_app_ro_password
+      - db_backup_password
+
+  db-restored:
+    profiles: [restore]
+    image: postgres:18-alpine
+    restart: unless-stopped
+    shm_size: 128mb
+    entrypoint:
+      - /bin/sh
+      - -eu
+      - -c
+      - |
+        if [ ! -f "$$PGDATA/PG_VERSION" ]; then
+          echo "Prepare this volume with make db-restore before starting PostgreSQL" >&2
+          exit 1
+        fi
+        exec /bin/sh /db/install-pg-cron.sh "$$@"
+      - restore
+    environment:
+      PGDATA: /restore/data
+      PG_CRON_VERSION: "1.6.7"
+    volumes:
+      - restore_data:/restore
+      - ./db/install-pg-cron.sh:/db/install-pg-cron.sh:ro
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=paperstacks
+      - -c
+      - cron.timezone=UTC
+      - -c
+      - cron.use_background_workers=on
+      - -c
+      - summarize_wal=on
+      - -c
+      - cron.launch_active_jobs=off
 
   grobid:
     image: docker.io/grobid/grobid:0.9.1-full
@@ -58,6 +99,11 @@ services:
     ports:
       - "8070:8070"
 
+volumes:
+  restore_data:
+    external: true
+    name: ${RESTORE_VOLUME:-paperstacks_db_restore}
+
 secrets:
   db_super_password:
     file: ./secrets/db_super_password.txt
@@ -65,4 +111,6 @@ secrets:
     file: ./secrets/db_app_rw_password.txt
   db_app_ro_password:
     file: ./secrets/db_app_ro_password.txt
+  db_backup_password:
+    file: ./secrets/db_backup_password.txt
 

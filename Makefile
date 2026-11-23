@@ -4,7 +4,8 @@ SECRETS_DIR := secrets
 SECRETS_FILES := \
 	db_app_ro_password.txt \
 	db_app_rw_password.txt \
-	db_super_password.txt
+	db_super_password.txt \
+	db_backup_password.txt
 
 secrets: ## Create secret credential files if they don't exist
 	@mkdir -p $(SECRETS_DIR)
@@ -21,6 +22,30 @@ db-init-smoke: ## Smoke test Postgres init scripts against a fresh database
 	./db/smoke-init.sh
 
 .PHONY: help
+.PHONY: db-backup-full db-backup-incremental
+BACKUP_VOLUME ?= paperstacks_db_backups
+BACKUP_HOST ?= db
+db-backup-full: ## Create a versioned full PostgreSQL backup in a Docker volume
+db-backup-incremental: ## Back up changes since the latest successful backup
+
+db-backup-full db-backup-incremental:
+	docker compose run --rm --no-deps -T --entrypoint /bin/sh \
+		-e "PGHOST=$(BACKUP_HOST)" \
+		-v "$(BACKUP_VOLUME):/backups" \
+		-v "./db/backup.sh:/db/backup.sh:ro" \
+		db /db/backup.sh $(patsubst db-backup-%,%,$@)
+
+.PHONY: db-restore
+RESTORE_VOLUME ?= paperstacks_db_restore
+
+db-restore: ## Prepare a full or incremental backup in an empty restore volume
+	docker compose run --rm --no-deps -T --entrypoint /bin/sh \
+		-e "RESTORE_BACKUPS=$(BACKUP)" \
+		-v "$(BACKUP_VOLUME):/backups:ro" \
+		-v "$(RESTORE_VOLUME):/restore" \
+		-v "./db/restore.sh:/db/restore.sh:ro" \
+		db /db/restore.sh
+
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
