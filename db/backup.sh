@@ -35,7 +35,7 @@ pg_basebackup --host=db --username=paperstacks_backup --no-password \
 pg_verifybackup --no-parse-wal /tmp/backup
 
 # Transfer the backup to the host only after verification succeeds.
-backup_name="$(date -u +%Y-%m-%d_T%H%M%SZ)"
+backup_name="$(date -u +%Y-%m-%d_T%H%M%SZ)-$mode"
 backup_dir="/backups/$backup_name"
 if [ -e "$backup_dir" ]; then
   echo "Backup destination already exists: $backup_dir" >&2

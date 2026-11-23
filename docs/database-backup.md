@@ -34,11 +34,11 @@ A successful backup creates files on the host system like in this example:
 
 ```text
 backups/
-├── 2026-11-23_T120000Z/
+├── 2026-11-23_T120000Z-full/
 │   ├── base.tar.gz
 │   ├── pg_wal.tar.gz
 │   └── backup_manifest
-└── latest -> 2026-11-23_T120000Z
+└── latest -> 2026-11-23_T120000Z-full
 ```
 
 The backup contains the entire PostgreSQL cluster, including all databases,
@@ -51,8 +51,8 @@ the most recent successful backup of either kind.
 
 ## Expected result: incremental backup
 
-An incremental backup creates another timestamped directory with the same archive
-filenames and prints the same success message. It uses the backup identified by
+An incremental backup creates another timestamped directory with an `-incremental`
+suffix and the same archive filenames. It uses the backup identified by
 `latest` as its reference, then becomes the new `latest` itself.
 
 It stores changed data relative to that reference and may be smaller than a full
@@ -60,13 +60,13 @@ backup; the size depends on database activity. It cannot be restored on its own.
 For example, restoring the last backup in this sequence requires all three:
 
 ```text
-2026-11-23_T120000Z  full
-2026-11-23_T130000Z  incremental
-2026-11-23_T140000Z  incremental
+2026-11-23_T120000Z-full
+2026-11-23_T130000Z-incremental
+2026-11-23_T140000Z-incremental
 ```
 
-Keep the original full backup and every dependent incremental backup. Record
-which backup starts each chain; directory names do not indicate the backup type.
+Keep the original full backup and every dependent incremental backup. The suffix
+identifies the backup type; retain a record of which backups belong to each chain.
 If no reference backup is available, or PostgreSQL reports that the required WAL
 summaries are unavailable, create a new full backup.
 
