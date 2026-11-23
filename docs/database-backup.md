@@ -119,5 +119,18 @@ two chained incremental backups, then verifies both restored states through
 the Compose restore service. It also checks rejected inputs and that
 scheduled jobs are disabled. Test containers and volumes are removed on exit.
 
+
+```sh
+bash db/test-backup.sh
+```
+
+The script creates an isolated Compose project with temporary credentials and
+its own backup volume. It invokes the real Make targets for two full backups
+and two chained incremental backups, checks online reads and writes, then
+stops the source. It restores the first full backup and separately combines
+and restores the incremental chain. It verifies the expected test values and disables scheduled
+jobs in the restored database. Test containers, volumes and the temporary
+restore image are removed on exit.
+
 `BACKUP_VOLUME` is configurable in the Make target so the test can use its
 own volume.
