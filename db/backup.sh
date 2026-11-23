@@ -24,18 +24,20 @@ if [ "$mode" = incremental ]; then
   incremental_arg="--incremental=/backups/latest/backup_manifest"
 fi
 
-backup_name="$(date -u +%Y-%m-%d_T%H%M%SZ)"
-backup_dir="/backups/$backup_name"
-test ! -e "$backup_dir"
-mkdir "$backup_dir.partial"
+# Perform the backup
+mkdir /tmp/backup
 
 pg_basebackup --host=db --username=paperstacks_backup --no-password \
-  --pgdata="$backup_dir.partial" --format=tar --compress=gzip \
+  --pgdata=/tmp/backup --format=tar --compress=gzip \
   ${incremental_arg:+"$incremental_arg"} \
   --wal-method=stream --checkpoint=fast --progress
 
-pg_verifybackup --no-parse-wal "$backup_dir.partial"
+pg_verifybackup --no-parse-wal /tmp/backup
 
-mv "$backup_dir.partial" "$backup_dir"
+# Transfer the backup to the host only after verification succeeds.
+backup_name="$(date -u +%Y-%m-%d_T%H%M%SZ)"
+backup_dir="/backups/$backup_name"
+test ! -e "$backup_dir"
+mv /tmp/backup "$backup_dir"
 ln -sfn "$backup_name" /backups/latest
 echo "Verified backup: $backup_dir"
