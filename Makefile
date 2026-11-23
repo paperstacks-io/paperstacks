@@ -21,9 +21,8 @@ secrets: ## Create secret credential files if they don't exist
 db-init-smoke: ## Smoke test Postgres init scripts against a fresh database
 	./db/smoke-init.sh
 
-.PHONY: help
-.PHONY: db-backup-full db-backup-incremental
 BACKUP_VOLUME ?= paperstacks_db_backups
+.PHONY: db-backup-full db-backup-incremental
 db-backup-full: ## Create a versioned full PostgreSQL backup in a Docker volume
 db-backup-incremental: ## Back up changes since the latest successful backup
 
@@ -33,6 +32,7 @@ db-backup-full db-backup-incremental:
 		-v "./db/backup.sh:/db/backup.sh:ro" \
 		db /db/backup.sh $(patsubst db-backup-%,%,$@)
 
+.PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
