@@ -21,16 +21,25 @@ secrets: ## Create secret credential files if they don't exist
 db-init-smoke: ## Smoke test Postgres init scripts against a fresh database
 	./db/smoke-init.sh
 
+COMPOSE_CMD := $(shell \
+	if command -v docker >/dev/null 2>&1; then \
+		echo "docker compose"; \
+	elif command -v podman >/dev/null 2>&1; then \
+		echo "podman compose"; \
+	fi \
+)
+
 BACKUP_VOLUME ?= paperstacks_db_backups
 .PHONY: db-backup-full db-backup-incremental
 db-backup-full: ## Create a versioned full PostgreSQL backup in a Docker volume
 db-backup-incremental: ## Back up changes since the latest successful backup
 
 db-backup-full db-backup-incremental:
-	docker compose run --rm --no-deps -T --entrypoint /bin/sh \
+	BACKUP_MODE=$(patsubst db-backup-%,%,$@); \
+	$(COMPOSE_CMD) run --rm --no-deps -T --entrypoint /bin/sh \
 		-v "$(BACKUP_VOLUME):/backups" \
 		-v "./db/backup.sh:/db/backup.sh:ro" \
-		db /db/backup.sh $(patsubst db-backup-%,%,$@)
+		db /db/backup.sh $$BACKUP_MODE
 
 .PHONY: help
 help:
