@@ -29,17 +29,17 @@ COMPOSE_CMD := $(shell \
 	fi \
 )
 
-BACKUP_VOLUME ?= paperstacks_db_backups
+BACKUP_DIR ?= ./backups
 .PHONY: db-backup-full db-backup-incremental
-db-backup-full: ## Create a versioned full PostgreSQL backup in a Docker volume
+db-backup-full: ## Create a versioned full PostgreSQL backup in a host directory
 db-backup-incremental: ## Back up changes since the latest successful backup
 
 db-backup-full db-backup-incremental:
 	BACKUP_MODE=$(patsubst db-backup-%,%,$@); \
 	$(COMPOSE_CMD) run --rm --no-deps -T --entrypoint /bin/sh \
-		-v "$(BACKUP_VOLUME):/backups" \
-		-v "./db/backup.sh:/db/backup.sh:ro" \
-		db /db/backup.sh $$BACKUP_MODE
+		-v "$(abspath $(BACKUP_DIR)):/backups" \
+		-v "./db/backup.sh:/backup.sh:ro" \
+		db /backup.sh $$BACKUP_MODE
 
 .PHONY: help
 help:
