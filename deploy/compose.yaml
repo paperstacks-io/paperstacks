@@ -45,8 +45,8 @@ services:
     networks:
       - paperstacks
     volumes:
-      - ./db/init-scripts:/docker-entrypoint-initdb.d:ro
-      - ./db/install-pg-cron.sh:/db/install-pg-cron.sh:ro
+      - ../db/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ../db/install-pg-cron.sh:/db/install-pg-cron.sh:ro
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/db_super_password
       POSTGRES_USER: postgres
