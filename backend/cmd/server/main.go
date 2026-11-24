@@ -65,9 +65,9 @@ func run(
 	var userService *userApp.UserService
 	var stackService *stackApp.StackService
 	if hasDB {
-		dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+		dbConfig, err := cfg.DatabasePoolConfig()
 		if err != nil {
-			return fmt.Errorf("parse database configuration: %w", err)
+			return err
 		}
 		dbConfig.MaxConns = 10
 		dbConfig.MinIdleConns = 2
@@ -168,7 +168,7 @@ func banner(w io.Writer, cfg config.Config) {
 
 	dbStatus := notConfigured
 	if cfg.DatabaseURL != "" {
-		dbStatus = cfg.DatabaseURL
+		dbStatus = "Configured"
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
@@ -180,7 +180,7 @@ func banner(w io.Writer, cfg config.Config) {
 	fmt.Fprintln(tw)
 	fmt.Fprintln(tw, "  Hanko API URL:\t"+cfg.HankoAPIURL)
 	fmt.Fprintln(tw, "  Object Storage URL:\t"+storageStatus)
-	fmt.Fprintln(tw, "  Database URL:\t"+dbStatus)
+	fmt.Fprintln(tw, "  Database:\t"+dbStatus)
 	fmt.Fprintln(tw)
 
 	_ = tw.Flush()

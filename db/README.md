@@ -9,11 +9,27 @@ If changes to the init script(s) in `./init-scripts/` are made or to reset the d
 
 ## Backend connection
 
-Set `DATABASE_URL` to persist papers, users, and stacks in PostgreSQL. If unset, the backend uses its in-memory repositories. Use the `app_rw` role and its secret; do not commit the password:
+Set `DATABASE_URL` with the `app_rw` user and omit the password. The server,
+crawler, and Crossref sync read the password from `/secrets/db_app_rw_password.txt`
+by default. When running directly from `backend/`, point
+`DATABASE_PASSWORD_FILE` to the file created by `make secrets` at the repository
+root:
 
 ```sh
-export DATABASE_URL='postgres://app_rw:<URL-encoded-password>@localhost:5432/paperstacks?sslmode=disable'
+export DATABASE_URL='postgres://app_rw@localhost:5432/paperstacks?sslmode=disable'
+export DATABASE_PASSWORD_FILE='../secrets/db_app_rw_password.txt'
 ```
+
+With Compose, both services mount the same secret file at
+`/run/secrets/db_app_rw_password`.
+Start the database and wait until it accepts connections, then start the backend
+from the repository root with the `db` service hostname:
+
+```sh
+DATABASE_URL='postgres://app_rw@db:5432/paperstacks?sslmode=disable' docker compose up paperstacks
+```
+
+If `DATABASE_URL` is unset, the server uses in-memory repositories.
 
 ## Paper and stack record metadata
 
