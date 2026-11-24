@@ -3,10 +3,17 @@ services:
     image: ghcr.io/paperstacks-io/paperstacks:latest
     restart: unless-stopped
 
-    env_file: ./.env
     environment:
       HOST: 0.0.0.0
       PORT: 80
+      # Replace these placeholders in the deployment copy of this file.
+      DATABASE_URL: "postgres://app_rw:<url-encoded-app-rw-password>@db:5432/paperstacks?sslmode=disable"
+      HANKO_API_URL: "https://<your-project>.hanko.io"
+      S3_ENDPOINT_URL: "https://<your-s3-endpoint>"
+      S3_ACCESS_KEY_ID: "<s3-access-key-id>"
+      S3_SECRET_ACCESS_KEY: "<s3-secret-access-key>"
+      S3_REGION: "<s3-region>"
+      S3_BUCKET: "<s3-bucket>"
     networks:
       - traefik
       - paperstacks
