@@ -49,6 +49,8 @@ services:
       - cron.timezone=UTC
       - -c
       - cron.use_background_workers=on
+      - -c
+      - summarize_wal=on
     # set shared memory limit when using docker compose
     shm_size: 128mb
     networks:
@@ -65,6 +67,16 @@ services:
       - db_super_password
       - db_app_rw_password
       - db_app_ro_password
+      - db_backup_password
+
+  grobid:
+    image: docker.io/grobid/grobid:0.9.1-crf
+    init: true
+    cpus: 1
+    ulimits:
+      core: 0
+    networks:
+      - paperstacks
 
 secrets:
   db_super_password:
@@ -73,6 +85,8 @@ secrets:
     file: ../secrets/db_app_rw_password.txt
   db_app_ro_password:
     file: ../secrets/db_app_ro_password.txt
+  db_backup_password:
+    file: ../secrets/db_backup_password.txt
 
 networks:
   traefik:
