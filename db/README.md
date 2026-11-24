@@ -2,9 +2,17 @@
 
 ## Run
 
-Use `docker compose up` to start the database.
+Run `docker compose -f deploy/compose.yaml up -d db` from the repository root to
+start the database. For a backend running on the host, use `compose.local.yaml`
+to publish PostgreSQL on localhost port 5432:
 
-If changes to the init script(s) in `./init-scripts/` are made or to reset the database, use `docker compose down -v` to stop the database and remove the volumes, then use `docker compose up` again to start it with a fresh state.
+```sh
+docker compose -f deploy/compose.yaml -f compose.local.yaml up -d db
+```
+
+To reinitialize a disposable local database after changing the init scripts,
+remove its volumes with `docker compose -f deploy/compose.yaml down -v` and
+start the database again.
 
 
 ## Backend connection
@@ -18,15 +26,6 @@ root:
 ```sh
 export DATABASE_URL='postgres://app_rw@localhost:5432/paperstacks?sslmode=disable'
 export DATABASE_PASSWORD_FILE='../secrets/db_app_rw_password.txt'
-```
-
-With Compose, both services mount the same secret file at
-`/run/secrets/db_app_rw_password`.
-Start the database and wait until it accepts connections, then start the backend
-from the repository root with the `db` service hostname:
-
-```sh
-DATABASE_URL='postgres://app_rw@db:5432/paperstacks?sslmode=disable' docker compose up paperstacks
 ```
 
 If `DATABASE_URL` is unset, the server uses in-memory repositories.

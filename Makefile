@@ -36,7 +36,7 @@ db-backup-incremental: ## Back up changes since the latest successful backup
 
 db-backup-full db-backup-incremental:
 	BACKUP_MODE=$(patsubst db-backup-%,%,$@); \
-	$(COMPOSE_CMD) run --rm --no-deps -T --entrypoint /bin/sh \
+	$(COMPOSE_CMD) -f ./deploy/compose.yaml run --rm --no-deps -T --entrypoint /bin/sh \
 		-v "$(abspath $(BACKUP_DIR)):/backups" \
 		-v "./db/backup.sh:/backup.sh:ro" \
 		db /backup.sh $$BACKUP_MODE
