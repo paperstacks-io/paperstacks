@@ -69,4 +69,3 @@ networks:
   traefik:
     external: true
   paperstacks:
-    internal: true
