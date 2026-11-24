@@ -19,6 +19,8 @@ services:
       - "traefik.http.services.paperstacks.loadbalancer.server.port=80"
       # Docker network
       - "traefik.docker.network=traefik"
+      # Auto aupdate via dockcheck
+      - "mag37.dockcheck.update=true"
 
 networks:
   traefik:
