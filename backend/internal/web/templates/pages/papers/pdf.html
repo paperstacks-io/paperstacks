@@ -1,0 +1,10 @@
+{{ define "papers/pdf" }}
+<script type="module" src="https://cdn.jsdelivr.net/npm/@embedpdf/viewer@3/dist/embedpdf.js"></script>
+
+<section class="col-span-12 grid gap-6">
+  <div class="epdf-theme">
+    <embedpdf-viewer src="https://www.embedpdf.com/pdfs/welcome.pdf" style="height: 100vh"></embedpdf-viewer>
+  </div>
+</section>
+
+{{ end }}

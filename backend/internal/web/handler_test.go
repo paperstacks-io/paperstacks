@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
@@ -26,6 +27,30 @@ import (
 	userDomain "github.com/paperstacks.io/paperstacks/internal/user/domain"
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
 )
+
+func TestPaperPDFViewerRoute(t *testing.T) {
+	mux := http.NewServeMux()
+	if err := AddRoute(mux, config.Config{}, slog.Default(), nil, nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	handler := http.StripPrefix("/app", mux)
+	const path = "/app/papers/11111111-1111-4111-8111-111111111111/pdf/viewer"
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if want := "/app/auth?next=" + url.QueryEscape(path); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != want {
+		t.Fatalf("signed-out response = %d, Location %q, want 303 and %q", rec.Code, rec.Header().Get("Location"), want)
+	}
+
+	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{IsValid: true}))
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/html") ||
+		!strings.Contains(rec.Body.String(), "This is the papers PDF page.") {
+		t.Fatalf("signed-in response = %d, Content-Type %q, body %q", rec.Code, rec.Header().Get("Content-Type"), rec.Body.String())
+	}
+}
 
 type uploadPDFTestStore struct {
 	objectstorage.Store
