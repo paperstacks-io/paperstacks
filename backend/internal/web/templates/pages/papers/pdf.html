@@ -1,10 +1,20 @@
 {{ define "papers/pdf" }}
-<script type="module" src="https://cdn.jsdelivr.net/npm/@embedpdf/viewer@3/dist/embedpdf.js"></script>
-
 <section class="col-span-12 grid gap-6">
   <div class="epdf-theme">
-    <embedpdf-viewer src="{{ .PDFURL }}" style="height: 100vh"></embedpdf-viewer>
+    <embedpdf-viewer src="{{ .PDFURL }}" id="paper-pdf-viewer" style="height: 100vh"></embedpdf-viewer>
   </div>
 </section>
+
+<script type="module">
+  import "https://cdn.jsdelivr.net/npm/@embedpdf/viewer@3/dist/embedpdf.js"
+
+  document.getElementById("paper-pdf-viewer").config = {
+    readOnly: true,
+    features: {
+      comments: false,
+      "documents.open": false,
+    },
+  }
+</script>
 
 {{ end }}
