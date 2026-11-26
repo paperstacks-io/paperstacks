@@ -31,7 +31,7 @@
             type="search"
             name="search"
             placeholder="exploratory..."
-            hx-post="/app/papers/search"
+            hx-post="/papers/search"
             hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
             hx-target="#search-results"
             hx-vals='{"page": 1}'
@@ -41,7 +41,7 @@
           aria-label="Select sort option"
           class="select select-sm w-full lg:max-w-sm"
           name="sortBy"
-          hx-post="/app/papers/search"
+          hx-post="/papers/search"
           hx-trigger="change"
           hx-target="#search-results"
           hx-vals='{"page": 1}'

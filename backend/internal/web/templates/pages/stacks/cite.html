@@ -6,7 +6,7 @@
       <ul>
         <li>
           <a
-            hx-get="/app/stacks"
+            hx-get="/stacks"
             hx-target="#page-shell"
             hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
@@ -19,7 +19,7 @@
 
         <li>
           <a
-            hx-get="/app/stacks/{{ .Stack.UUID }}"
+            hx-get="/stacks/{{ .Stack.UUID }}"
             hx-target="#page-shell"
             hx-select="#page-shell"
             hx-select-oob="#sidebar:outerHTML"
@@ -68,7 +68,7 @@
 
   const citationStyles = {{ .Styles }}
   const [localeResponse, ...styleResponses] = await Promise.all([
-    fetch("/app/assets/csl/locales-en-US.xml"),
+    fetch("/assets/csl/locales-en-US.xml"),
     ...citationStyles.map(({ url }) => fetch(url)),
   ])
 

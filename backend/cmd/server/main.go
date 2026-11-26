@@ -26,7 +26,6 @@ import (
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
-	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
 	stackMem "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
@@ -94,16 +93,16 @@ func run(
 	sessionService := commonauth.NewHankoSessionService(cfg.HankoAPIURL, userProvisioner, http.DefaultClient)
 
 	rootMux := http.NewServeMux()
+	if err := web.AddRoute(rootMux, cfg, logger, paperService, stackService, userService, sessionService); err != nil {
+		return err
+	}
+
 	apiMux := http.NewServeMux()
-	webMux := http.NewServeMux()
-	server.AddRoute(rootMux, ctx, logger, sessionService)
 	paperHttp.AddPaperRoute(apiMux, logger, paperService, sessionService)
 	doiHttp.AddDOIRoute(apiMux, logger, doiService, sessionService)
 	userHttp.AddUserRoute(apiMux, logger, userService, stackService, sessionService)
 	stackHttp.AddStackRoute(apiMux, logger, stackService, sessionService)
-	web.AddRoute(webMux, cfg, logger, paperService, stackService, userService, sessionService)
 	rootMux.Handle("/api/", http.StripPrefix("/api", apiMux))
-	rootMux.Handle("/app/", http.StripPrefix("/app", webMux))
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
@@ -132,7 +131,7 @@ func run(
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "\tStarting server:")
-	fmt.Fprintln(tw, "\tFrontend: \thttp://"+cfg.Host+":"+cfg.Port+"/app/")
+	fmt.Fprintln(tw, "\tFrontend: \thttp://"+cfg.Host+":"+cfg.Port+"/")
 	fmt.Fprintln(tw, "\tAPI: \thttp://"+cfg.Host+":"+cfg.Port+"/api/")
 	fmt.Fprintln(tw)
 	_ = tw.Flush()

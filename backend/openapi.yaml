@@ -7,8 +7,6 @@ servers:
   - url: http://localhost:8080/api
     description: Local development server
 tags:
-  - name: Health
-    description: Health check endpoints.
   - name: Users
     description: User management endpoints.
   - name: Papers
@@ -16,12 +14,6 @@ tags:
   - name: Stacks
     description: Stack management endpoints.
 paths:
-  /healthz:
-    get:
-      tags:
-        - Health
-      summary: Check service health
-
   /users/me:
     get:
       tags:

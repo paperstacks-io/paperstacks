@@ -5,7 +5,7 @@
     <h2 class="card-title">Paper Files</h2>
     <div id="paper-pdf-{{ .UUID }}">
       <form
-        hx-put="/app/stacks/{{ .StackUUID }}/papers/{{ .UUID }}/pdf"
+        hx-put="/stacks/{{ .StackUUID }}/papers/{{ .UUID }}/pdf"
         hx-encoding="multipart/form-data"
         hx-target="#paper-files"
         hx-swap="outerHTML"
@@ -16,7 +16,7 @@
           <div class="grid gap-2 sm:grid-cols-2">
             <a
               class="btn btn-sm join-item"
-              href="/app/papers/{{ .UUID }}/pdf"
+              href="/papers/{{ .UUID }}/pdf"
               target="_blank"
               onclick="event.stopPropagation()"
             >
@@ -25,7 +25,7 @@
             <button
               class="btn btn-sm join-item"
               type="button"
-              hx-delete="/app/stacks/{{ .StackUUID }}/papers/{{ .UUID }}/pdf"
+              hx-delete="/stacks/{{ .StackUUID }}/papers/{{ .UUID }}/pdf"
               hx-target="#paper-files"
               hx-swap="outerHTML"
               hx-disable="this"

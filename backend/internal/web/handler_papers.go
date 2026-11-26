@@ -76,7 +76,7 @@ func handlePaperPDFViewer(tmpl *template.Template, hankoAPIURL string) http.Hand
 			PDFURL string
 		}{
 			pageData: newPageData(r, hankoAPIURL),
-			PDFURL:   "/app/papers/" + paperUUID.String() + "/pdf",
+			PDFURL:   "/papers/" + paperUUID.String() + "/pdf",
 		}
 		renderTemplate(w, r, tmpl, data)
 	})

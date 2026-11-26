@@ -26,9 +26,19 @@
     <script type="module">
       const authComponent = document.getElementById("authComponent")
       const next = new URLSearchParams(window.location.search).get("next")
-      const redirectTo = next && next.startsWith("/app/") ? next : "/app"
 
       authComponent.addEventListener("onSessionCreated", () => {
+        let redirectTo = "/"
+        if (next?.startsWith("/")) {
+          try {
+            const target = new URL(next, window.location.origin)
+            if (target.origin === window.location.origin) {
+              redirectTo = target.href
+            }
+          } catch {
+            // Use the home page if the return URL is malformed.
+          }
+        }
         document.location.href = redirectTo
       })
     </script>

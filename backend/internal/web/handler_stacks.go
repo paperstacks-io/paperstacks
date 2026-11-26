@@ -20,7 +20,7 @@ import (
 
 const invalidStackNameMessage = "Stack name must be 1-80 characters and contain only letters, numbers, spaces, or - _ . , : ' & / ( ) + #."
 
-const stacksPageURL = "/app/stacks"
+const stacksPageURL = "/stacks"
 
 const (
 	oneMiB int64 = 1 << 20
@@ -57,8 +57,8 @@ type citationStyleViewData struct {
 }
 
 var citationStyles = []citationStyleViewData{
-	{Label: "IEEE", URL: "/app/assets/csl/ieee.csl"},
-	{Label: "APA", URL: "/app/assets/csl/apa.csl"},
+	{Label: "IEEE", URL: "/assets/csl/ieee.csl"},
+	{Label: "APA", URL: "/assets/csl/apa.csl"},
 }
 
 type citationViewData struct {
@@ -500,7 +500,7 @@ func handleStackCreate(
 			return
 		}
 
-		hxLocation(w, "/app/stacks/"+stack.UUID, http.StatusCreated)
+		hxLocation(w, "/stacks/"+stack.UUID, http.StatusCreated)
 	})
 }
 
@@ -581,7 +581,7 @@ func handleStackPaperRemove(
 			return
 		}
 
-		detailURL := "/app/stacks/" + stackUUID
+		detailURL := "/stacks/" + stackUUID
 		if isHTMX(r) {
 			hxLocation(w, detailURL, http.StatusOK)
 			return

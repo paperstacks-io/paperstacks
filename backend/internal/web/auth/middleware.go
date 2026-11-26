@@ -12,8 +12,8 @@ func RequireAuthWebMiddleware() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, ok := commonauth.SessionFromContext(r.Context())
 			if !ok || session == nil || !session.IsValid {
-				next := url.QueryEscape("/app" + r.URL.RequestURI())
-				http.Redirect(w, r, "/app/auth?next="+next, http.StatusSeeOther)
+				next := url.QueryEscape(r.URL.RequestURI())
+				http.Redirect(w, r, "/auth?next="+next, http.StatusSeeOther)
 				return
 			}
 
