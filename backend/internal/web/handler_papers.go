@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"uuid"
 
 	paperApp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperDomain "github.com/paperstacks.io/paperstacks/internal/paper/domain"
@@ -58,6 +59,26 @@ func handlePapersSearch(
 		if err := tmpl.ExecuteTemplate(w, templateName, data); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+	})
+}
+
+func handlePaperPDFViewer(tmpl *template.Template, hankoAPIURL string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paperUUID, err := uuid.Parse(r.PathValue("paperUUID"))
+		if err != nil {
+			http.Error(w, "invalid paper uuid", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		data := struct {
+			pageData
+			PDFURL string
+		}{
+			pageData: newPageData(r, hankoAPIURL),
+			PDFURL:   "/app/papers/" + paperUUID.String() + "/pdf",
+		}
+		renderTemplate(w, r, tmpl, data)
 	})
 }
 

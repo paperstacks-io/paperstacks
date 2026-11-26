@@ -34,7 +34,8 @@ func TestPaperPDFViewerRoute(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := http.StripPrefix("/app", mux)
-	const path = "/app/papers/11111111-1111-4111-8111-111111111111/pdf/viewer"
+	const pdfURL = "/app/papers/11111111-1111-4111-8111-111111111111/pdf"
+	const path = pdfURL + "/viewer"
 
 	req := httptest.NewRequest(http.MethodGet, path, nil)
 	rec := httptest.NewRecorder()
@@ -47,8 +48,26 @@ func TestPaperPDFViewerRoute(t *testing.T) {
 	rec = httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/html") ||
-		!strings.Contains(rec.Body.String(), "This is the papers PDF page.") {
+		!strings.Contains(rec.Body.String(), `<embedpdf-viewer src="`+pdfURL+`"`) {
 		t.Fatalf("signed-in response = %d, Content-Type %q, body %q", rec.Code, rec.Header().Get("Content-Type"), rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/app/papers/invalid/pdf/viewer", nil).WithContext(req.Context())
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid UUID response = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestHandlePaperPDFViewerProvidesPDFURL(t *testing.T) {
+	tmpl := template.Must(template.New("base").Parse("{{ .PDFURL }}"))
+	req := httptest.NewRequest(http.MethodGet, "/papers/11111111-1111-4111-8111-111111111111/pdf/viewer", nil)
+	req.SetPathValue("paperUUID", "11111111-1111-4111-8111-111111111111")
+	rec := httptest.NewRecorder()
+	handlePaperPDFViewer(tmpl, "").ServeHTTP(rec, req)
+	if want := "/app/papers/11111111-1111-4111-8111-111111111111/pdf"; rec.Code != http.StatusOK || rec.Body.String() != want {
+		t.Fatalf("viewer response = %d, body %q, want 200 and %q", rec.Code, rec.Body.String(), want)
 	}
 }
 
