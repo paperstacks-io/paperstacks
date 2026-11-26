@@ -3,19 +3,12 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-compose_file="$script_dir/../compose.yaml"
-compose_project="paperstacks-db-smoke"
-secrets_dir="$(mktemp -d)"
-compose_override="$secrets_dir/compose.smoke.yaml"
+compose_file="$script_dir/../deploy/compose.yaml"
+compose_project="paperstacks-db-smoke-$(openssl rand -hex 8)"
+secrets_dir="$script_dir/../secrets"
 compose_cmd=()
 compose_args=()
 compose_started=false
-
-super_password="paperstacks-super-smoke"
-app_rw_password="paperstacks-rw-smoke"
-app_ro_password="paperstacks-ro-smoke"
-# Compose interpolates every service, even when only db is started; this password is URL-safe.
-export DB_APP_RW_PASSWORD_URLENCODED="$app_rw_password"
 
 on_exit() {
   status=$?
@@ -26,7 +19,6 @@ on_exit() {
   if [ "$compose_started" = true ]; then
     "${compose_cmd[@]}" "${compose_args[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   fi
-  rm -rf "$secrets_dir"
   exit "$status"
 }
 trap on_exit EXIT
@@ -79,24 +71,12 @@ psql_as() {
 }
 
 select_compose_command
-compose_args=(--project-name "$compose_project" --file "$compose_file" --file "$compose_override")
+compose_args=(--project-name "$compose_project" --file "$compose_file")
 
-printf '%s\n' "$super_password" >"$secrets_dir/db_super_password"
-printf '%s\n' "$app_rw_password" >"$secrets_dir/db_app_rw_password"
-printf '%s\n' "$app_ro_password" >"$secrets_dir/db_app_ro_password"
-
-cat >"$compose_override" <<EOF
-services:
-  db:
-    ports: !reset []
-secrets:
-  db_super_password:
-    file: $secrets_dir/db_super_password
-  db_app_rw_password:
-    file: $secrets_dir/db_app_rw_password
-  db_app_ro_password:
-    file: $secrets_dir/db_app_ro_password
-EOF
+make -s -C "$script_dir/.." secrets
+super_password="$(<"$secrets_dir/db_super_password.txt")"
+app_rw_password="$(<"$secrets_dir/db_app_rw_password.txt")"
+app_ro_password="$(<"$secrets_dir/db_app_ro_password.txt")"
 
 compose_started=true
 "${compose_cmd[@]}" "${compose_args[@]}" up -d --no-deps db >/dev/null

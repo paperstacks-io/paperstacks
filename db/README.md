@@ -2,18 +2,33 @@
 
 ## Run
 
-Use `docker compose up` to start the database.
+Run `docker compose -f deploy/compose.yaml up -d db` from the repository root to
+start the database. For a backend running on the host, use `compose.local.yaml`
+to publish PostgreSQL on localhost port 5432:
 
-If changes to the init script(s) in `./init-scripts/` are made or to reset the database, use `docker compose down -v` to stop the database and remove the volumes, then use `docker compose up` again to start it with a fresh state.
+```sh
+docker compose -f deploy/compose.yaml -f compose.local.yaml up -d db
+```
+
+To reinitialize a disposable local database after changing the init scripts,
+remove its volumes with `docker compose -f deploy/compose.yaml down -v` and
+start the database again.
 
 
 ## Backend connection
 
-Set `DATABASE_URL` to persist papers, users, and stacks in PostgreSQL. If unset, the backend uses its in-memory repositories. Use the `app_rw` role and its secret; do not commit the password:
+Set `DATABASE_URL` with the `app_rw` user and omit the password. The server,
+crawler, and Crossref sync read the password from `/secrets/db_app_rw_password.txt`
+by default. When running directly from `backend/`, point
+`DATABASE_PASSWORD_FILE` to the file created by `make secrets` at the repository
+root:
 
 ```sh
-export DATABASE_URL='postgres://app_rw:<URL-encoded-password>@localhost:5432/paperstacks?sslmode=disable'
+export DATABASE_URL='postgres://app_rw@localhost:5432/paperstacks?sslmode=disable'
+export DATABASE_PASSWORD_FILE='../secrets/db_app_rw_password.txt'
 ```
+
+If `DATABASE_URL` is unset, the server uses in-memory repositories.
 
 ## Paper and stack record metadata
 

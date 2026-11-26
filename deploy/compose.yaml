@@ -1,0 +1,103 @@
+services:
+  paperstacks:
+    image: ghcr.io/paperstacks-io/paperstacks:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOST: 0.0.0.0
+      PORT: 80
+      DATABASE_URL: "postgres://app_rw@db:5432/paperstacks?sslmode=disable"
+      DATABASE_PASSWORD_FILE: /run/secrets/db_app_rw_password
+    secrets:
+      - db_app_rw_password
+    networks:
+      - traefik
+      - paperstacks
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router
+      - "traefik.http.routers.paperstacks.rule=Host(`paperstacks.95.217.168.198.sslip.io`)"
+      - "traefik.http.routers.paperstacks.entrypoints=websecure"
+      - "traefik.http.routers.paperstacks.tls=true"
+      - "traefik.http.routers.paperstacks.tls.certresolver=letsencrypt"
+      # Backend service
+      - "traefik.http.services.paperstacks.loadbalancer.server.port=80"
+      # Docker network
+      - "traefik.docker.network=traefik"
+      # Auto aupdate via dockcheck
+      - "mag37.dockcheck.update=true"
+
+  db:
+    image: postgres:18-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+    entrypoint:
+      - /bin/sh
+      - /db/install-pg-cron.sh
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=paperstacks
+      - -c
+      - cron.timezone=UTC
+      - -c
+      - cron.use_background_workers=on
+      - -c
+      - summarize_wal=on
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    networks:
+      - paperstacks
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ../db/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ../db/install-pg-cron.sh:/db/install-pg-cron.sh:ro
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_super_password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      PG_CRON_VERSION: "1.6.7"
+    secrets:
+      - db_super_password
+      - db_app_rw_password
+      - db_app_ro_password
+      - db_backup_password
+
+  grobid:
+    image: docker.io/grobid/grobid:0.9.1-crf
+    init: true
+    cpus: 1
+    ulimits:
+      core: 0
+    networks:
+      - paperstacks
+
+secrets:
+  db_super_password:
+    file: ../secrets/db_super_password.txt
+  db_app_rw_password:
+    file: ../secrets/db_app_rw_password.txt
+  db_app_ro_password:
+    file: ../secrets/db_app_ro_password.txt
+  db_backup_password:
+    file: ../secrets/db_backup_password.txt
+
+volumes:
+  postgres_data:
+
+networks:
+  traefik:
+    external: true
+  paperstacks:

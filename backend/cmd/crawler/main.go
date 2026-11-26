@@ -6,7 +6,8 @@
 //
 //	go run ./cmd/crawler -dir /path/to/dump
 //
-// Records are stored in memory for the command's lifetime.
+// Records are stored in the PostgreSQL database at DATABASE_URL using the
+// password from DATABASE_PASSWORD_FILE.
 package main
 
 import (
@@ -18,9 +19,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/joho/godotenv/autoload"
+
+	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/importer"
 	paperapp "github.com/paperstacks.io/paperstacks/internal/paper/application"
-	papermemory "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
+	paperpostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
 )
 
 // logDir is where each import run's log file is created, relative to the
@@ -54,8 +59,31 @@ func run(ctx context.Context) error {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 
-	paperService := paperapp.NewPaperService(papermemory.NewRepository(), nil)
+	db, err := openDatabase(ctx)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	paperService := paperapp.NewPaperService(paperpostgres.NewRepository(db), nil)
 	imp := importer.New(importer.Config{Dir: *dir, LogDir: logDir}, log, paperService)
 
 	return imp.Run(ctx)
+}
+
+// openDatabase connects to the PostgreSQL database at DATABASE_URL.
+func openDatabase(ctx context.Context) (*pgxpool.Pool, error) {
+	dbConfig, err := config.New().DatabasePoolConfig()
+	if err != nil {
+		return nil, err
+	}
+	db, err := pgxpool.NewWithConfig(ctx, dbConfig)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+	if err := db.Ping(ctx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+	return db, nil
 }
