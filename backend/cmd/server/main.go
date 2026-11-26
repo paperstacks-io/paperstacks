@@ -26,7 +26,6 @@ import (
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	paperMem "github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
 	paperPostgres "github.com/paperstacks.io/paperstacks/internal/paper/repository/postgres"
-	"github.com/paperstacks.io/paperstacks/internal/pdfextractor"
 	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApp "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackHttp "github.com/paperstacks.io/paperstacks/internal/stack/http"
@@ -88,10 +87,6 @@ func run(
 		paperService = paperApp.NewPaperService(paperMem.NewRepository(), objectStore)
 		userService = userApp.NewUserService(userMem.NewRepository())
 		stackService = stackApp.NewStackService(stackMem.NewRepository(paperService), paperService)
-	}
-
-	if cfg.GrobidURL != "" {
-		paperService.SetXMLExtractor(pdfextractor.NewGrobidClient(cfg.GrobidURL, nil))
 	}
 
 	doiService := doiApp.NewDOIService(nil)

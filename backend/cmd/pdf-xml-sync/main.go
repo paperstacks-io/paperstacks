@@ -1,10 +1,10 @@
-// Command pdfextractor scans object storage for PDF files without a matching
+// Command pdf-xml-sync scans object storage for PDF files without a matching
 // XML file, sends each missing PDF to GROBID to extract fulltext TEI-XML, and
 // stores the resulting XML back in object storage.
 //
 // Usage:
 //
-//	go run ./cmd/pdfextractor [-grobid-url http://localhost:8070] [-prefix pdf/] [-debug]
+//	go run ./cmd/pdf-xml-sync [-debug]
 //
 // The GROBID URL defaults to GROBID_URL, falling back to http://localhost:8070.
 package main
@@ -21,7 +21,6 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	"github.com/paperstacks.io/paperstacks/internal/common/objectstorage"
-	paperapp "github.com/paperstacks.io/paperstacks/internal/paper/application"
 	"github.com/paperstacks.io/paperstacks/internal/pdfextractor"
 )
 
@@ -61,8 +60,5 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	paperService := paperapp.NewPaperService(nil, s3Store)
-	paperService.SetXMLExtractor(grobidClient)
-
-	return paperService.SyncPDFXMLs(ctx, storagePrefix, log)
+	return pdfextractor.Sync(ctx, s3Store, grobidClient, storagePrefix, log)
 }
