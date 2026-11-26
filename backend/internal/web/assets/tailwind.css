@@ -77,3 +77,17 @@
 	--noise: 0;
 }
 
+.epdf-theme {
+	--epdf-accent: var(--color-primary);
+	--epdf-canvas: var(--color-base-100);
+	--epdf-surface: var(--color-base-200);
+	--epdf-surface-raised: var(--color-base-300);
+	--epdf-text: var(--color-base-content);
+	--epdf-text-muted: color-mix(in oklab, var(--color-base-content) 65%, var(--color-base-200));
+	--epdf-border: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-200));
+	--epdf-hover: color-mix(in oklab, var(--color-base-content) 8%, var(--color-base-200));
+}
+
+[data-theme="dark"] .epdf-theme {
+	--epdf-accent: var(--color-accent-content);
+}
