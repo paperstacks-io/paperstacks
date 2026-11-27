@@ -66,52 +66,42 @@
   </div>
 </dialog>
 
-<!-- empty stack -->
+<section
+  aria-label="Stack overview"
+  class="col-span-12 flex flex-col gap-2 rounded-box bg-base-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
+>
+  <div id="stats-section" class="text-sm tabular-nums">
+    <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <p class="font-semibold">{{ len .Stack.Papers }} {{ if eq (len .Stack.Papers) 1 }}paper{{ else }}papers{{ end }}</p>
+      <p>Updated {{ .UpdatedAt }}</p>
+    </div>
+    <p class="mt-1 text-xs text-base-content/60">Created {{ .CreatedAt }}</p>
+  </div>
+
+  <label
+    id="stack-settings-card"
+    class="label min-h-10 cursor-pointer justify-between gap-3 text-sm whitespace-normal text-base-content"
+  >
+    <span>Public <span class="text-base-content/60">(visible to everyone)</span></span>
+    <!-- prettier-ignore -->
+    <input
+      type="checkbox"
+      class="toggle toggle-success shrink-0"
+      name="is_public"
+      hx-patch="/stacks/{{ .Stack.UUID }}"
+      hx-trigger="change"
+      hx-target="#toast-host"
+      hx-swap="innerHTML"
+      hx-disable="this"
+      hx-on::after:request="if (event.detail.ctx.response.status >= 400) this.checked = !this.checked"
+      {{ if .Stack.IsPublic }}checked="checked" {{ end }}
+    />
+  </label>
+</section>
+
 {{ if not .Stack.Papers }} {{ template "stacks/partials/empty-stack" . }} {{ end }}
 
-<!-- stats -->
 {{ if .Stack.Papers }}
-<section class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-12 shadow-xs">
-  <div class="stat">
-    <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/24/outline/document.svg" class="size-7 opacity-40"></svg>
-    </div>
-    <div class="stat-title">Papers</div>
-    <div class="stat-value text-xl font-semibold tabular-nums">{{ len .Stack.Papers }}</div>
-    <div class="stat-desc">in this stacks</div>
-  </div>
-  <div class="stat">
-    <div class="stat-figure">
-      <svg data-src="https://unpkg.com/heroicons/24/outline/clock.svg" class="size-7 opacity-40"></svg>
-    </div>
-    <div class="stat-title">Updated at</div>
-    <div class="stat-value text-sm font-semibold tabular-nums">{{ .UpdatedAt}}</div>
-    <div class="stat-desc">Created: {{ .CreatedAt }}</div>
-  </div>
-  <div class="card bg-base-200 shadow-xs">
-    <div class="card-body">
-      <h3 class="card-title">Stack Settings</h3>
-      <label class="label cursor-pointer justify-between">
-        Public (visible to everyone)
-
-        <!-- prettier-ignore -->
-        <input
-                type="checkbox"
-                class="toggle toggle-success"
-                name="is_public"
-                hx-patch="/stacks/{{ .Stack.UUID }}"
-                hx-trigger="change"
-                hx-target="#toast-host"
-                hx-swap="innerHTML"
-                hx-disable="this"
-                hx-on::after:request="if (event.detail.ctx.response.status >= 400) this.checked = !this.checked"
-                {{ if .Stack.IsPublic }}checked="checked" {{ end }}
-              />
-      </label>
-    </div>
-  </div>
-</section>
-{{ end }} {{ if .Stack.Papers }}
 <section class="drawer drawer-end drawer-open col-span-12 min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto]">
   <input
     id="stack-details-toggle"
