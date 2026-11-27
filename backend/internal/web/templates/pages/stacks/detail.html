@@ -115,10 +115,10 @@
               class="select select-sm w-full lg:max-w-sm"
               name="sortBy"
             >
-              <option value="+title">Title (A-Z)</option>
+              <option value="+title" selected>Title (A-Z)</option>
               <option value="-title">Title (Z-A)</option>
               <option value="+year">Oldest</option>
-              <option value="-year" selected>Sort: Newest</option>
+              <option value="-year">Newest</option>
             </select>
           </div>
         </form>
@@ -282,8 +282,11 @@
     const visibleCount = document.querySelector("[data-stack-paper-visible-count]")
     const params = new URLSearchParams(window.location.search)
     searchInput.value = params.get("search") || ""
-    const sortValue = params.get("sortBy")
-    sortSelect.value = Array.from(sortSelect.options).some((option) => option.value === sortValue) ? sortValue : "-year"
+    const sortQueryParam = params.get("sortBy")
+    isValidSortType = Array.from(sortSelect.options).some((option) => option.value === sortQueryParam)
+    if (isValidSortType) {
+      sortSelect.value = sortQueryParam
+    }
 
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
     const rows = Array.from(tbody.querySelectorAll("[data-stack-paper-row]")).map((element) => {
@@ -310,7 +313,7 @@
     })
 
     function compareRows(a, b) {
-      const sortValue = sortSelect.value || "-year"
+      const sortValue = sortSelect.value || "+title"
       const desc = sortValue.startsWith("-")
       const sortBy = sortValue.slice(1)
 
