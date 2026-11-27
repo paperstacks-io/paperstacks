@@ -70,18 +70,17 @@
   aria-label="Stack overview"
   class="col-span-12 flex flex-col gap-2 rounded-box bg-base-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
 >
-  <div id="stats-section" class="text-sm tabular-nums">
+  <div class="text-sm tabular-nums">
     <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-      <p class="font-semibold">{{ len .Stack.Papers }} {{ if eq (len .Stack.Papers) 1 }}paper{{ else }}papers{{ end }}</p>
+      <p class="font-semibold">
+        {{ len .Stack.Papers }} {{ if eq (len .Stack.Papers) 1 }}paper{{ else }}papers{{ end }}
+      </p>
       <p>Updated {{ .UpdatedAt }}</p>
     </div>
     <p class="mt-1 text-xs text-base-content/60">Created {{ .CreatedAt }}</p>
   </div>
 
-  <label
-    id="stack-settings-card"
-    class="label min-h-10 cursor-pointer justify-between gap-3 text-sm whitespace-normal text-base-content"
-  >
+  <label class="label min-h-10 cursor-pointer justify-between gap-3 text-sm whitespace-normal text-base-content">
     <span>Public <span class="text-base-content/60">(visible to everyone)</span></span>
     <!-- prettier-ignore -->
     <input
@@ -99,9 +98,7 @@
   </label>
 </section>
 
-{{ if not .Stack.Papers }} {{ template "stacks/partials/empty-stack" . }} {{ end }}
-
-{{ if .Stack.Papers }}
+{{ if not .Stack.Papers }} {{ template "stacks/partials/empty-stack" . }} {{ end }} {{ if .Stack.Papers }}
 <section class="drawer drawer-end drawer-open col-span-12 min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto]">
   <input
     id="stack-details-toggle"
