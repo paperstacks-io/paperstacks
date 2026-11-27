@@ -33,28 +33,27 @@ func TestPaperPDFViewerRoute(t *testing.T) {
 	if err := AddRoute(mux, config.Config{}, slog.Default(), nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	handler := http.StripPrefix("/app", mux)
-	const pdfURL = "/app/papers/11111111-1111-4111-8111-111111111111/pdf"
+	const pdfURL = "/papers/11111111-1111-4111-8111-111111111111/pdf"
 	const path = pdfURL + "/viewer"
 
-	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req := httptest.NewRequest(http.MethodGet, path+"?page=2", nil)
 	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	if want := "/app/auth?next=" + url.QueryEscape(path); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != want {
+	mux.ServeHTTP(rec, req)
+	if want := "/auth?next=" + url.QueryEscape(path+"?page=2"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != want {
 		t.Fatalf("signed-out response = %d, Location %q, want 303 and %q", rec.Code, rec.Header().Get("Location"), want)
 	}
 
 	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{IsValid: true}))
 	rec = httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/html") ||
 		!strings.Contains(rec.Body.String(), `<embedpdf-viewer src="`+pdfURL+`"`) {
 		t.Fatalf("signed-in response = %d, Content-Type %q, body %q", rec.Code, rec.Header().Get("Content-Type"), rec.Body.String())
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/app/papers/invalid/pdf/viewer", nil).WithContext(req.Context())
+	req = httptest.NewRequest(http.MethodGet, "/papers/invalid/pdf/viewer", nil).WithContext(req.Context())
 	rec = httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("invalid UUID response = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
@@ -66,7 +65,7 @@ func TestHandlePaperPDFViewerProvidesPDFURL(t *testing.T) {
 	req.SetPathValue("paperUUID", "11111111-1111-4111-8111-111111111111")
 	rec := httptest.NewRecorder()
 	handlePaperPDFViewer(tmpl, "").ServeHTTP(rec, req)
-	if want := "/app/papers/11111111-1111-4111-8111-111111111111/pdf"; rec.Code != http.StatusOK || rec.Body.String() != want {
+	if want := "/papers/11111111-1111-4111-8111-111111111111/pdf"; rec.Code != http.StatusOK || rec.Body.String() != want {
 		t.Fatalf("viewer response = %d, body %q, want 200 and %q", rec.Code, rec.Body.String(), want)
 	}
 }
@@ -168,7 +167,7 @@ func TestHandlePaperDeletePDF(t *testing.T) {
 					t.Fatal("failed request detached PDF")
 				}
 			} else if updated.PDFStorageKey != "" || !strings.Contains(response, `id="paper-pdf-`+paperUUID+`"`) ||
-				!strings.Contains(response, `hx-put="/app/stacks/`+stackUUID+`/papers/`+paperUUID+`/pdf"`) ||
+				!strings.Contains(response, `hx-put="/stacks/`+stackUUID+`/papers/`+paperUUID+`/pdf"`) ||
 				!strings.Contains(response, `type="file"`) || strings.Contains(response, "Download") || strings.Contains(response, "hx-delete") || rr.Header().Get("HX-Retarget") != "" {
 				t.Fatalf("expected upload section after removal: paper=%+v body=%s", updated, response)
 			}
@@ -182,7 +181,7 @@ func TestHandlePaperDeletePDF(t *testing.T) {
 
 func TestHandlePaperUploadPDF(t *testing.T) {
 	const paperUUID = "11111111-1111-4111-8111-111111111111"
-	const stackURL = "/app/stacks/22222222-2222-4222-8222-222222222222"
+	const stackURL = "/stacks/22222222-2222-4222-8222-222222222222"
 	tests := []struct {
 		name         string
 		content      string
@@ -228,7 +227,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 			store := &uploadPDFTestStore{err: tt.storeErr}
 			stackService := stackApp.NewStackService(stackMemory.NewRepository(nil), nil)
 			stack := stackDomain.Stack{
-				UUID:   strings.TrimPrefix(stackURL, "/app/stacks/"),
+				UUID:   strings.TrimPrefix(stackURL, "/stacks/"),
 				Name:   "Upload stack",
 				Owner:  userDomain.User{ExternalID: "owner"},
 				Papers: []paperDomain.Paper{{UUID: paperUUID}},
@@ -309,7 +308,7 @@ func TestHandlePaperUploadPDF(t *testing.T) {
 				t.Fatalf("form does not replace the PDF section: %s", response)
 			}
 			if strings.Contains(response, `type="file"`) || !strings.Contains(response, "Open") ||
-				!strings.Contains(response, `href="/app/papers/`+paperUUID+`/pdf"`) {
+				!strings.Contains(response, `href="/papers/`+paperUUID+`/pdf"`) {
 				t.Fatalf("unexpected PDF controls: %s", response)
 			}
 
@@ -351,16 +350,16 @@ func TestPaperInfoURLsIncludeStackUUID(t *testing.T) {
 		{
 			name:    "detail page",
 			handler: handleStacksDetailPage(testLogger(), detailTmpl, "", stackService),
-			want:    `hx-get="/app/stacks/` + stackUUID + `/papers/` + paper.UUID + `"`,
+			want:    `hx-get="/stacks/` + stackUUID + `/papers/` + paper.UUID + `"`,
 		},
 		{
 			name:    "paper partial",
 			handler: handleStackPaperInfo(testLogger(), tmpl, paperApp.NewPaperService(repo, nil)),
-			want:    `hx-put="/app/stacks/` + stackUUID + `/papers/` + paper.UUID + `/pdf"`,
+			want:    `hx-put="/stacks/` + stackUUID + `/papers/` + paper.UUID + `/pdf"`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/app/stacks/"+stackUUID, nil)
+			req := httptest.NewRequest(http.MethodGet, "/stacks/"+stackUUID, nil)
 			req.SetPathValue("stackUUID", stackUUID)
 			req.SetPathValue("paperUUID", paper.UUID)
 			rr := httptest.NewRecorder()
@@ -517,7 +516,7 @@ func TestHandleStackPaperRemoveRemovesPaperAndNavigatesToDetail(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if got := rr.Header().Get("HX-Location"); got != "/app/stacks/"+stack.UUID {
+	if got := rr.Header().Get("HX-Location"); got != "/stacks/"+stack.UUID {
 		t.Fatalf("HX-Location = %q, want detail page redirect", got)
 	}
 
@@ -550,11 +549,11 @@ func TestHandleStackCreateNavigatesToDetail(t *testing.T) {
 	}
 
 	location := rr.Header().Get("HX-Location")
-	if !strings.HasPrefix(location, "/app/stacks/") {
-		t.Fatalf("HX-Location = %q, want /app/stacks/{uuid}", location)
+	if !strings.HasPrefix(location, "/stacks/") {
+		t.Fatalf("HX-Location = %q, want /stacks/{uuid}", location)
 	}
 
-	uuid := strings.TrimPrefix(location, "/app/stacks/")
+	uuid := strings.TrimPrefix(location, "/stacks/")
 	created, err := stackService.GetByUUID(req.Context(), uuid)
 	if err != nil {
 		t.Fatalf("created stack not found by HX-Location UUID %q: %v", uuid, err)
@@ -570,7 +569,7 @@ func TestHandleStackCreateNavigatesToDetail(t *testing.T) {
 func newSidebarStackCreateRequest(t *testing.T, userID string, email string, name string) *http.Request {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodPost, "/app/stacks", strings.NewReader(url.Values{
+	req := httptest.NewRequest(http.MethodPost, "/stacks", strings.NewReader(url.Values{
 		"name": {name},
 	}.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -586,7 +585,7 @@ func newSidebarStackCreateRequest(t *testing.T, userID string, email string, nam
 func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/app/stacks/"+stackUUID, nil)
+	req := httptest.NewRequest(http.MethodGet, "/stacks/"+stackUUID, nil)
 	req.SetPathValue("stackUUID", stackUUID)
 	req = req.WithContext(commonauth.ContextWithSession(req.Context(), &commonauth.Session{
 		UserID:  "owner-detail",
@@ -600,7 +599,7 @@ func newStackDetailRequest(t *testing.T, stackUUID string) *http.Request {
 func newStackPaperRemoveRequest(t *testing.T, stackUUID string, paperUUID string, userID string, email string) *http.Request {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodDelete, "/app/stacks/"+stackUUID+"/papers/"+paperUUID, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/stacks/"+stackUUID+"/papers/"+paperUUID, nil)
 	req.Header.Set("HX-Request", "true")
 	req.SetPathValue("stackUUID", stackUUID)
 	req.SetPathValue("paperUUID", paperUUID)

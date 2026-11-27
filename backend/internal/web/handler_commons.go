@@ -40,7 +40,7 @@ func currentHTMXPath(r *http.Request) string {
 	currentPath := r.URL.Path
 	if hxCurrentURL := r.Header.Get("HX-Current-URL"); hxCurrentURL != "" {
 		if u, err := url.Parse(hxCurrentURL); err == nil {
-			currentPath = strings.TrimPrefix(u.Path, "/app")
+			currentPath = u.Path
 		}
 	}
 

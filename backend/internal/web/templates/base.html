@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{.Title}} · Paperstacks</title>
     <!-- CSS for production -->
-    <link rel="stylesheet" href="/app/assets/styles.css" />
-    <link rel="stylesheet" href="/app/assets/hanko.css" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/hanko.css" />
     <!-- CSS for development -->
     <!-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" /> -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
     <!-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" /> -->
 
-    <script src="/app/assets/htmx.min.js" defer></script>
+    <script src="/assets/htmx.min.js" defer></script>
 
     <script
       src="https://cdn.jsdelivr.net/npm/theme-change@3.0.4/index.js"
@@ -77,19 +77,19 @@
         <div class="mx-5 flex items-center gap-2 font-semibold tracking-[0.2em] uppercase">paperstacks.io</div>
         <ul class="menu w-full overflow-y-auto">
           <li>
-            <a hx-get="/app/" class="{{ if eq .PageName `home` }}menu-active{{ end }}">
+            <a hx-get="/" class="{{ if eq .PageName `home` }}menu-active{{ end }}">
               <svg data-src="https://unpkg.com/heroicons/24/outline/home.svg" class="size-4"></svg>
               Home
             </a>
           </li>
           <li>
-            <a hx-get="/app/stacks" class="{{ if eq .PageName `stacks` }}menu-active{{ end }}">
+            <a hx-get="/stacks" class="{{ if eq .PageName `stacks` }}menu-active{{ end }}">
               <svg data-src="https://unpkg.com/heroicons/24/outline/rectangle-stack.svg" class="size-4"></svg>
               Stacks Overview
             </a>
           </li>
           <li>
-            <a hx-get="/app/papers" class="{{ if eq .PageName `papers` }}menu-active{{ end }}">
+            <a hx-get="/papers" class="{{ if eq .PageName `papers` }}menu-active{{ end }}">
               <svg data-src="https://unpkg.com/heroicons/24/outline/book-open.svg" class="size-4"></svg>
               All My Papers
             </a>
@@ -104,7 +104,7 @@
           {{ if .Session.IsValid }}
 
           <div
-            hx-get="/app/partials/sidebar/stacks-list"
+            hx-get="/partials/sidebar/stacks-list"
             hx-trigger="load"
             hx-target="this"
             hx-select=""
@@ -135,14 +135,14 @@
             {{ if .Session.IsValid }}
 
             <li>
-              <a hx-get="/app/settings" class="{{ if eq .PageName `settings` }}menu-active{{ end }}">
+              <a hx-get="/settings" class="{{ if eq .PageName `settings` }}menu-active{{ end }}">
                 <svg data-src="https://unpkg.com/heroicons/24/outline/adjustments-vertical.svg" class="size-4"></svg>
                 Settings
               </a>
             </li>
 
             <li>
-              <a hx-post="/app/auth/logout">
+              <a hx-post="/auth/logout">
                 <svg
                   data-src="https://unpkg.com/heroicons/24/outline/arrow-right-on-rectangle.svg"
                   class="size-4"
@@ -152,7 +152,7 @@
             </li>
             {{ else }}
             <li>
-              <a hx-get="/app/auth" class="btn btn-sm btn-primary">
+              <a hx-get="/auth" class="btn btn-sm btn-primary">
                 <svg data-src="https://unpkg.com/heroicons/24/outline/arrow-left-on-rectangle.svg" class="size-4"></svg>
                 Login
               </a>

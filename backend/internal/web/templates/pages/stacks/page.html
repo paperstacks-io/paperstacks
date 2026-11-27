@@ -10,7 +10,7 @@
   <div class="flex flex-wrap gap-2">
     <button
       class="btn btn-sm btn-primary"
-      hx-get="/app/partials/toast/not-implemented"
+      hx-get="/partials/toast/not-implemented"
       hx-target="#toast-host"
       hx-swap="innerHTML"
     >
@@ -24,7 +24,7 @@
 <section
   class="stats stats-vertical bg-base-200 xl:stats-horizontal col-span-6 shadow-xs"
   hx-trigger="load"
-  hx-get="/app/stacks/stats"
+  hx-get="/stacks/stats"
   hx-swap="innerHTML"
 >
   <div class="stat h-24 skeleton"></div>
@@ -44,7 +44,7 @@
     </div>
   </div>
   <div class="card-body gap-4">
-    <form id="stack_search_form" hx-get="/app/stacks" hx-trigger="load" hx-target:inherited="#stack-results">
+    <form id="stack_search_form" hx-get="/stacks" hx-trigger="load" hx-target:inherited="#stack-results">
       <div class="flex flex-col gap-3 lg:flex-row">
         <label class="input input-bordered flex items-center gap-2 w-full">
           <svg data-src="https://unpkg.com/heroicons/24/outline/magnifying-glass.svg" class="h-4 w-4 opacity-50"></svg>
@@ -53,7 +53,7 @@
             type="search"
             name="query"
             placeholder="methodology..."
-            hx-get="/app/stacks"
+            hx-get="/stacks"
             hx-include="closest form"
             hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
             hx-target="#stack-results"
@@ -64,7 +64,7 @@
         <select
           class="select select-bordered block w-40"
           name="sortBy"
-          hx-get="/app/stacks"
+          hx-get="/stacks"
           hx-include="closest form"
           hx-trigger="change"
           hx-target="#stack-results"

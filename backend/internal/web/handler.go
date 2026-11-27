@@ -137,10 +137,10 @@ func handleLogout(
 		}
 
 		if isHTMX(r) {
-			hxRedirect(w, "/app/", http.StatusOK)
+			hxRedirect(w, "/", http.StatusOK)
 			return
 		}
 
-		http.Redirect(w, r, "/app/", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 }

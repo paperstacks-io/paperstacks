@@ -13,16 +13,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paperstacks.io/paperstacks/internal/common/config"
 	commonauth "github.com/paperstacks.io/paperstacks/internal/common/server/auth"
 	"github.com/paperstacks.io/paperstacks/internal/paper/application"
 	paperHttp "github.com/paperstacks.io/paperstacks/internal/paper/http"
 	"github.com/paperstacks.io/paperstacks/internal/paper/repository/memory"
-	"github.com/paperstacks.io/paperstacks/internal/server"
 	stackApplication "github.com/paperstacks.io/paperstacks/internal/stack/application"
 	stackMemory "github.com/paperstacks.io/paperstacks/internal/stack/repository/memory"
 	userApplication "github.com/paperstacks.io/paperstacks/internal/user/application"
 	userHttp "github.com/paperstacks.io/paperstacks/internal/user/http"
 	userMemory "github.com/paperstacks.io/paperstacks/internal/user/repository/memory"
+	"github.com/paperstacks.io/paperstacks/internal/web"
 )
 
 const clientTimeout = 10 * time.Second
@@ -53,7 +54,9 @@ func startApplication(t *testing.T) testApplication {
 	stackService := stackApplication.NewStackService(stackMemory.NewRepository(paperService), paperService)
 	userService := userApplication.NewUserService(userRepo)
 	sessionService := noopSessionService{}
-	server.AddRoute(root, context.Background(), logger, sessionService)
+	if err := web.AddRoute(root, config.Config{}, logger, paperService, stackService, userService, sessionService); err != nil {
+		t.Fatal(err)
+	}
 	paperHttp.AddPaperRoute(api, logger, paperService, sessionService)
 	userHttp.AddUserRoute(api, logger, userService, stackService, sessionService)
 	root.Handle("/api/", http.StripPrefix("/api", api))
